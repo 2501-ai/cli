@@ -31,22 +31,8 @@ Specify a different workspace path using the `--workspace` option if needed. The
 ### Init Command
 
 - Command: `init`
-- Description: Initializes a new workspace by creating the necessary files and directories.
-- Usage: `2501 init [--name <name>] [--path <path>]`
-
-The `--name` option allows specifying a name for the new workspace. The `--path` option sets the path where the workspace should be created. If no path is provided, the workspace will be created in the current working directory.
-
-### Build Command
-
-- Command: `build`
-- Description: Builds the project by compiling source files and generating output artifacts.
-- Usage: `2501 build [--watch]`
-
-The `--watch` option enables watch mode, which will automatically rebuild the project whenever source files are modified.
-
-## Development
-
-After making changes to the source code, you can build the project using `npm run build`. To run the CLI tool, use `node .` or `npm start` from the project directory.
+- Description: Initializes a new agent.
+- Usage: `2501 init [--name <name>] [--workspace <path>] [--config <config_id>]`
 
 ## Contributing
 
