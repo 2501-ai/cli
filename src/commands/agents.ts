@@ -16,9 +16,9 @@ export async function agentsCommand(options: {
   if (agents.length > 0) {
     terminal.table(
       [
-        ['ID', 'Configuration', 'Workspace'],
+        ['Name', 'Configuration', 'Workspace'],
         ...agents.map((agent) => [
-          agent.id.substring(0, 10),
+          agent.name.substring(0, 10),
           agent.configuration,
           agent.workspace,
         ])

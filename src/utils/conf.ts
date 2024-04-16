@@ -17,6 +17,7 @@ import * as path from 'path';
 
 interface AgentConfig {
   id: string;
+  name: string;
   workspace: string;
   configuration: string;
 }

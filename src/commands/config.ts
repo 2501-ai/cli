@@ -1,12 +1,9 @@
 import axios from 'axios';
-
-// Define API configuration variables
-const apiHost = 'http://localhost:1337';
-const apiVersion = '/api/v1';
+import { API_HOST, API_VERSION } from '../constants';
 
 export async function configCommand() {
   try {
-    const response = await axios.get(`${apiHost}${apiVersion}/configurations`);
+    const response = await axios.get(`${API_HOST}${API_VERSION}/configurations`);
     console.log(response.data);
   } catch (error) {
     if (error instanceof Error) {

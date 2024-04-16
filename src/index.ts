@@ -18,9 +18,10 @@ program
 
 // Query command  
 program
-  .command('query')
-  .description('Display the current workspace and options')
+  .command('query <query>')
+  .description('Execute a query using the specified agent')
   .option('--workspace <path>', 'Specify a different workspace path')
+  .option('--agentId <id>', 'Specify the agent ID')
   .action(queryCommand);
 
 // Init command

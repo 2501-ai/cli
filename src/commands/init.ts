@@ -51,7 +51,7 @@ export async function initCommand(options: initCommandOptions): Promise<void> {
     progressBar.itemDone('Creating agent...')
 
     progressBar.startItem('Adding agent to local configuration...')
-    await addAgent({ id: agent.name, workspace, configuration: selected_config.id });
+    await addAgent({ id: agent.db_id, name: agent.name, workspace, configuration: selected_config.id });
     progressBar.itemDone('Adding agent to local configuration...')
 
     if (
