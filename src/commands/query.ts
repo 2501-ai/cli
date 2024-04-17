@@ -2,122 +2,164 @@ import axios from 'axios';
 import { terminal } from 'terminal-kit';
 import { jsonrepair } from 'jsonrepair';
 
+import { TaskManager } from '../utils/taskManager';
 import { listAgentsFromWorkspace } from '../utils/conf';
 import { convertFormToJSON } from '../utils/json';
 import { API_HOST, API_VERSION } from '../constants';
 
 import * as actionsFns from '../utils/actions';
 
-async function checkStatus(agentId: string) {
-  try {
-    const { data } = await axios.get(
-      `${API_HOST}${API_VERSION}/agents/${agentId}/status`
-    );
+class Agent {
+  id: string;
+  name: string;
+  main_engine: string;
 
-    if (data.status === 'completed') {
-      return console.log('Query completed:', data.result);
-    }
+  loader: any;
 
-    if (data.status === 'failed') {
-      return console.error('Query failed:', data.error);
-    }
-
-    if (data.actions) {
-      await processActions(data.actions);
-      return;
-    }
-
-    setTimeout(() => checkStatus(agentId), 1000);
-  } catch (error: any) {
-    console.error('Error checking query status:', error.message);
+  constructor(options: { id: string; name: string; main_engine: string }) {
+    this.id = options.id;
+    this.name = options.name;
+    this.main_engine = options.main_engine;
   }
-}
 
-async function processActions(actions: any[]) {
-  let tool_outputs: any[] = [];
-  for (const call of actions) {
-    let args: any;
+  toggleLoader(destroy: boolean = false) {
+    if (this.loader || destroy) {
+      this.loader.distroy();
+      this.loader = null;
+    } else {
+      this.loader = terminal.spinner();
+    }
+  }
 
-    if (call.function.arguments) {
-      args = call.function.arguments;
-      if (typeof args === 'string') {
-        const fixed_args = jsonrepair(args);
-        args = JSON.parse(convertFormToJSON(fixed_args));
+  async checkStatus() {
+    try {
+      const { data } = await axios.get(
+        `${API_HOST}${API_VERSION}/agents/${this.id}/status`
+      );
+
+      if (data.answer || data.response) {
+        this.toggleLoader(true);
+        console.log('\nAgent:', data.answer || data.response);
+      }
+
+      if (data.status === 'completed') {
+        this.toggleLoader(true);
+        return process.exit(0);
+      }
+
+      if (data.status === 'failed') {
+        console.error('Query failed:', data.error);
+        return process.exit(0);
+      }
+
+      if (data.actions) {
+        this.toggleLoader(true);
+        await this.processActions(data.actions);
+        return;
+      }
+    } catch (error: any) {
+      console.error(
+        'Error checking query status:',
+        error.message,
+        '\n Retrying...'
+      );
+    }
+
+    const self = this;
+    setTimeout(async () => await self.checkStatus(), 2000);
+  }
+
+  async processActions(actions: any[]) {
+    const taskManager = new TaskManager();
+    let tool_outputs: any[] = [];
+    for (const call of actions) {
+      let args: any;
+
+      if (call.function.arguments) {
+        args = call.function.arguments;
+        if (typeof args === 'string') {
+          const fixed_args = jsonrepair(args);
+          args = JSON.parse(convertFormToJSON(fixed_args));
+        }
+      } else {
+        args = call.args;
+      }
+      // if (args.path && args.content && verification_active.value) {
+      //   const previous = await window.electronAPI.getFileFromWorkspace(args.path);
+      //   try {
+      //     const { data: correctionData } = await axios.post(
+      //       `/agents/${agent.value.db_id}/verifyOutput`,
+      //       {
+      //         task: args.answer || currentInput.value,
+      //         previous,
+      //         proposal: args.content,
+      //       },
+      //       { timeout: 60000 }
+      //     );
+
+      //     if (
+      //       correctionData.corrected_output &&
+      //       correctionData.corrected_output !== args.content
+      //     ) {
+      //       args.content = correctionData.corrected_output;
+      //     }
+      //   } catch (e) {
+      //     console.error('verifyOutput error or timeout', e);
+      //   }
+      // }
+
+      const functions = actionsFns as any;
+      const function_name = call.function.name || call.function;
+
+      let task: string = args.answer || args.command || '';
+      if (args.url) {
+        task = 'Browsing: ' + args.url;
+      }
+
+      await taskManager.run(task, async () => {
+        try {
+          const output = await functions[function_name](args);
+          tool_outputs.push({
+            tool_call_id: call.id,
+            output,
+          });
+        } catch (e: any) {
+          tool_outputs.push({
+            tool_call_id: call.id,
+            output: `I failed to run ${function_name}, please fix the situation, errors below.\n ${e.message}`,
+          });
+        }
+      });
+      // for (const o of output) {
+      //   if (o.output && !!o.output.length) {
+      //     appendMessage(
+      //       'verbose',
+      //       args.url ? `Analysing ${args.url}` : o.output
+      //     );
+      //   }
+      // }
+    }
+
+    if (this.main_engine.includes('openai/gpt4')) {
+      try {
+        await axios.post(`/agents/${this.id}/submitOutput`, {
+          tool_outputs,
+        });
+        const self = this;
+        setTimeout(async () => await self.checkStatus(), 2000);
+      } catch (e) {
+        this.checkStatus();
       }
     } else {
-      args = call.args;
+      // console.log('tool_outputs', tool_outputs);
+      // queryAgent(
+      //   `here is the output of the actions: ${tool_outputs
+      //     .map((o) => o.output)
+      //     .join('\n')}`
+      // );
     }
-
-    console.log('args', args);
-    if (args.answer) {
-      console.log('Agent:', args.answer);
-    }
-
-    if (args.command) {
-      console.log('Running: ', args.command);
-    }
-
-    if (args.url) {
-      console.log('Browsing: ', args.url);
-    }
-
-    // if (args.path && args.content && verification_active.value) {
-    //   const previous = await window.electronAPI.getFileFromWorkspace(args.path);
-    //   try {
-    //     const { data: correctionData } = await axios.post(
-    //       `/agents/${agent.value.db_id}/verifyOutput`,
-    //       {
-    //         task: args.answer || currentInput.value,
-    //         previous,
-    //         proposal: args.content,
-    //       },
-    //       { timeout: 60000 }
-    //     );
-
-    //     if (
-    //       correctionData.corrected_output &&
-    //       correctionData.corrected_output !== args.content
-    //     ) {
-    //       args.content = correctionData.corrected_output;
-    //     }
-    //   } catch (e) {
-    //     console.error('verifyOutput error or timeout', e);
-    //   }
-    // }
-
-    const functions = actionsFns as any;
-    const output = await functions[call.function.name](args);
-    console.log('output', output);
-
-    // for (const o of output) {
-    //   if (o.output && !!o.output.length) {
-    //     appendMessage(
-    //       'verbose',
-    //       args.url ? `Analysing ${args.url}` : o.output
-    //     );
-    //   }
-    // }
-    tool_outputs = tool_outputs.concat(output);
+    return;
   }
-
-  // if (agent.value.main_engine.includes('openai/gpt4')) {
-  //   try {
-  //     await axios.post(`/agents/${agent.value.db_id}/submitOutput`, {
-  //       tool_outputs,
-  //     });
-  //     setTimeout(checkAgentStatus, 2000);
-  //   } catch (e) {
-  //     checkAgentStatus();
-  //   }
-  // } else {
-  //   console.log('tool_outputs', tool_outputs);
-  //   queryAgent(
-  //     `here is the output of the actions: ${tool_outputs
-  //       .map((o) => o.output)
-  //       .join('\n')}`
-  //   );
-  // }
-  return;
 }
 
 // Function to execute the query command
@@ -132,25 +174,38 @@ export async function queryCommand(
   console.log(`Current workspace: ${workspace}`);
 
   const agents = await listAgentsFromWorkspace(workspace);
-  const agentId = options.agentId || (agents.length > 0 ? agents[0].id : null);
+  const eligible =
+    agents.find((a) => a.id === options.agentId) || agents[0] || null;
 
-  if (!agentId) {
+  if (!eligible) {
     console.error('No agent found in the specified workspace.');
     return;
   }
 
+  const agent = new Agent({
+    id: eligible.id,
+    name: eligible.name,
+    main_engine: eligible.main_engine,
+  });
+
   try {
-    terminal.spinner();
-    terminal('thinking...\n');
+    agent.toggleLoader();
     const { data } = await axios.post(
-      `${API_HOST}${API_VERSION}/agents/${agentId}/query`,
-      { query }
+      `${API_HOST}${API_VERSION}/agents/${agent.id}/query`,
+      { query },
+      { timeout: 5 * 60 * 1000 }
     );
 
-    console.log('Query result:', data);
-
     if (data.asynchronous) {
-      return checkStatus(agentId);
+      return agent.checkStatus();
+    }
+
+    if (data.response) {
+      console.log('Agent:', data.response);
+    }
+
+    if (data.actions) {
+      return await agent.processActions(data.actions);
     }
 
     process.exit(0);

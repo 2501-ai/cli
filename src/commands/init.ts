@@ -23,10 +23,10 @@ export async function initCommand(options: initCommandOptions): Promise<void> {
       width: 80,
       syncMode: true,
       percent: true,
-      items: 4
-    })
+      items: 4,
+    });
 
-    progressBar.startItem('Fetching configurations...')
+    progressBar.startItem('Fetching configurations...');
     const { data: configurations } = await axios.get(`/configurations`);
 
     const selected_config = configurations.find(
@@ -36,23 +36,30 @@ export async function initCommand(options: initCommandOptions): Promise<void> {
       console.error('Invalid configuration ID');
       process.exit(1);
     }
-    progressBar.itemDone('Fetching configurations...')
+    progressBar.itemDone('Fetching configurations...');
 
-    progressBar.startItem('Syncing workspace...')
+    progressBar.startItem('Syncing workspace...');
     const workspaceResponse = await syncWorkspace(workspace);
-    progressBar.itemDone('Syncing workspace...')
+    progressBar.itemDone('Syncing workspace...');
 
-    progressBar.startItem('Creating agent...')
+    progressBar.startItem('Creating agent...');
     const { data: agent } = await axios.post('/agents', {
       workspace,
       configuration: selected_config.db_id,
       prompt: selected_config.prompt,
     });
-    progressBar.itemDone('Creating agent...')
+    progressBar.itemDone('Creating agent...');
 
-    progressBar.startItem('Adding agent to local configuration...')
-    await addAgent({ id: agent.db_id, name: agent.name, workspace, configuration: selected_config.id });
-    progressBar.itemDone('Adding agent to local configuration...')
+    progressBar.startItem('Adding agent to local configuration...');
+    await addAgent({
+      id: agent.db_id,
+      name: agent.name,
+      workspace,
+      configuration: selected_config.id,
+      main_engine: agent.main_engine,
+      secondary_engine: agent.secondary_engine,
+    });
+    progressBar.itemDone('Adding agent to local configuration...');
 
     if (
       workspaceResponse &&
@@ -72,9 +79,9 @@ export async function initCommand(options: initCommandOptions): Promise<void> {
       );
     }
 
-    term('\n')
+    term('\n');
     console.log('Initialization complete.');
-    progressBar.stop()
+    progressBar.stop();
   } catch (error: any) {
     console.error('An error occurred:', error.message);
   }

@@ -19,6 +19,8 @@ interface AgentConfig {
   id: string;
   name: string;
   workspace: string;
+  main_engine: string;
+  secondary_engine: string;
   configuration: string;
 }
 
