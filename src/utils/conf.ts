@@ -54,44 +54,6 @@ export async function writeConfig(config: Config): Promise<void> {
   }
 }
 
-// Get agent workspace from configuration
-export async function getAgentWorkspace(
-  agentId: string
-): Promise<string | null> {
-  const config = await readConfig();
-  if (config) {
-    const agent = config.find((agent) => agent.id === agentId);
-    if (agent) {
-      return agent.workspace;
-    } else {
-      console.error('Agent workspace not found for agent ID:', agentId);
-      return null;
-    }
-  } else {
-    console.error('Invalid configuration');
-    return null;
-  }
-}
-
-// Delete agent workspace from configuration
-export async function deleteAgentWorkspace(agentId: string): Promise<void> {
-  const config = await readConfig();
-  if (config) {
-    const index = config.findIndex((agent) => agent.id === agentId);
-    if (index !== -1) {
-      config.splice(index, 1);
-      await writeConfig(config);
-    } else {
-      console.error(
-        'Agent workspace not found for deletion, agent ID:',
-        agentId
-      );
-    }
-  } else {
-    console.error('Invalid configuration');
-  }
-}
-
 // List all agents
 export async function listAgents(): Promise<AgentConfig[]> {
   const config = await readConfig();
