@@ -1,6 +1,8 @@
 import axios from 'axios';
 import { terminal } from 'terminal-kit';
 import { jsonrepair } from 'jsonrepair';
+import { marked } from 'marked';
+import { markedTerminal } from 'marked-terminal';
 
 import { TaskManager } from '../utils/taskManager';
 import { listAgentsFromWorkspace } from '../utils/conf';
@@ -8,6 +10,10 @@ import { convertFormToJSON } from '../utils/json';
 import { API_HOST, API_VERSION } from '../constants';
 
 import * as actionsFns from '../utils/actions';
+
+import { initCommand } from './init';
+
+marked.use(markedTerminal() as any);
 
 class Agent {
   id: string;
@@ -39,8 +45,8 @@ class Agent {
 
       if (data.answer || data.response) {
         this.toggleLoader(true);
-        terminal.bold('\n\nAGENT:\n')
-        terminal(data.answer || data.response);
+        terminal.bold('\n\nAGENT:\n');
+        terminal(marked.parse(data.answer || data.response));
       }
 
       if (data.status === 'completed') {
@@ -170,19 +176,29 @@ export async function queryCommand(
     workspace?: string;
     agentId?: string;
   }
-) {
+): Promise<void> {
   const workspace = options.workspace || process.cwd();
-  terminal.grey(`INFO: Current workspace: ${workspace}`);
-  terminal('\n');
 
   const agents = await listAgentsFromWorkspace(workspace);
   const eligible =
     agents.find((a) => a.id === options.agentId) || agents[0] || null;
 
   if (!eligible) {
-    console.error('No agent found in the specified workspace.');
+    const taskManager = new TaskManager();
+    terminal.yellow(
+      'Warn: no agent found in the specified workspace, initializing...'
+    );
+    await taskManager.run('Initializing agent', initCommand);
+    await taskManager.run(
+      'Warming up... can take a few seconds.',
+      async () => new Promise((resolve) => setTimeout(resolve, 5000))
+    );
+
+    await queryCommand(query, options);
     return;
   }
+  terminal.grey(`INFO: Current workspace: ${workspace}`);
+  terminal('\n');
 
   const agent = new Agent({
     id: eligible.id,
@@ -203,8 +219,8 @@ export async function queryCommand(
     }
 
     if (data.response) {
-      terminal.bold('AGENT:\n')
-      terminal(data.response)
+      terminal.bold('AGENT:\n');
+      terminal(marked.parse(data.response));
     }
 
     if (data.actions) {

@@ -167,7 +167,7 @@ async function getContextFromWorkspace(workspace: string) {
 
   await createPDFFromFolder(workspace, outputFilePath)
     .then(() => {
-      console.log('Agent : Workspace files unified.');
+      //console.log('Agent : Workspace files unified.');
     })
     .catch((err) => {
       console.error(
@@ -203,16 +203,14 @@ export async function syncWorkspace(workspace: string) {
   const data = new FormData();
   for (let i = 0; i < files.length; i++) {
     const name = files[i].path.split('/').pop();
-    data.set('file' + i, files[i].data, name);
+    data.set('file' + i, new Blob([files[i].data]), name);
   }
 
-  console.log(data);
   const response = await axios.post('/files', data, {
     headers: {
       'Content-Type': 'multipart/form-data',
     },
   });
   const form_files = response.data.map((file: { id: string }) => file.id);
-  console.log(data);
   return { data, files: form_files };
 }

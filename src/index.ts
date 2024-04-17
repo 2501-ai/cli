@@ -9,7 +9,7 @@ import { agentsCommand } from './commands/agents';
 const program = new Command();
 
 program
-  .name('2501')
+  .name('@2501')
   .description('An AI to rule your systems')
   .version('0.0.1')
   .on('command:*', async (...args) => {
