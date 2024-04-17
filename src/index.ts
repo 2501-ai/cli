@@ -39,6 +39,7 @@ program
   .description('List agents in the current workspace or all agents on the machine')
   .option('--workspace <path>', 'Specify a different workspace path')
   .option('--all', 'List all agents on the machine')
+  .option('--flush', 'Flush all agents from the configuration')
   .action(agentsCommand);
 
 program.parse(process.argv);

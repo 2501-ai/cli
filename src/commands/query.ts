@@ -14,7 +14,7 @@ class Agent {
   name: string;
   main_engine: string;
 
-  loader: any;
+  spinner: any;
 
   constructor(options: { id: string; name: string; main_engine: string }) {
     this.id = options.id;
@@ -22,12 +22,12 @@ class Agent {
     this.main_engine = options.main_engine;
   }
 
-  toggleLoader(destroy: boolean = false) {
-    if (this.loader || destroy) {
-      this.loader.distroy();
-      this.loader = null;
+  async toggleLoader(destroy: boolean = false) {
+    if (this.spinner || destroy) {
+      this.spinner && this.spinner.animate(false);
+      this.spinner = null;
     } else {
-      this.loader = terminal.spinner();
+      this.spinner = await terminal.spinner();
     }
   }
 
@@ -39,7 +39,8 @@ class Agent {
 
       if (data.answer || data.response) {
         this.toggleLoader(true);
-        console.log('\nAgent:', data.answer || data.response);
+        terminal.bold('\n\nAGENT:\n')
+        terminal(data.answer || data.response);
       }
 
       if (data.status === 'completed') {
@@ -171,7 +172,8 @@ export async function queryCommand(
   }
 ) {
   const workspace = options.workspace || process.cwd();
-  console.log(`Current workspace: ${workspace}`);
+  terminal.grey(`INFO: Current workspace: ${workspace}`);
+  terminal('\n');
 
   const agents = await listAgentsFromWorkspace(workspace);
   const eligible =
@@ -201,7 +203,8 @@ export async function queryCommand(
     }
 
     if (data.response) {
-      console.log('Agent:', data.response);
+      terminal.bold('AGENT:\n')
+      terminal(data.response)
     }
 
     if (data.actions) {

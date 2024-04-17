@@ -131,3 +131,12 @@ export async function addAgent(newAgent: AgentConfig): Promise<void> {
     console.error('Invalid configuration');
   }
 }
+
+// Flush all agents from the configuration 
+export async function flushAgents(): Promise<void> {
+  try {
+    await writeConfig([]); // Clear the entire configuration
+  } catch (error) {
+    console.error('Error flushing agents:', error);
+  }
+}

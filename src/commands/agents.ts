@@ -1,10 +1,17 @@
-import { listAgents, listAgentsFromWorkspace } from '../utils/conf';
+import { listAgents, listAgentsFromWorkspace, flushAgents } from '../utils/conf';
 import { terminal } from 'terminal-kit';
 
 export async function agentsCommand(options: {
   all?: boolean;
+  flush?: boolean;  
   workspace?: string;
 }): Promise<void> {
+  if (options.flush) {
+    await flushAgents();
+    terminal('All agents have been flushed from the configuration.\n');
+    return;
+  }
+
   let agents;
   if (options.all) {
     agents = await listAgents();
