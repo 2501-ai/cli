@@ -5,7 +5,7 @@ import { marked } from 'marked';
 import { markedTerminal } from 'marked-terminal';
 
 import { TaskManager } from '../utils/taskManager';
-import { listAgentsFromWorkspace } from '../utils/conf';
+import { listAgentsFromWorkspace, readConfig } from '../utils/conf';
 import { convertFormToJSON } from '../utils/json';
 import { API_HOST, API_VERSION } from '../constants';
 
@@ -18,14 +18,14 @@ marked.use(markedTerminal() as any);
 class Agent {
   id: string;
   name: string;
-  main_engine: string;
+  engine: string;
 
   spinner: any;
 
-  constructor(options: { id: string; name: string; main_engine: string }) {
+  constructor(options: { id: string; name: string; engine: string }) {
     this.id = options.id;
     this.name = options.name;
-    this.main_engine = options.main_engine;
+    this.engine = options.engine;
   }
 
   async toggleLoader(destroy: boolean = false) {
@@ -39,8 +39,14 @@ class Agent {
 
   async checkStatus() {
     try {
+      const config = await readConfig();
       const { data } = await axios.get(
-        `${API_HOST}${API_VERSION}/agents/${this.id}/status`
+        `${API_HOST}${API_VERSION}/agents/${this.id}/status`,
+        {
+          headers: {
+            Authorization: `Bearer ${config?.api_key}`,
+          },
+        }
       );
 
       if (data.answer || data.response) {
@@ -147,11 +153,20 @@ class Agent {
       // }
     }
 
-    if (this.main_engine.includes('openai/gpt4')) {
+    if (this.engine.includes('rhino')) {
       try {
-        await axios.post(`/agents/${this.id}/submitOutput`, {
-          tool_outputs,
-        });
+        const config = await readConfig();
+        await axios.post(
+          `/agents/${this.id}/submitOutput`,
+          {
+            tool_outputs,
+          },
+          {
+            headers: {
+              Authorization: `Bearer ${config?.api_key}`,
+            },
+          }
+        );
         const self = this;
         setTimeout(async () => await self.checkStatus(), 2000);
       } catch (e) {
@@ -203,15 +218,22 @@ export async function queryCommand(
   const agent = new Agent({
     id: eligible.id,
     name: eligible.name,
-    main_engine: eligible.main_engine,
+    engine: eligible.engine,
   });
 
   try {
     agent.toggleLoader();
+    const config = await readConfig();
     const { data } = await axios.post(
       `${API_HOST}${API_VERSION}/agents/${agent.id}/query`,
       { query },
-      { timeout: 5 * 60 * 1000 }
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${config?.api_key}`,
+        }, 
+        timeout: 5 * 60 * 1000 
+      }
     );
 
     if (data.asynchronous) {

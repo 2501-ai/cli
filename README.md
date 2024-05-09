@@ -23,16 +23,20 @@ This will install the 2501 CLI globally on your system, making it available from
 ### Query Command
 
 - Command: `query`
-- Description: Displays information about the current workspace and allows specifying a different workspace path.
-- Usage: `2501 query [--workspace <path>]`
-
-Specify a different workspace path using the `--workspace` option if needed. The default workspace is the current working directory of the process.
+- Description: Execute a query using the specified agent.
+- Usage: `2501 query <query> [--workspace <path>] [--agentId <id>]`
 
 ### Init Command
 
 - Command: `init`
 - Description: Initializes a new agent.
 - Usage: `2501 init [--name <name>] [--workspace <path>] [--config <config_id>]`
+
+### Agents Command
+
+- Command: `agents`
+- Description: List agents in the current workspace or all agents on the machine.
+- Usage: `2501 agents [--workspace <path>] [--all] [--flush]`
 
 ## Contributing
 

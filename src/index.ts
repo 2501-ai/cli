@@ -5,6 +5,9 @@ import { configCommand } from './commands/config';
 import { queryCommand } from './commands/query';
 import { initCommand } from './commands/init';
 import { agentsCommand } from './commands/agents';
+import { setCommand } from './commands/set';
+
+import { authMiddleware } from './middleware/auth';
 
 const program = new Command();
 
@@ -22,6 +25,7 @@ program
 program
   .command('config')
   .description('Fetch configuration from API')
+  .hook('preAction', authMiddleware)
   .action(configCommand);
 
 // Query command
@@ -52,5 +56,12 @@ program
   .option('--all', 'List all agents on the machine')
   .option('--flush', 'Flush all agents from the configuration')
   .action(agentsCommand);
+
+program
+  .command('set')
+  .description('Set a configuration value')
+  .argument('<key>', 'The key to set')
+  .argument('<value>', 'The value to set')
+  .action(setCommand);
 
 program.parse(process.argv);

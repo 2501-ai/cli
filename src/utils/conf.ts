@@ -2,21 +2,20 @@
 // Example configuration file (~/.2501/2501.conf):
 // {
 //   "workspace_disabled": false,
+//   "api_key": "your-api-key",
 //   "agents": [
 //     {
 //       "id": "agent1",
 //       "name": "Agent 1",
 //       "workspace": "/path/to/workspace1",
-//       "main_engine": "engine1",
-//       "secondary_engine": "engine2",
+//       "engine": "rhino",
 //       "configuration": "config1"
 //     },
 //     {
 //       "id": "agent2", 
 //       "name": "Agent 2",
 //       "workspace": "/path/to/workspace2",
-//       "main_engine": "engine3",
-//       "secondary_engine": "engine4",
+//       "engine": "rabbit",
 //       "configuration": "config2"
 //     }
 //   ]
@@ -30,13 +29,13 @@ interface AgentConfig {
   id: string;
   name: string;
   workspace: string;
-  main_engine: string;
-  secondary_engine: string;
+  engine: string;
   configuration: string;
 }
 
 type Config = {
   workspace_disabled: boolean;
+  api_key?: string;
   agents: AgentConfig[];
 };
 
@@ -59,6 +58,23 @@ export async function readConfig(): Promise<Config | null> {
   } catch (error) {
     console.error('Error reading configuration:', error);
     return null;
+  }
+}
+
+/**
+ * Writes the specified key-value pair to the configuration file.
+ * @param key - The key to set.
+ * @param value - The value to set.
+ */
+export async function setValue(key: string, value: string): Promise<void> {
+  try {
+    const config = await readConfig() as any;
+    if (config) {
+      config[key as keyof Config] = value;
+      await writeConfig(config);
+    }
+  } catch (error) {
+    console.error('Error setting value:', error);
   }
 }
 

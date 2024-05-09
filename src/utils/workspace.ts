@@ -6,6 +6,8 @@ import { FormData } from 'formdata-node';
 
 import { isText } from 'istextorbinary';
 
+import { readConfig } from './conf';
+
 axios.defaults.baseURL = 'http://localhost:1337/api/v1';
 axios.defaults.timeout = 8000;
 
@@ -206,9 +208,11 @@ export async function syncWorkspace(workspace: string) {
     data.set('file' + i, new Blob([files[i].data]), name);
   }
 
+  const config = await readConfig();
   const response = await axios.post('/files', data, {
     headers: {
       'Content-Type': 'multipart/form-data',
+      Authorization: `Bearer ${config?.api_key}`,
     },
   });
   const form_files = response.data.map((file: { id: string }) => file.id);

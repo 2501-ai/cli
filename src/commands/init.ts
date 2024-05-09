@@ -1,9 +1,11 @@
 import axios from 'axios';
 import { syncWorkspace } from '../utils/workspace';
-import { addAgent } from '../utils/conf';
+import { addAgent, readConfig } from '../utils/conf';
 
 axios.defaults.baseURL = 'http://localhost:1337/api/v1';
 axios.defaults.timeout = 8000;
+
+const defaultEngine = 'rhino';
 
 interface initCommandOptions {
   name?: string;
@@ -16,8 +18,13 @@ export async function initCommand(options?: initCommandOptions): Promise<void> {
   try {
     const workspace = (options && options.workspace) || process.cwd();
     const configId = (options && options.config) || 'CODING_AGENT';
+    const config = await readConfig();
 
-    const { data: configurations } = await axios.get(`/configurations`);
+    const { data: configurations } = await axios.get(`/configurations`, {
+      headers: {
+        Authorization: `Bearer ${config?.api_key}`,
+      },
+    });
 
     const selected_config = configurations.find(
       (config: { id: string; prompt: string }) => config.id === configId
@@ -27,19 +34,27 @@ export async function initCommand(options?: initCommandOptions): Promise<void> {
       process.exit(1);
     }
     const workspaceResponse = await syncWorkspace(workspace);
-    const { data: agent } = await axios.post('/agents', {
-      workspace,
-      configuration: selected_config.db_id,
-      prompt: selected_config.prompt,
-    });
+    const { data: agent } = await axios.post(
+      '/agents',
+      {
+        workspace,
+        configuration: selected_config.db_id,
+        prompt: selected_config.prompt,
+        engine: defaultEngine,
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${config?.api_key}`,
+        },
+      }
+    );
 
     await addAgent({
       id: agent.db_id,
       name: agent.name,
       workspace,
       configuration: selected_config.id,
-      main_engine: agent.main_engine,
-      secondary_engine: agent.secondary_engine,
+      engine: defaultEngine,
     });
 
     if (
@@ -53,6 +68,7 @@ export async function initCommand(options?: initCommandOptions): Promise<void> {
         {
           headers: {
             'Content-Type': 'multipart/form-data',
+            Authorization: `Bearer ${config?.api_key}`,
           },
           timeout: 20000,
         }
