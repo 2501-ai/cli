@@ -16,7 +16,7 @@ export async function agentsCommand(options: {
   if (options.all) {
     agents = await listAgents();
   } else {
-    let workspaceUrl = options.workspace || process.cwd();
+    const workspaceUrl = options.workspace || process.cwd();
     agents = await listAgentsFromWorkspace(workspaceUrl);
   }
 

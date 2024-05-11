@@ -1,26 +1,3 @@
-// Handles the configuration of the application to ~/.2501/2501.conf
-// Example configuration file (~/.2501/2501.conf):
-// {
-//   "workspace_disabled": false,
-//   "api_key": "your-api-key",
-//   "agents": [
-//     {
-//       "id": "agent1",
-//       "name": "Agent 1",
-//       "workspace": "/path/to/workspace1",
-//       "engine": "rhino",
-//       "configuration": "config1"
-//     },
-//     {
-//       "id": "agent2", 
-//       "name": "Agent 2",
-//       "workspace": "/path/to/workspace2",
-//       "engine": "rabbit",
-//       "configuration": "config2"
-//     }
-//   ]
-// }
-
 import fs from 'fs';
 import os from 'os';
 import * as path from 'path';
@@ -33,9 +10,10 @@ interface AgentConfig {
   configuration: string;
 }
 
-type Config = {
+export type Config = {
   workspace_disabled: boolean;
   api_key?: string;
+  engine?: string;
   agents: AgentConfig[];
 };
 
@@ -54,7 +32,7 @@ export async function readConfig(): Promise<Config | null> {
       await fs.writeFileSync(CONFIG_FILE_PATH, JSON.stringify({ workspace_disabled: false, agents: [] }, null, 2), 'utf8');
     }
     const data = await fs.readFileSync(CONFIG_FILE_PATH, 'utf8');
-    return JSON.parse(data) as Config;
+    return JSON.parse(data);
   } catch (error) {
     console.error('Error reading configuration:', error);
     return null;
@@ -66,11 +44,11 @@ export async function readConfig(): Promise<Config | null> {
  * @param key - The key to set.
  * @param value - The value to set.
  */
-export async function setValue(key: string, value: string): Promise<void> {
+export async function setValue<K extends keyof Config>(key: K, value: Config[K]): Promise<void> {
   try {
-    const config = await readConfig() as any;
+    const config = await readConfig();
     if (config) {
-      config[key as keyof Config] = value;
+      config[key] = value;
       await writeConfig(config);
     }
   } catch (error) {

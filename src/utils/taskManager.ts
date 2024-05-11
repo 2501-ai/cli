@@ -1,8 +1,8 @@
 import { Manager } from '@listr2/manager';
 import type { ListrBaseClassOptions } from 'listr2';
-import { delay, ListrLogger, ListrLogLevels } from 'listr2';
+import { ListrLogger } from 'listr2';
 
-function TaskManagerFactory<T = any>(
+function TaskManagerFactory<T = TaskManager>(
   override?: ListrBaseClassOptions
 ): Manager<T> {
   return new Manager({

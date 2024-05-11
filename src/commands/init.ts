@@ -40,7 +40,7 @@ export async function initCommand(options?: initCommandOptions): Promise<void> {
         workspace,
         configuration: selected_config.db_id,
         prompt: selected_config.prompt,
-        engine: defaultEngine,
+        engine: config?.engine || defaultEngine,
       },
       {
         headers: {
@@ -54,7 +54,7 @@ export async function initCommand(options?: initCommandOptions): Promise<void> {
       name: agent.name,
       workspace,
       configuration: selected_config.id,
-      engine: defaultEngine,
+      engine: config?.engine || defaultEngine,
     });
 
     if (

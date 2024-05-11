@@ -84,7 +84,7 @@ class Agent {
 
   async processActions(actions: any[]) {
     const taskManager = new TaskManager();
-    let tool_outputs: any[] = [];
+    const tool_outputs: any[] = [];
     for (const call of actions) {
       let args: any;
 
