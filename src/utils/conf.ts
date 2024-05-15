@@ -124,7 +124,11 @@ export async function addAgent(newAgent: AgentConfig): Promise<void> {
  */
 export async function flushAgents(): Promise<void> {
   try {
-    await writeConfig({ workspace_disabled: false, agents: [] }); // Clear the entire configuration
+    const config = await readConfig();
+    if (config) {
+      config.agents = []; // Empty the agents array
+      await writeConfig(config);
+    }
   } catch (error) {
     console.error('Error flushing agents:', error);
   }

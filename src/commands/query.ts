@@ -15,17 +15,29 @@ import { initCommand } from './init';
 
 marked.use(markedTerminal() as any);
 
+enum QueryStatus {
+  Completed = 'completed',
+  Failed = 'failed',
+}
+
 class Agent {
   id: string;
   name: string;
   engine: string;
+  workspace: string;
 
   spinner: any;
 
-  constructor(options: { id: string; name: string; engine: string }) {
+  constructor(options: {
+    id: string;
+    name: string;
+    engine: string;
+    workspace: string;
+  }) {
     this.id = options.id;
     this.name = options.name;
     this.engine = options.engine;
+    this.workspace = options.workspace;
   }
 
   async toggleLoader(destroy: boolean = false) {
@@ -55,12 +67,12 @@ class Agent {
         terminal(marked.parse(data.answer || data.response));
       }
 
-      if (data.status === 'completed') {
+      if (data.status === QueryStatus.Completed) {
         this.toggleLoader(true);
         return process.exit(0);
       }
 
-      if (data.status === 'failed') {
+      if (data.status === QueryStatus.Failed) {
         console.error('Query failed:', data.error);
         return process.exit(0);
       }
@@ -97,29 +109,6 @@ class Agent {
       } else {
         args = call.args;
       }
-      // if (args.path && args.content && verification_active.value) {
-      //   const previous = await window.electronAPI.getFileFromWorkspace(args.path);
-      //   try {
-      //     const { data: correctionData } = await axios.post(
-      //       `/agents/${agent.value.db_id}/verifyOutput`,
-      //       {
-      //         task: args.answer || currentInput.value,
-      //         previous,
-      //         proposal: args.content,
-      //       },
-      //       { timeout: 60000 }
-      //     );
-
-      //     if (
-      //       correctionData.corrected_output &&
-      //       correctionData.corrected_output !== args.content
-      //     ) {
-      //       args.content = correctionData.corrected_output;
-      //     }
-      //   } catch (e) {
-      //     console.error('verifyOutput error or timeout', e);
-      //   }
-      // }
 
       const functions = actionsFns as any;
       const function_name = call.function.name || call.function;
@@ -143,14 +132,6 @@ class Agent {
           });
         }
       });
-      // for (const o of output) {
-      //   if (o.output && !!o.output.length) {
-      //     appendMessage(
-      //       'verbose',
-      //       args.url ? `Analysing ${args.url}` : o.output
-      //     );
-      //   }
-      // }
     }
 
     if (this.engine.includes('rhino')) {
@@ -173,12 +154,17 @@ class Agent {
         this.checkStatus();
       }
     } else {
-      // console.log('tool_outputs', tool_outputs);
-      // queryAgent(
-      //   `here is the output of the actions: ${tool_outputs
-      //     .map((o) => o.output)
-      //     .join('\n')}`
-      // );
+      queryCommand(
+        `
+      Find below the output of the actions in the task context, if you're done on the main task and its related subtasks, you can stop and wait for my next instructions.
+      Output :
+      ${tool_outputs.map((o) => o.output).join('\n')}`,
+        {
+          agentId: this.id,
+          workspace: process.cwd(),
+          skipWarmup: true,
+        }
+      );
     }
     return;
   }
@@ -190,6 +176,7 @@ export async function queryCommand(
   options: {
     workspace?: string;
     agentId?: string;
+    skipWarmup?: boolean;
   }
 ): Promise<void> {
   const workspace = options.workspace || process.cwd();
@@ -198,27 +185,30 @@ export async function queryCommand(
   const eligible =
     agents.find((a) => a.id === options.agentId) || agents[0] || null;
 
-  if (!eligible) {
-    const taskManager = new TaskManager();
-    terminal.yellow(
-      'Warn: no agent found in the specified workspace, initializing...'
-    );
-    await taskManager.run('Initializing agent', initCommand);
-    await taskManager.run(
-      'Warming up... can take a few seconds.',
-      async () => new Promise((resolve) => setTimeout(resolve, 5000))
-    );
+  if (!options.skipWarmup) {
+    if (!eligible) {
+      const taskManager = new TaskManager();
+      terminal.yellow(
+        'Warn: no agent found in the specified workspace, initializing...'
+      );
+      await taskManager.run('Initializing agent', initCommand);
+      await taskManager.run(
+        'Warming up... can take a few seconds.',
+        async () => new Promise((resolve) => setTimeout(resolve, 5000))
+      );
 
-    await queryCommand(query, options);
-    return;
+      await queryCommand(query, options);
+      return;
+    }
+    terminal.grey(`INFO: Current workspace: ${workspace}`);
+    terminal('\n');
   }
-  terminal.grey(`INFO: Current workspace: ${workspace}`);
-  terminal('\n');
 
   const agent = new Agent({
     id: eligible.id,
     name: eligible.name,
     engine: eligible.engine,
+    workspace,
   });
 
   try {
@@ -231,8 +221,8 @@ export async function queryCommand(
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${config?.api_key}`,
-        }, 
-        timeout: 5 * 60 * 1000 
+        },
+        timeout: 5 * 60 * 1000,
       }
     );
 

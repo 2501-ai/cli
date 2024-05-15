@@ -18,6 +18,7 @@ program
   .on('command:*', async (...args) => {
     const query = args[0] && args[0].join(' ');
     // @TODO : implement options support.
+    authMiddleware();
     await queryCommand(query, {});
   });
 
@@ -35,6 +36,7 @@ program
   .description('Execute a query using the specified agent')
   .option('--workspace <path>', 'Specify a different workspace path')
   .option('--agentId <id>', 'Specify the agent ID')
+  .hook('preAction', authMiddleware)
   .action(queryCommand);
 
 // Init command
@@ -44,6 +46,7 @@ program
   .option('--name <name>', 'Specify the name of the agent')
   .option('--workspace <path>', 'Specify a different workspace path')
   .option('--config <config_id>', 'Specify the configuration ID')
+  .hook('preAction', authMiddleware)
   .action(initCommand);
 
 // Agents command
