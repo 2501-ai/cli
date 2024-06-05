@@ -6,6 +6,7 @@ import { queryCommand } from './commands/query';
 import { initCommand } from './commands/init';
 import { agentsCommand } from './commands/agents';
 import { setCommand } from './commands/set';
+import { jobSubscriptionCommand } from './commands/jobs';
 
 import { authMiddleware } from './middleware/auth';
 
@@ -59,6 +60,15 @@ program
   .option('--all', 'List all agents on the machine')
   .option('--flush', 'Flush all agents from the configuration')
   .action(agentsCommand);
+
+// Jobs command
+program
+  .command('jobs')
+  .description('Fetch jobs from API')
+  .option('--workspace <path>', 'Specify a different workspace path')
+  .option('--subscribe', 'Subscribe every min to the API for new jobs')
+  .option('--listen', 'Listen for new jobs from the API and execute them')
+  .action(jobSubscriptionCommand);
 
 program
   .command('set')

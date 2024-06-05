@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import TurndownService from 'turndown';
 import execa from 'execa';
+import * as cheerio from 'cheerio';
 
 export async function write_file(args: { path: string; content: string }) {
   fs.mkdirSync(path.dirname(args.path), { recursive: true });
@@ -37,10 +38,22 @@ export async function run_shell(args: { command: string }) {
 
 export async function browse_url(args: { url: string }) {
   const html = await fetch(args.url).then((res) => res.text());
+  const $ = cheerio.load(html);
+
+  // Remove script and style elements
+  $('script').remove();
+  $('style').remove();
+
+  // Optionally, you can remove other elements like iframes, images, etc.
+  $('iframe, img, video, object').remove();
+
+  // Extract the textual content
+  const text = $('body').text();
+
   const turndownService = new TurndownService();
-  const md = turndownService.turndown(html);
+  const md = turndownService.turndown(text);
   return `
-    Result of content of page as markdown :
-    ${md.replace(/\s+/g, '')}
+    Result of content of page :
+    ${md.replace(/\s+/g, "")}
   `;
 }

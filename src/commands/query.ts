@@ -180,12 +180,14 @@ export async function queryCommand(
   }
 ): Promise<void> {
   const workspace = options.workspace || process.cwd();
+  const agentId = options.agentId;
+  const skipWarmup = options.skipWarmup;
 
   const agents = await listAgentsFromWorkspace(workspace);
   const eligible =
-    agents.find((a) => a.id === options.agentId) || agents[0] || null;
+    agents.find((a) => a.id === agentId) || agents[0] || null;
 
-  if (!options.skipWarmup) {
+  if (!skipWarmup) {
     if (!eligible) {
       const taskManager = new TaskManager();
       terminal.yellow(
