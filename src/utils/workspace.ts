@@ -8,7 +8,9 @@ import { isText } from 'istextorbinary';
 
 import { readConfig } from './conf';
 
-axios.defaults.baseURL = 'http://localhost:1337/api/v1';
+import { API_HOST, API_VERSION } from '../constants';
+
+axios.defaults.baseURL = `${API_HOST}${API_VERSION}`;
 axios.defaults.timeout = 8000;
 
 const ignored = [

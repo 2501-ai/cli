@@ -3,6 +3,8 @@ import axios from 'axios';
 import { readConfig, listAgentsFromWorkspace } from '../utils/conf';
 import { run_shell } from "../utils/actions";
 
+import { queryCommand } from './query';
+
 import { API_HOST, API_VERSION } from '../constants';
 
 export async function jobSubscriptionCommand(options: {
@@ -13,7 +15,7 @@ export async function jobSubscriptionCommand(options: {
   const workspace = options.workspace || process.cwd();
   if(options.subscribe){
     const commandpath = await run_shell({command: `which @2501`});
-    await run_shell({command: `(crontab -l 2>/dev/null; echo "* * * * * cd ${workspace} && ${commandpath} jobs --listen") | crontab -`})
+    await run_shell({command: `(crontab -l 2>/dev/null; echo "* * * * * cd ${workspace} && sudo ${commandpath} jobs --listen") | crontab -`})
     return console.log('Subscribed to the API for new jobs');
   }
 
@@ -39,8 +41,8 @@ export async function jobSubscriptionCommand(options: {
       console.log(`Found ${jobs.length} jobs to execute`);
       for(const idx in jobs){
         console.log(`Executing job ${idx} : "${jobs[idx].brief}"`);
+        await queryCommand(jobs[idx].brief, {});
       }
-
     } catch (error) {
       console.error(error);
     }

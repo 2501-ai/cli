@@ -2,7 +2,9 @@ import axios from 'axios';
 import { syncWorkspace } from '../utils/workspace';
 import { addAgent, readConfig } from '../utils/conf';
 
-axios.defaults.baseURL = 'http://localhost:1337/api/v1';
+import { API_HOST, API_VERSION } from '../constants';
+
+axios.defaults.baseURL = `${API_HOST}${API_VERSION}`;
 axios.defaults.timeout = 8000;
 
 const defaultEngine = 'rhino';
@@ -75,6 +77,6 @@ export async function initCommand(options?: initCommandOptions): Promise<void> {
       );
     }
   } catch (error: any) {
-    console.error('An error occurred:', error.message);
+    console.error('An error occurred:', error.message || error);
   }
 }
