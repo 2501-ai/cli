@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 import { readConfig, listAgentsFromWorkspace } from '../utils/conf';
-import { run_shell } from "../utils/actions";
+import { run_shell } from '../utils/actions';
 
 import { queryCommand } from './query';
 
@@ -10,16 +10,18 @@ import { API_HOST, API_VERSION } from '../constants';
 export async function jobSubscriptionCommand(options: {
   subscribe?: boolean;
   workspace?: string;
-  listen?: boolean;  
+  listen?: boolean;
 }): Promise<any> {
   const workspace = options.workspace || process.cwd();
-  if(options.subscribe){
-    const commandpath = await run_shell({command: `which @2501`});
-    await run_shell({command: `(crontab -l 2>/dev/null; echo "* * * * * cd ${workspace} && sudo ${commandpath} jobs --listen") | crontab -`})
+  if (options.subscribe) {
+    const commandpath = await run_shell({ command: `which @2501` });
+    await run_shell({
+      command: `(crontab -l 2>/dev/null; echo "* * * * * cd ${workspace} && sudo ${commandpath} jobs --listen") | crontab -`,
+    });
     return console.log('Subscribed to the API for new jobs');
   }
 
-  if(options.listen){
+  if (options.listen) {
     try {
       const workspace = options.workspace || process.cwd();
       const config = await readConfig();
@@ -33,15 +35,28 @@ export async function jobSubscriptionCommand(options: {
       );
 
       const jobs = response.data;
-      if(!jobs.length){
+      if (!jobs.length) {
         console.log('No jobs to execute');
         return;
       }
 
       console.log(`Found ${jobs.length} jobs to execute`);
-      for(const idx in jobs){
+      const shell_user = await run_shell({ command: `whoami` });
+      const localIP = await run_shell({ command: `hostname -I` });
+
+      for (const idx in jobs) {
         console.log(`Executing job ${idx} : "${jobs[idx].brief}"`);
+        await axios.put(
+          `${API_HOST}${API_VERSION}/jobs/${jobs[idx].id}`,
+          { status: 'in_progress', host: `${shell_user}@${localIP}` },
+          { headers: { Authorization: `Bearer ${config?.api_key}` } }
+        );
         await queryCommand(jobs[idx].brief, {});
+        await axios.put(
+          `${API_HOST}${API_VERSION}/jobs/${jobs[idx].id}`,
+          { status: 'completed' },
+          { headers: { Authorization: `Bearer ${config?.api_key}` } }
+        );
       }
     } catch (error) {
       console.error(error);
