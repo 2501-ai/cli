@@ -72,13 +72,13 @@ class Agent {
 
       if (data.status === QueryStatus.Completed) {
         this.toggleLoader(true);
-        this.callback && this.callback(data.answer || data.response);
+        this.callback && await this.callback(data.answer || data.response);
         return process.exit(0);
       }
 
       if (data.status === QueryStatus.Failed) {
         console.error('Query failed:', data.error);
-        this.callback && this.callback(data.answer || data.error);
+        this.callback && await this.callback(data.answer || data.error);
         return process.exit(0);
       }
 
