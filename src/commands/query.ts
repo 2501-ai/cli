@@ -216,6 +216,7 @@ export async function queryCommand(
     id: eligible.id,
     name: eligible.name,
     engine: eligible.engine,
+    callback: options.callback,
     workspace,
   });
 
