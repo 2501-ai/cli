@@ -25,6 +25,7 @@ class Agent {
   name: string;
   engine: string;
   workspace: string;
+  callback?: any;
 
   spinner: any;
 
@@ -33,11 +34,13 @@ class Agent {
     name: string;
     engine: string;
     workspace: string;
+    callback?: any;
   }) {
     this.id = options.id;
     this.name = options.name;
     this.engine = options.engine;
     this.workspace = options.workspace;
+    this.callback = options.callback;
   }
 
   async toggleLoader(destroy: boolean = false) {
@@ -69,11 +72,13 @@ class Agent {
 
       if (data.status === QueryStatus.Completed) {
         this.toggleLoader(true);
+        this.callback && this.callback(data.answer || data.response);
         return process.exit(0);
       }
 
       if (data.status === QueryStatus.Failed) {
         console.error('Query failed:', data.error);
+        this.callback && this.callback(data.answer || data.error);
         return process.exit(0);
       }
 
@@ -177,6 +182,7 @@ export async function queryCommand(
     workspace?: string;
     agentId?: string;
     skipWarmup?: boolean;
+    callback?: any;
   }
 ): Promise<void> {
   const workspace = options.workspace || process.cwd();

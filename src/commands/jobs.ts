@@ -51,12 +51,15 @@ export async function jobSubscriptionCommand(options: {
           { status: 'in_progress', host: `${shell_user}@${localIP}` },
           { headers: { Authorization: `Bearer ${config?.api_key}` } }
         );
-        await queryCommand(jobs[idx].brief, {});
-        await axios.put(
-          `${API_HOST}${API_VERSION}/jobs/${jobs[idx].id}`,
-          { status: 'completed' },
-          { headers: { Authorization: `Bearer ${config?.api_key}` } }
-        );
+        await queryCommand(jobs[idx].brief, {
+          callback: async (response: any) => {
+            await axios.put(
+              `${API_HOST}${API_VERSION}/jobs/${jobs[idx].id}`,
+              { status: 'completed', result: response },
+              { headers: { Authorization: `Bearer ${config?.api_key}` } }
+            );
+          }
+        });
       }
     } catch (error) {
       console.error(error);
