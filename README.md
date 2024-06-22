@@ -10,7 +10,7 @@ This tool is available as an npm package. To install, run the following command:
 npm install -g @2501-ai/2501-cli
 ```
 
-![2501.ai](./assets/2501-cli.png)
+![2501.ai](https://github.com/2501-ai/2501-cli/raw/main/assets/2501-cli.png)
 
 This will install the 2501 CLI globally on your system, making it available from anywhere in your terminal.
 
@@ -31,7 +31,7 @@ Examples
 @2501 find the location apache config in this machine
 ```
 
-![2501.ai](./assets/2501-cli.gif)
+![2501.ai](https://github.com/2501-ai/2501-cli/raw/main/assets/2501-cli.gif)
 
 ## Commands
 
