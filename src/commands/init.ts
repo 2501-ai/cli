@@ -1,4 +1,6 @@
 import axios from 'axios';
+import fs from 'fs';
+
 import { syncWorkspace } from '../utils/workspace';
 import { addAgent, readConfig } from '../utils/conf';
 
@@ -11,14 +13,27 @@ const defaultEngine = 'rhino';
 
 interface initCommandOptions {
   name?: string;
-  workspace?: string;
+  workspace?: string | boolean;
   config?: string;
+}
+
+function getWorkspace(options?: initCommandOptions): string {
+  if (options && options.workspace === false) {
+    const path = `/tmp/2501/${Date.now()}`;
+    fs.mkdirSync(path, { recursive: true });
+    return path;
+  }
+
+  return (
+    (options && typeof options.workspace === 'string' && options.workspace) ||
+    process.cwd()
+  );
 }
 
 // This function will be called when the `init` command is executed
 export async function initCommand(options?: initCommandOptions): Promise<void> {
   try {
-    const workspace = (options && options.workspace) || process.cwd();
+    const workspace = getWorkspace(options);
     const configId = (options && options.config) || 'CODING_AGENT';
     const config = await readConfig();
 
@@ -76,6 +91,8 @@ export async function initCommand(options?: initCommandOptions): Promise<void> {
         }
       );
     }
+
+    console.log(`Agent ${agent.name}, (${agent.db_id}) created in ${workspace}`);
   } catch (error: any) {
     console.error('An error occurred:', error.message || error);
   }

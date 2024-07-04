@@ -4,6 +4,13 @@ import TurndownService from 'turndown';
 import execa from 'execa';
 import * as cheerio from 'cheerio';
 
+export function read_file(args: { path: string }): string | null{
+  if (!fs.existsSync(args.path)) return null;
+
+  const content = fs.readFileSync(args.path, 'utf8');
+  return content;
+}
+
 export async function write_file(args: { path: string; content: string }) {
   fs.mkdirSync(path.dirname(args.path), { recursive: true });
   fs.writeFileSync(args.path, args.content);
@@ -54,6 +61,6 @@ export async function browse_url(args: { url: string }) {
   const md = turndownService.turndown(text);
   return `
     Result of content of page :
-    ${md.replace(/\s+/g, "")}
+    ${md.replace(/\s+/g, '')}
   `;
 }

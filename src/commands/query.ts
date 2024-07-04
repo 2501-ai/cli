@@ -5,7 +5,7 @@ import { marked } from 'marked';
 import { markedTerminal } from 'marked-terminal';
 
 import { TaskManager } from '../utils/taskManager';
-import { listAgentsFromWorkspace, readConfig } from '../utils/conf';
+import { listAgents, listAgentsFromWorkspace, readConfig } from '../utils/conf';
 import { convertFormToJSON } from '../utils/json';
 import { API_HOST, API_VERSION } from '../constants';
 
@@ -14,6 +14,8 @@ import * as actionsFns from '../utils/actions';
 import { initCommand } from './init';
 
 marked.use(markedTerminal() as any);
+
+let debugData: any = null;
 
 enum QueryStatus {
   Completed = 'completed',
@@ -72,17 +74,18 @@ class Agent {
 
       if (data.status === QueryStatus.Completed) {
         this.toggleLoader(true);
-        this.callback && await this.callback(data.answer || data.response);
+        this.callback && (await this.callback(data.answer || data.response));
         return process.exit(0);
       }
 
       if (data.status === QueryStatus.Failed) {
         console.error('Query failed:', data.error);
-        this.callback && await this.callback(data.answer || data.error);
+        this.callback && (await this.callback(data.answer || data.error));
         return process.exit(0);
       }
 
       if (data.actions) {
+        debugData = data;
         this.toggleLoader(true);
         await this.processActions(data.actions);
         return;
@@ -93,13 +96,14 @@ class Agent {
         error.message,
         '\n Retrying...'
       );
+      console.log('debugData', JSON.stringify(debugData));
     }
 
     const self = this;
     setTimeout(async () => await self.checkStatus(), 2000);
   }
 
-  async processActions(actions: any[]) {
+  async processActions(actions: any[], asynchronous: boolean = true) {
     const taskManager = new TaskManager();
     const tool_outputs: any[] = [];
     for (const call of actions) {
@@ -123,9 +127,43 @@ class Agent {
         task = 'Browsing: ' + args.url;
       }
 
+      let corrected = false;
+      if (args.path && args.content) {
+        await taskManager.run('Checking output for correction', async () => {
+          const previous =
+            actionsFns.read_file({ path: args.path }) || 'NO PREVIOUS VERSION';
+          try {
+            const config = await readConfig();
+            const { data: correctionData } = await axios.post(
+              `/agents/${this.id}/verifyOutput`,
+              { task, previous, proposal: args.content },
+              {
+                timeout: 60000,
+                headers: {
+                  Authorization: `Bearer ${config?.api_key}`,
+                },
+              }
+            );
+
+            if (
+              correctionData.corrected_output &&
+              correctionData.corrected_output !== args.content
+            ) {
+              corrected = true;
+              args.content = correctionData.corrected_output;
+            }
+          } catch (e) {
+            console.error('verifyOutput error or timeout', e);
+          }
+        });
+      }
+
       await taskManager.run(task, async () => {
         try {
-          const output = await functions[function_name](args);
+          let output = await functions[function_name](args);
+          if (corrected) {
+            output += `\n\n NOTE: your original content for ${args.path} was corrected with the new version below before running the function: \n\n${args.content}`;
+          }
           tool_outputs.push({
             tool_call_id: call.id,
             output,
@@ -139,11 +177,11 @@ class Agent {
       });
     }
 
-    if (this.engine.includes('rhino')) {
+    if (this.engine.includes('rhino') && asynchronous) {
       try {
         const config = await readConfig();
         await axios.post(
-          `/agents/${this.id}/submitOutput`,
+          `${API_HOST}${API_VERSION}/agents/${this.id}/submitOutput`,
           {
             tool_outputs,
           },
@@ -154,6 +192,7 @@ class Agent {
           }
         );
         const self = this;
+
         setTimeout(async () => await self.checkStatus(), 2000);
       } catch (e) {
         this.checkStatus();
@@ -183,15 +222,19 @@ export async function queryCommand(
     agentId?: string;
     skipWarmup?: boolean;
     callback?: any;
+    noPersistentAgent?: boolean;
   }
 ): Promise<void> {
+  const config = await readConfig();
+
   const workspace = options.workspace || process.cwd();
   const agentId = options.agentId;
   const skipWarmup = options.skipWarmup;
 
-  const agents = await listAgentsFromWorkspace(workspace);
-  const eligible =
-    agents.find((a) => a.id === agentId) || agents[0] || null;
+  const agents = agentId
+    ? await listAgents()
+    : await listAgentsFromWorkspace(workspace);
+  let eligible = agents.find((a) => a.id === agentId) || agents[0] || null;
 
   if (!skipWarmup) {
     if (!eligible) {
@@ -208,7 +251,11 @@ export async function queryCommand(
       await queryCommand(query, options);
       return;
     }
-    terminal.grey(`INFO: Current workspace: ${workspace}`);
+    terminal.grey(
+      `INFO: Current workspace: ${
+        (eligible && eligible.workspace) || workspace
+      }`
+    );
     terminal('\n');
   }
 
@@ -222,7 +269,6 @@ export async function queryCommand(
 
   try {
     agent.toggleLoader();
-    const config = await readConfig();
     const { data } = await axios.post(
       `${API_HOST}${API_VERSION}/agents/${agent.id}/query`,
       { query },
@@ -235,7 +281,7 @@ export async function queryCommand(
       }
     );
 
-    if (data.asynchronous) {
+    if (data.asynchronous && data.asynchronous === true) {
       return agent.checkStatus();
     }
 
@@ -245,7 +291,10 @@ export async function queryCommand(
     }
 
     if (data.actions) {
-      return await agent.processActions(data.actions);
+      return await agent.processActions(
+        data.actions,
+        data.asynchronous && data.asynchronous === true
+      );
     }
 
     process.exit(0);
