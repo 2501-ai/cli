@@ -44,7 +44,7 @@ export async function initCommand(options?: initCommandOptions): Promise<void> {
     });
 
     const selected_config = configurations.find(
-      (config: { id: string; prompt: string }) => config.id === configId
+      (config: { key: string; prompt: string }) => config.key === configId
     );
     if (!selected_config) {
       console.error('Invalid configuration ID');
@@ -55,7 +55,7 @@ export async function initCommand(options?: initCommandOptions): Promise<void> {
       '/agents',
       {
         workspace,
-        configuration: selected_config.db_id,
+        configuration: selected_config.id,
         prompt: selected_config.prompt,
         engine: config?.engine || defaultEngine,
       },
@@ -67,7 +67,7 @@ export async function initCommand(options?: initCommandOptions): Promise<void> {
     );
 
     await addAgent({
-      id: agent.db_id,
+      id: agent.id,
       name: agent.name,
       workspace,
       configuration: selected_config.id,
@@ -92,7 +92,7 @@ export async function initCommand(options?: initCommandOptions): Promise<void> {
       );
     }
 
-    console.log(`Agent ${agent.name}, (${agent.db_id}) created in ${workspace}`);
+    console.log(`Agent ${agent.id} created in ${workspace}`);
   } catch (error: any) {
     console.error('An error occurred:', error.message || error);
   }
