@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { terminal } from 'terminal-kit';
+import { realTerminal as terminal } from 'terminal-kit';
 import { jsonrepair } from 'jsonrepair';
 import { marked } from 'marked';
 

@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { terminal } from 'terminal-kit';
+import { realTerminal as terminal } from 'terminal-kit';
 import { marked } from 'marked';
 import { markedTerminal } from 'marked-terminal';
 
@@ -39,7 +39,7 @@ export async function queryCommand(
     if (!eligible) {
       const taskManager = new TaskManager();
       terminal.yellow(
-        'Warn: no agent found in the specified workspace, initializing...'
+        'Warn: no agent found in the specified workspace, initializing...\n'
       );
       await taskManager.run('Initializing agent', initCommand);
       await taskManager.run(
