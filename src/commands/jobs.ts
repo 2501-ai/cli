@@ -16,7 +16,7 @@ export async function jobSubscriptionCommand(options: {
   if (options.subscribe) {
     const commandpath = await run_shell({ command: `which @2501` });
     await run_shell({
-      command: `(crontab -l 2>/dev/null; echo "* * * * * cd ${workspace} && sudo ${commandpath} jobs --listen") | crontab -`,
+      command: `(crontab -l 2>/dev/null; echo "* * * * * cd ${workspace} && ${commandpath} jobs --listen") | crontab -`,
     });
     return console.log('Subscribed to the API for new jobs');
   }

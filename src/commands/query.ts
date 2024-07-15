@@ -41,7 +41,7 @@ export async function queryCommand(
       terminal.yellow(
         'Warn: no agent found in the specified workspace, initializing...\n'
       );
-      await taskManager.run('Initializing agent', initCommand);
+      await initCommand({ workspace });
       await taskManager.run(
         'Warming up... can take a few seconds.',
         async () => new Promise((resolve) => setTimeout(resolve, 5000))
