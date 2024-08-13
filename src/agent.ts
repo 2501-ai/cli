@@ -17,23 +17,25 @@ enum QueryStatus {
   Failed = 'failed',
 }
 
+export type AgentCallbackType = (...args: unknown[]) => Promise<void>;
+
 export class Agent {
   id: string;
   name: string;
   engine: string;
   workspace: string;
-  callback?: any;
+  callback?: AgentCallbackType;
 
   spinner: any;
-  queryCommand: Function;
+  queryCommand: (...args: any[]) => Promise<void>;
 
   constructor(options: {
     id: string;
     name: string;
     engine: string;
     workspace: string;
-    callback?: any;
-    queryCommand: Function;
+    callback?: AgentCallbackType;
+    queryCommand: (...args: any[]) => Promise<void>;
   }) {
     this.id = options.id;
     this.name = options.name;
@@ -196,7 +198,7 @@ export class Agent {
         this.checkStatus();
       }
     } else {
-      this.queryCommand(
+      await this.queryCommand(
         `
         Find below the output of the actions in the task context, if you're done on the main task and its related subtasks, you can stop and wait for my next instructions.
         Output :

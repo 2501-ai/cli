@@ -24,9 +24,11 @@ export class Logger {
         ...rest
       );
     } else {
-      terminal[Colors.RED]('\n[ERROR] ').defaultColor(...args);
+      // terminal[Colors.RED]('\n[ERROR] ').defaultColor(...args);
+      console.error('\n[ERROR] ', ...args);
     }
   }
+
   static warn(content: string) {
     terminal[Colors.YELLOW]('\n[WARN] ').defaultColor(content);
   }

@@ -14,7 +14,8 @@ const program = new Command();
 
 program
   .name('@2501')
-  .description(`
+  .description(
+    `
 ░▒▓███████▓▒░░▒▓████████▓▒░▒▓████████▓▒░  ░▒▓█▓▒░ 
        ░▒▓█▓▒░▒▓█▓▒░      ░▒▓█▓▒░░▒▓█▓▒░▒▓████▓▒░ 
        ░▒▓█▓▒░▒▓█▓▒░      ░▒▓█▓▒░░▒▓█▓▒░  ░▒▓█▓▒░ 
@@ -24,13 +25,14 @@ program
 ░▒▓████████▓▒░▒▓███████▓▒░░▒▓████████▓▒░  ░▒▓█▓▒░ 
                                                   
         ---- AI Autonomous Systems ----                                                   
-  `)
+  `
+  )
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
   .version(require('../package.json').version)
   .on('command:*', async (...args) => {
     const query = args[0] && args[0].join(' ');
     // @TODO : implement options support.
-    authMiddleware();
-    await queryCommand(query, {});
+    await Promise.all([authMiddleware(), queryCommand(query, {})]);
   });
 
 // Config command
@@ -56,7 +58,10 @@ program
   .description('Initializes a new agent')
   .option('--name <name>', 'Specify the name of the agent')
   .option('--workspace <path>', 'Specify a different workspace path')
-  .option('--no-workspace', 'Will not sync the current workspace and will create a temporary one in /tmp/2501/')
+  .option(
+    '--no-workspace',
+    'Will not sync the current workspace and will create a temporary one in /tmp/2501/'
+  )
   .option('--config <config_id>', 'Specify the configuration ID')
   .hook('preAction', authMiddleware)
   .action(initCommand);
@@ -77,7 +82,10 @@ program
   .command('jobs')
   .description('Fetch jobs from API')
   .option('--workspace <path>', 'Specify a different workspace path')
-  .option('--subscribe', 'Subscribe to the API for new jobs (updated every minute)')
+  .option(
+    '--subscribe',
+    'Subscribe to the API for new jobs (updated every minute)'
+  )
   .option('--listen', 'Listen for new jobs from the API and execute them')
   .action(jobSubscriptionCommand);
 
