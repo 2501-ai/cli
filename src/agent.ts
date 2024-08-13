@@ -123,7 +123,6 @@ export class Agent {
   async processActions(actions: any[], asynchronous: boolean = true) {
     const taskManager = new TaskManager();
     const tool_outputs: any[] = [];
-    console.log('actions', actions);
     for (const call of actions) {
       let args: any;
 

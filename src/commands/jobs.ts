@@ -36,7 +36,6 @@ export async function jobSubscriptionCommand(options: {
     if (hasError(soureCommandOutput)) {
       return Logger.error(soureCommandOutput);
     }
-    Logger.log('soureCommandOutput', soureCommandOutput);
     const crontabOutput = await run_shell({
       shell: true,
       command: `(crontab -l 2>/dev/null; echo "* * * * * ${shellOutput} -c \\"${soureCommandOutput} && cd ${workspace} && @2501 jobs --listen\\" >> ${LOGFILE_PATH} 2>>${ERRORFILE_PATH}") | crontab -`,
