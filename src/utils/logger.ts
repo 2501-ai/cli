@@ -2,9 +2,6 @@ import { AxiosError } from 'axios';
 import { terminal } from 'terminal-kit';
 import { marked } from 'marked';
 
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-require('dotenv').config();
-
 enum Colors {
   RED = 'red',
   GREEN = 'green',
