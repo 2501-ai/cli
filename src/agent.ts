@@ -29,7 +29,7 @@ const ACTION_FNS = {
   read_file,
   run_shell,
   write_file,
-}
+};
 
 export type AgentCallbackType = (...args: unknown[]) => Promise<void>;
 
@@ -108,12 +108,12 @@ export class Agent {
         return;
       }
     } catch (error: any) {
-      console.error(
+      Logger.error(
         'Error checking query status:',
         error.message,
         '\n Retrying...'
       );
-      console.log('debugData', JSON.stringify(debugData));
+      Logger.log('debugData', JSON.stringify(debugData));
     }
 
     // const self = this;
@@ -138,7 +138,8 @@ export class Agent {
       }
 
       const functions = ACTION_FNS;
-      const function_name: keyof typeof ACTION_FNS = call.function.name || call.function;
+      const function_name: keyof typeof ACTION_FNS =
+        call.function.name || call.function;
 
       let task: string = args.answer || args.command || '';
       if (args.url) {
@@ -149,7 +150,7 @@ export class Agent {
       if (args.path && args.content) {
         await taskManager.run('Checking output for correction', async () => {
           const previous =
-                  ACTION_FNS.read_file({ path: args.path }) || 'NO PREVIOUS VERSION';
+            ACTION_FNS.read_file({ path: args.path }) || 'NO PREVIOUS VERSION';
           try {
             const config = await readConfig();
             const { data: correctionData } = await axios.post(
