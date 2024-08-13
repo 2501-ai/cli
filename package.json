@@ -4,7 +4,6 @@
   "description": "",
   "main": "dist/index.js",
   "scripts": {
-    "postinstall": "husky install",
     "build": "tsc",
     "build:link": "npm run build && npm link",
     "start": "node .",
