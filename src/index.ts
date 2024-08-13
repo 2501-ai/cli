@@ -77,7 +77,7 @@ program
   .command('jobs')
   .description('Fetch jobs from API')
   .option('--workspace <path>', 'Specify a different workspace path')
-  .option('--subscribe', 'Subscribe every min to the API for new jobs')
+  .option('--subscribe', 'Subscribe to the API for new jobs (updated every minute)')
   .option('--listen', 'Listen for new jobs from the API and execute them')
   .action(jobSubscriptionCommand);
 
