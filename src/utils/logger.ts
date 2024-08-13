@@ -1,5 +1,6 @@
 import { AxiosError } from 'axios';
 import { terminal } from 'terminal-kit';
+import { marked } from 'marked';
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 require('dotenv').config();
@@ -29,8 +30,16 @@ export class Logger {
     }
   }
 
-  static warn(content: string) {
-    terminal[Colors.YELLOW]('\n[WARN] ').defaultColor(content);
+  /**
+   * Log the agent data in a formatted way
+   */
+  static agent(data: any) {
+    terminal.bold('\n\nAGENT:\n');
+    terminal(marked.parse(data));
+  }
+
+  static warn(...args: unknown[]) {
+    terminal[Colors.YELLOW]('\n[WARN] ').defaultColor(...args);
   }
 
   static success(content: string) {

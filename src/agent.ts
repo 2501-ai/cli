@@ -1,20 +1,34 @@
 import axios from 'axios';
-import { realTerminal as terminal } from 'terminal-kit';
+import { terminal } from 'terminal-kit';
 import { jsonrepair } from 'jsonrepair';
-import { marked } from 'marked';
 
 import { TaskManager } from './utils/taskManager';
 import { convertFormToJSON } from './utils/json';
-import * as actionsFns from './utils/actions';
+import {
+  hasError,
+  browse_url,
+  read_file,
+  run_shell,
+  write_file,
+} from './utils/actions';
 import { readConfig } from './utils/conf';
 
 import { API_HOST, API_VERSION } from './constants';
+import { Logger } from './utils/logger';
 
 let debugData: any = null;
 
 enum QueryStatus {
   Completed = 'completed',
   Failed = 'failed',
+}
+
+const ACTION_FNS = {
+  hasError,
+  browse_url,
+  read_file,
+  run_shell,
+  write_file,
 }
 
 export type AgentCallbackType = (...args: unknown[]) => Promise<void>;
@@ -46,11 +60,15 @@ export class Agent {
   }
 
   async toggleLoader(destroy: boolean = false) {
-    if (this.spinner || destroy) {
-      this.spinner && this.spinner.animate(false);
-      this.spinner = null;
-    } else {
-      this.spinner = await terminal.spinner();
+    try {
+      if (this.spinner || destroy) {
+        this.spinner && this.spinner.animate(false);
+        this.spinner = null;
+      } else {
+        this.spinner = await terminal.spinner();
+      }
+    } catch (e) {
+      Logger.warn('Error toggling loader', e);
     }
   }
 
@@ -67,13 +85,12 @@ export class Agent {
       );
 
       if (data.answer || data.response) {
-        this.toggleLoader(true);
-        terminal.bold('\n\nAGENT:\n');
-        terminal(marked.parse(data.answer || data.response));
+        await this.toggleLoader(true);
+        Logger.agent(data.answer || data.response);
       }
 
       if (data.status === QueryStatus.Completed) {
-        this.toggleLoader(true);
+        await this.toggleLoader(true);
         this.callback && (await this.callback(data.answer || data.response));
         return process.exit(0);
       }
@@ -86,7 +103,7 @@ export class Agent {
 
       if (data.actions) {
         debugData = data;
-        this.toggleLoader(true);
+        await this.toggleLoader(true);
         await this.processActions(data.actions);
         return;
       }
@@ -99,13 +116,14 @@ export class Agent {
       console.log('debugData', JSON.stringify(debugData));
     }
 
-    const self = this;
-    setTimeout(async () => await self.checkStatus(), 2000);
+    // const self = this;
+    setTimeout(async () => await this.checkStatus.call(this), 2000);
   }
 
   async processActions(actions: any[], asynchronous: boolean = true) {
     const taskManager = new TaskManager();
     const tool_outputs: any[] = [];
+    console.log('actions', actions);
     for (const call of actions) {
       let args: any;
 
@@ -119,8 +137,8 @@ export class Agent {
         args = call.args;
       }
 
-      const functions = actionsFns as any;
-      const function_name = call.function.name || call.function;
+      const functions = ACTION_FNS;
+      const function_name: keyof typeof ACTION_FNS = call.function.name || call.function;
 
       let task: string = args.answer || args.command || '';
       if (args.url) {
@@ -131,7 +149,7 @@ export class Agent {
       if (args.path && args.content) {
         await taskManager.run('Checking output for correction', async () => {
           const previous =
-            actionsFns.read_file({ path: args.path }) || 'NO PREVIOUS VERSION';
+                  ACTION_FNS.read_file({ path: args.path }) || 'NO PREVIOUS VERSION';
           try {
             const config = await readConfig();
             const { data: correctionData } = await axios.post(
@@ -191,11 +209,10 @@ export class Agent {
             },
           }
         );
-        const self = this;
-
-        setTimeout(async () => await self.checkStatus(), 2000);
+        // const self = this;
+        setTimeout(async () => await this.checkStatus.call(this), 2000);
       } catch (e) {
-        this.checkStatus();
+        await this.checkStatus();
       }
     } else {
       await this.queryCommand(

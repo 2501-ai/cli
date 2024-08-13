@@ -7,11 +7,10 @@ import { listAgents, listAgentsFromWorkspace, readConfig } from '../utils/conf';
 import { API_HOST, API_VERSION } from '../constants';
 
 import { initCommand } from './init';
-
-marked.use(markedTerminal() as MarkedExtension);
-
 import { Agent } from '../agent';
 import { Logger } from '../utils/logger';
+
+marked.use(markedTerminal() as MarkedExtension);
 
 // Function to execute the query command
 export async function queryCommand(
@@ -48,9 +47,7 @@ export async function queryCommand(
       await queryCommand(query, options);
       return;
     }
-    Logger.log(
-      `Current workspace: ${(eligible && eligible.workspace) || workspace}`
-    );
+    Logger.log(`Current workspace: ${eligible?.workspace || workspace} \n`);
   }
 
   const agent = new Agent({
@@ -81,7 +78,7 @@ export async function queryCommand(
     }
 
     if (data.response) {
-      Logger.log('AGENT:', marked.parse(data.response));
+      Logger.agent(data.response);
     }
 
     if (data.actions) {
@@ -93,7 +90,7 @@ export async function queryCommand(
 
     process.exit(0);
   } catch (error: any) {
-    console.error('Error querying agent:', error.message);
+    Logger.error('Error querying agent:', error);
     process.exit(0);
   }
 }
