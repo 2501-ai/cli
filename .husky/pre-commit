@@ -1,0 +1,7 @@
+
+echo "Running TS Lint.."
+npm test
+echo "Running prettier on staged files.."
+prettier $(git diff --cached --name-only --diff-filter=ACMR | sed 's| |\\ |g') --write --ignore-unknown
+git update-index --again
+echo "Code is good to go! ✅"

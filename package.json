@@ -7,11 +7,16 @@
     "build": "tsc",
     "build:link": "npm run build && npm link",
     "start": "node .",
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "lint": "eslint . --ext .ts,.tsx",
-    "lint:fix": "eslint . --ext .ts,.tsx --fix"
+    "test": "tsc --noEmit",
+    "lint:fix": "eslint . --ext .ts,.tsx --fix",
+    "prepare": "husky"
   },
-  "keywords": ["AI", "devops", "automation", "CLI"],
+  "keywords": [
+    "AI",
+    "devops",
+    "automation",
+    "CLI"
+  ],
   "author": "",
   "license": "ISC",
   "dependencies": {
@@ -43,7 +48,8 @@
     "@typescript-eslint/eslint-plugin": "^7.3.1",
     "@typescript-eslint/parser": "^7.3.1",
     "eslint": "^8.57.0",
-    "husky": "^7.0.0"
+    "husky": "^9.1.4",
+    "prettier": "^3.3.3"
   },
   "husky": {
     "hooks": {

@@ -6,6 +6,7 @@ import { addAgent, readConfig } from '../utils/conf';
 import { TaskManager } from '../utils/taskManager';
 
 import { API_HOST, API_VERSION } from '../constants';
+import { Logger } from '../utils/logger';
 
 axios.defaults.baseURL = `${API_HOST}${API_VERSION}`;
 axios.defaults.timeout = 8000;
@@ -50,7 +51,7 @@ export async function initCommand(options?: initCommandOptions): Promise<void> {
         (config: { key: string; prompt: string }) => config.key === configId
       );
       if (!selected_config) {
-        console.error('Invalid configuration ID');
+        Logger.error('Invalid configuration ID');
         process.exit(1);
       }
       const workspaceResponse = await syncWorkspace(workspace);
@@ -95,9 +96,9 @@ export async function initCommand(options?: initCommandOptions): Promise<void> {
         );
       }
 
-      console.log(`Agent ${agent.id} created in ${workspace}`);
+      Logger.log(`Agent ${agent.id} created in ${workspace}`);
     });
-  } catch (error: any) {
-    console.error('An error occurred:', error.message || error);
+  } catch (error: Error | unknown) {
+    Logger.error('An error occurred:', (error as Error)?.message || error);
   }
 }

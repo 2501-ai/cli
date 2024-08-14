@@ -1,6 +1,5 @@
 import axios from 'axios';
-import { realTerminal as terminal } from 'terminal-kit';
-import { marked } from 'marked';
+import { marked, MarkedExtension } from 'marked';
 import { markedTerminal } from 'marked-terminal';
 
 import { TaskManager } from '../utils/taskManager';
@@ -8,10 +7,10 @@ import { listAgents, listAgentsFromWorkspace, readConfig } from '../utils/conf';
 import { API_HOST, API_VERSION } from '../constants';
 
 import { initCommand } from './init';
-
-marked.use(markedTerminal() as any);
-
 import { Agent } from '../agent';
+import { Logger } from '../utils/logger';
+
+marked.use(markedTerminal() as MarkedExtension);
 
 // Function to execute the query command
 export async function queryCommand(
@@ -20,7 +19,7 @@ export async function queryCommand(
     workspace?: string;
     agentId?: string;
     skipWarmup?: boolean;
-    callback?: any;
+    callback?: (...args: any[]) => Promise<void>;
     noPersistentAgent?: boolean;
   }
 ): Promise<void> {
@@ -33,14 +32,12 @@ export async function queryCommand(
   const agents = agentId
     ? await listAgents()
     : await listAgentsFromWorkspace(workspace);
-  let eligible = agents.find((a) => a.id === agentId) || agents[0] || null;
+  const eligible = agents.find((a) => a.id === agentId) || agents[0] || null;
 
   if (!skipWarmup) {
     if (!eligible) {
       const taskManager = new TaskManager();
-      terminal.yellow(
-        'Warn: no agent found in the specified workspace, initializing...\n'
-      );
+      Logger.warn('no agent found in the specified workspace, initializing...');
       await initCommand({ workspace });
       await taskManager.run(
         'Warming up... can take a few seconds.',
@@ -50,12 +47,7 @@ export async function queryCommand(
       await queryCommand(query, options);
       return;
     }
-    terminal.grey(
-      `INFO: Current workspace: ${
-        (eligible && eligible.workspace) || workspace
-      }`
-    );
-    terminal('\n');
+    Logger.log(`Current workspace: ${eligible?.workspace || workspace} \n`);
   }
 
   const agent = new Agent({
@@ -64,11 +56,11 @@ export async function queryCommand(
     engine: eligible.engine,
     callback: options.callback,
     workspace,
-    queryCommand
+    queryCommand,
   });
 
   try {
-    agent.toggleLoader();
+    await agent.toggleLoader();
     const { data } = await axios.post(
       `${API_HOST}${API_VERSION}/agents/${agent.id}/query`,
       { query },
@@ -86,8 +78,7 @@ export async function queryCommand(
     }
 
     if (data.response) {
-      terminal.bold('AGENT:\n');
-      terminal(marked.parse(data.response));
+      Logger.agent(data.response);
     }
 
     if (data.actions) {
@@ -99,7 +90,7 @@ export async function queryCommand(
 
     process.exit(0);
   } catch (error: any) {
-    console.error('Error querying agent:', error.message);
+    Logger.error('Error querying agent:', error);
     process.exit(0);
   }
 }

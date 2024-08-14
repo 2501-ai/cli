@@ -28,10 +28,14 @@ const CONFIG_FILE_PATH = path.join(CONFIG_DIR, '2501.conf');
 export async function readConfig(): Promise<Config | null> {
   try {
     if (!fs.existsSync(CONFIG_FILE_PATH)) {
-      await fs.mkdirSync(path.dirname(CONFIG_FILE_PATH), { recursive: true });
-      await fs.writeFileSync(CONFIG_FILE_PATH, JSON.stringify({ workspace_disabled: false, agents: [] }, null, 2), 'utf8');
+      fs.mkdirSync(path.dirname(CONFIG_FILE_PATH), { recursive: true });
+      fs.writeFileSync(
+        CONFIG_FILE_PATH,
+        JSON.stringify({ workspace_disabled: false, agents: [] }, null, 2),
+        'utf8'
+      );
     }
-    const data = await fs.readFileSync(CONFIG_FILE_PATH, 'utf8');
+    const data = fs.readFileSync(CONFIG_FILE_PATH, 'utf8');
     return JSON.parse(data);
   } catch (error) {
     console.error('Error reading configuration:', error);
@@ -44,7 +48,10 @@ export async function readConfig(): Promise<Config | null> {
  * @param key - The key to set.
  * @param value - The value to set.
  */
-export async function setValue<K extends keyof Config>(key: K, value: Config[K]): Promise<void> {
+export async function setValue<K extends keyof Config>(
+  key: K,
+  value: Config[K]
+): Promise<void> {
   try {
     const config = await readConfig();
     if (config) {
@@ -88,7 +95,7 @@ export async function listAgents(): Promise<AgentConfig[]> {
  * @returns An array of agent configurations associated with the specified workspace URL.
  */
 export async function listAgentsFromWorkspace(
-  workspaceUrl: string  
+  workspaceUrl: string
 ): Promise<AgentConfig[]> {
   const config = await readConfig();
   if (config) {
@@ -106,7 +113,9 @@ export async function addAgent(newAgent: AgentConfig): Promise<void> {
   const config = await readConfig();
   if (config) {
     // Check if an agent with the same ID already exists
-    const existingAgent = config.agents.find((agent) => agent.id === newAgent.id);
+    const existingAgent = config.agents.find(
+      (agent) => agent.id === newAgent.id
+    );
     if (existingAgent) {
       console.error('Agent with the same ID already exists:', newAgent.id);
       return;
