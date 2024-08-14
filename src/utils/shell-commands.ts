@@ -1,5 +1,11 @@
 import { ERROR_BOL } from './actions';
 
+/**
+ * .bashrc file might not exist (and still be a valid configuration)
+ *
+ * This is subject to evolution, as the file might be located in different places :
+ * https://shreevatsa.wordpress.com/2008/03/30/zshbash-startup-files-loading-order-bashrc-zshrc-etc/
+ */
 export const unixSourceCommand = `
 if [ -n "$ZSH_VERSION" ]; then
     # Zsh shell

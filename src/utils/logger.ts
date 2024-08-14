@@ -1,4 +1,9 @@
 import { AxiosError } from 'axios';
+
+/**
+ * using realTerminal in terminal-kit was on purpose since we were having issues not using it before.
+ * That it might be necessary in case of issues
+ */
 import { terminal } from 'terminal-kit';
 import { marked } from 'marked';
 
