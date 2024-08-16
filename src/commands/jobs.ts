@@ -77,7 +77,10 @@ export async function jobSubscriptionCommand(options: {
         Logger.log(`Executing job ${idx} : "${jobs[idx].brief}"`);
         await axios.put(
           `${API_HOST}${API_VERSION}/jobs/${jobs[idx].id}`,
-          { status: 'in_progress', host: `${shell_user}@${localIP}` },
+          {
+            status: 'in_progress',
+            host: `${shell_user.trim()}@${localIP.trim()}`,
+          },
           { headers: { Authorization: `Bearer ${config?.api_key}` } }
         );
         await queryCommand(jobs[idx].brief, {
