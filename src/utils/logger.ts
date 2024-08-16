@@ -22,13 +22,14 @@ export class Logger {
   static error(...args: (Error | AxiosError | string | unknown)[]) {
     if ((args[0] as AxiosError).isAxiosError) {
       const [arg0, ...rest] = args;
-      terminal[Colors.RED]('\n[HTTP ERROR] ').defaultColor(
+      terminal[Colors.RED]('[HTTP ERROR] ').defaultColor(
         (arg0 as AxiosError).toJSON(),
-        ...rest
+        ...rest,
+        '\n'
       );
     } else {
       // terminal[Colors.RED]('\n[ERROR] ').defaultColor(...args);
-      console.error('\n[ERROR] ', ...args);
+      console.error('[ERROR] ', ...args, '\n');
     }
   }
 
@@ -36,19 +37,19 @@ export class Logger {
    * Log the agent data in a formatted way
    */
   static agent(data: any) {
-    terminal.bold('\n\nAGENT:\n');
-    terminal(marked.parse(data));
+    terminal.bold('\nAGENT:\n');
+    terminal(marked.parse(data) + '\n');
   }
 
   static warn(...args: unknown[]) {
-    terminal[Colors.YELLOW]('\n[WARN] ').defaultColor(...args);
+    terminal[Colors.YELLOW]('[WARN] ').defaultColor(...(args + '\n'));
   }
 
   static success(content: string) {
-    terminal[Colors.GREEN]('\n[SUCCESS] ').defaultColor(content);
+    terminal[Colors.GREEN]('SUCCESS] ').defaultColor(content + '\n');
   }
 
   static log(...args: unknown[]) {
-    terminal[Colors.BLUE]('\n[INFO] ').defaultColor(...args);
+    terminal[Colors.BLUE]('[INFO] ').defaultColor(...(args + '\n'));
   }
 }

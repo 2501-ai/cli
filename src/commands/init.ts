@@ -37,68 +37,78 @@ export async function initCommand(options?: initCommandOptions): Promise<void> {
   try {
     const workspace = getWorkspace(options);
     const configId = (options && options.config) || 'CODING_AGENT';
-    const config = await readConfig();
+    const config = readConfig();
 
     const taskManager = new TaskManager();
     await taskManager.run('Initializing agent...', async () => {
-      const { data: configurations } = await axios.get(`/configurations`, {
-        headers: {
-          Authorization: `Bearer ${config?.api_key}`,
-        },
-      });
-
-      const selected_config = configurations.find(
-        (config: { key: string; prompt: string }) => config.key === configId
-      );
-      if (!selected_config) {
-        Logger.error('Invalid configuration ID');
-        process.exit(1);
-      }
-      const workspaceResponse = await syncWorkspace(workspace);
-      const { data: agent } = await axios.post(
-        '/agents',
-        {
-          workspace,
-          configuration: selected_config.id,
-          prompt: selected_config.prompt,
-          engine: config?.engine || defaultEngine,
-        },
-        {
+      try {
+        const { data: configurations } = await axios.get(`/configurations`, {
           headers: {
             Authorization: `Bearer ${config?.api_key}`,
           },
+        });
+
+        console.log('configurations', configurations.length);
+
+        const selected_config = configurations.find(
+          (config: { key: string; prompt: string }) => config.key === configId
+        );
+        if (!selected_config) {
+          Logger.error('Invalid configuration ID');
+          process.exit(1);
         }
-      );
+        const workspaceResponse = await syncWorkspace(workspace);
+        console.log('workspaceResponse', workspaceResponse);
 
-      await addAgent({
-        id: agent.id,
-        name: agent.name,
-        workspace,
-        configuration: selected_config.id,
-        engine: config?.engine || defaultEngine,
-      });
-
-      if (
-        workspaceResponse &&
-        workspaceResponse.data &&
-        workspaceResponse.files.length
-      ) {
-        await axios.post(
-          `/files/index?agent=${agent.name}`,
-          workspaceResponse.data,
+        const { data: agent } = await axios.post(
+          '/agents',
+          {
+            workspace,
+            configuration: selected_config.id,
+            prompt: selected_config.prompt,
+            engine: config?.engine || defaultEngine,
+          },
           {
             headers: {
-              'Content-Type': 'multipart/form-data',
               Authorization: `Bearer ${config?.api_key}`,
             },
-            timeout: 20000,
           }
         );
-      }
+        console.log('agent', agent);
 
-      Logger.log(`Agent ${agent.id} created in ${workspace}`);
+        addAgent({
+          id: agent.id,
+          name: agent.name,
+          workspace,
+          configuration: selected_config.id,
+          engine: config?.engine || defaultEngine,
+        });
+
+        if (
+          workspaceResponse &&
+          workspaceResponse.data &&
+          workspaceResponse.files.length
+        ) {
+          await axios.post(
+            `/files/index?agent=${agent.name}`,
+            workspaceResponse.data,
+            {
+              headers: {
+                'Content-Type': 'multipart/form-data',
+                Authorization: `Bearer ${config?.api_key}`,
+              },
+              timeout: 20000,
+            }
+          );
+        }
+
+        Logger.log(`Agent ${agent.id} created in ${workspace}`);
+      } catch (error) {
+        console.error('Task error :', (error as Error)?.message || error);
+        throw error;
+      }
     });
-  } catch (error: Error | unknown) {
+  } catch (error) {
     Logger.error('An error occurred:', (error as Error)?.message || error);
   }
 }

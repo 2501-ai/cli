@@ -10,6 +10,7 @@ import {
   read_file,
   run_shell,
   write_file,
+  modify_file,
 } from './utils/actions';
 import { readConfig } from './utils/conf';
 
@@ -29,6 +30,7 @@ const ACTION_FNS = {
   read_file,
   run_shell,
   write_file,
+  modify_file,
 };
 
 export type AgentCallbackType = (...args: unknown[]) => Promise<void>;
@@ -136,7 +138,6 @@ export class Agent {
         args = call.args;
       }
 
-      const functions = ACTION_FNS;
       const function_name: keyof typeof ACTION_FNS =
         call.function.name || call.function;
 
@@ -178,7 +179,7 @@ export class Agent {
 
       await taskManager.run(task, async () => {
         try {
-          let output = await functions[function_name](args);
+          let output = await ACTION_FNS[function_name](args);
           if (corrected) {
             output += `\n\n NOTE: your original content for ${args.path} was corrected with the new version below before running the function: \n\n${args.content}`;
           }

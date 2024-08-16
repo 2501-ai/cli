@@ -23,7 +23,7 @@ export async function queryCommand(
     noPersistentAgent?: boolean;
   }
 ): Promise<void> {
-  const config = await readConfig();
+  const config = readConfig();
 
   const workspace = options.workspace || process.cwd();
   const agentId = options.agentId;
