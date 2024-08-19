@@ -27,6 +27,7 @@ Now you can use the 2501 CLI commands:
 ```
 
 Examples
+
 ```
 @2501 find the location apache config in this machine
 ```
@@ -74,7 +75,8 @@ Examples
 - Usage: `@2501 jobs [--workspace <path>] [--subscribe] [--listen]`
 
   - `--workspace <path>`: Specify a different workspace path.
-  - `--subscribe`: Subscribe every minute to the API for new jobs.
+  - `--subscribe`: Subscribe every minute to the API for new jobs on the current workspace.
+  - `--unsubscribe`: Unsubscribe the current workspace for new jobs.
   - `--listen`: Listen for new jobs from the API and execute them.
 
 ## Contributing

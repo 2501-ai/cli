@@ -16,10 +16,12 @@ import { Logger } from '../utils/logger';
 
 export async function jobSubscriptionCommand(options: {
   subscribe?: boolean;
+  unsubscribe?: boolean;
   workspace?: string;
   listen?: boolean;
 }): Promise<void> {
   const workspace = options.workspace || process.cwd();
+
   if (options.subscribe) {
     const shellOutput = await run_shell({
       command: `echo $SHELL`,
@@ -43,7 +45,22 @@ export async function jobSubscriptionCommand(options: {
     if (hasError(crontabOutput)) {
       return Logger.error('crontabOutput', crontabOutput);
     }
-    return Logger.log('Subscribed to the API for new jobs');
+    return Logger.log(
+      `Subscribed to the API for new jobs on workspace ${workspace}`
+    );
+  }
+
+  if (options.unsubscribe) {
+    const crontabOutput = await run_shell({
+      shell: true,
+      command: `crontab -l | grep -v "cd ${workspace} && @2501 jobs --listen" | crontab -`,
+    });
+    if (hasError(crontabOutput)) {
+      return Logger.error('crontabOutput', crontabOutput);
+    }
+    return Logger.log(
+      `Unsubscribed to the API for new jobs on workspace ${workspace}`
+    );
   }
 
   if (options.listen) {
