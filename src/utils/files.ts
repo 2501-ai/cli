@@ -3,6 +3,7 @@ import crypto from 'crypto';
 import { performance } from 'node:perf_hooks';
 import { IGNORED_FILE_PATTERNS } from './workspace';
 import fs from 'fs';
+import { WorkspaceState } from './types';
 
 interface DirectoryMd5HashOptions {
   directoryPath: string;
@@ -10,15 +11,11 @@ interface DirectoryMd5HashOptions {
   ignorePatterns?: string[]; // Optional array of patterns or names to ignore
 }
 
-interface WorkspaceState {
-  md5: string; // md5 hash of the workspace state
-  fileHashes: Map<string, string>; // Map of file paths to their respective hashes
-}
-
 interface WorkspaceDiff {
   added: string[]; // Files that are present in the new state but not in the old state
   removed: string[]; // Files that are present in the old state but not in the new state
   modified: string[]; // Files that are present in both states but have different hashes
+  hasChanges: boolean; // True if there are any changes in the workspace
 }
 
 /**
@@ -33,11 +30,14 @@ export async function getDirectoryMd5Hash({
   directoryPath,
   maxDepth = 10,
   ignorePatterns = IGNORED_FILE_PATTERNS,
-}: DirectoryMd5HashOptions): Promise<WorkspaceState> {
+}: DirectoryMd5HashOptions) {
   const fileHashes = new Map<string, string>();
   const ignoreSet = new Set(ignorePatterns);
 
-  async function processDirectory(currentPath: string, currentDepth: number) {
+  async function processDirectory(
+    currentPath: string,
+    currentDepth: number
+  ): Promise<void> {
     if (currentDepth > maxDepth) {
       // console.warn('Directory depth exceeds the maximum allowed depth.');
       return;
@@ -67,32 +67,6 @@ export async function getDirectoryMd5Hash({
     );
   }
 
-  /**
-   * Computes the MD5 hash of a file asynchronously.
-   * @deprecated This function is not used in the final implementation (too slow)
-   */
-  async function computeFileHash(filePath: string): Promise<string> {
-    return new Promise<string>((resolve, reject) => {
-      const hash = crypto.createHash('md5');
-      const stream = fs.createReadStream(filePath);
-
-      stream.on('data', (chunk) => hash.update(chunk));
-      stream.on('end', () => resolve(hash.digest('hex')));
-      stream.on('error', reject);
-    });
-  }
-
-  /**
-   * Computes a hash based on file metadata (size and modification time).
-   * This is a faster alternative to reading the entire file content, but will not detect changes in file content, and not detect reverted changes (for example)
-   */
-  function computeFileMetadataHash(filePath: string): string {
-    const stats = fs.statSync(filePath);
-    const metaHash = crypto.createHash('md5');
-    metaHash.update(`${stats.size}:${stats.mtimeMs}`);
-    return metaHash.digest('hex');
-  }
-
   // Start processing from the base directory with an initial depth of 0
   await processDirectory(directoryPath, 0);
 
@@ -110,7 +84,34 @@ export async function getDirectoryMd5Hash({
   return {
     md5,
     fileHashes,
+    directoryPath,
   };
+}
+
+/**
+ * Computes a hash based on file metadata (size and modification time).
+ * This is a faster alternative to reading the entire file content, but will not detect changes in file content, and not detect reverted changes (for example)
+ */
+function computeFileMetadataHash(filePath: string): string {
+  const stats = fs.statSync(filePath);
+  const metaHash = crypto.createHash('md5');
+  metaHash.update(`${stats.size}:${stats.mtimeMs}`);
+  return metaHash.digest('hex');
+}
+
+/**
+ * Computes the MD5 hash of a file asynchronously.
+ * @deprecated This function is not used in the final implementation (too slow)
+ */
+async function computeFileHash(filePath: string): Promise<string> {
+  return new Promise<string>((resolve, reject) => {
+    const hash = crypto.createHash('md5');
+    const stream = fs.createReadStream(filePath);
+
+    stream.on('data', (chunk) => hash.update(chunk));
+    stream.on('end', () => resolve(hash.digest('hex')));
+    stream.on('error', reject);
+  });
 }
 
 /**
@@ -129,29 +130,48 @@ export function getWorkspaceDiff(
   const modified: string[] = [];
 
   // Check for added and modified files
-  newState.fileHashes.forEach((newHash, filePath) => {
-    if (!oldState.fileHashes.has(filePath)) {
+  newState.file_hashes.forEach((newHash, filePath) => {
+    if (!oldState.file_hashes.has(filePath)) {
       added.push(filePath);
-    } else if (oldState.fileHashes.get(filePath) !== newHash) {
+    } else if (oldState.file_hashes.get(filePath) !== newHash) {
       modified.push(filePath);
     }
   });
 
   // Check for removed files
-  oldState.fileHashes.forEach((_, filePath) => {
-    if (!newState.fileHashes.has(filePath)) {
+  oldState.file_hashes.forEach((_, filePath) => {
+    if (!newState.file_hashes.has(filePath)) {
       removed.push(filePath);
     }
   });
 
-  return { added, removed, modified };
+  const hasChanges =
+    added.length > 0 || removed.length > 0 || modified.length > 0;
+
+  return { added, removed, modified, hasChanges };
 }
 
 /**
  * Wraps an asynchronous function to measure its execution time.
- * @param asyncFn - The asynchronous function to be wrapped.
- * @param fnName - Optional name of the function, used in logging.
  * @returns A new function that, when called, executes the original async function and logs its performance.
+ * @example
+ *
+ * // Assume getDirectoryMd5Hash is an async function that computes MD5 hash of a directory
+ * const wrappedGetDirectoryMd5Hash = measurePerformance(
+ *   getDirectoryMd5Hash,
+ *   'getDirectoryMd5Hash'
+ * );
+ *
+ * // Example usage:
+ * const directoryPath = '/tmp/2501-workspace';
+ * wrappedGetDirectoryMd5Hash({
+ *   directoryPath,
+ *   ignorePatterns: IGNORED_FILE_PATTERNS,
+ * })
+ *   .then(({ md5 }) => {
+ *     console.log(`MD5 hash of the directory: ${md5}`);
+ *   })
+ *   .catch((err) => console.error(err));
  */
 function measurePerformance<T>(
   asyncFn: (...args: any[]) => Promise<T>,
@@ -173,24 +193,3 @@ function measurePerformance<T>(
     }
   };
 }
-
-// Example of using the performance wrapper:
-
-// Assume getDirectoryMd5Hash is an async function that computes MD5 hash of a directory
-// const wrappedGetDirectoryMd5Hash = measurePerformance(
-//   getDirectoryMd5Hash,
-//   'getDirectoryMd5Hash'
-// );
-
-// Example usage:
-// const directoryPath =
-//   '/Users/shide/Developments/clients/greenscope/greenserver'; // large codebase
-// const directoryPath = '/tmp/2501-workspace';
-// wrappedGetDirectoryMd5Hash({
-//   directoryPath,
-//   ignorePatterns: IGNORED_FILE_PATTERNS,
-// })
-//   .then(({ md5 }) => {
-//     console.log(`MD5 hash of the directory: ${md5}`);
-//   })
-//   .catch((err) => console.error(err));

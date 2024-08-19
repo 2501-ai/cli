@@ -22,8 +22,6 @@ interface Ctx {
   runTime?: number;
 }
 
-type Task = () => Promise<void>;
-
 export class TaskManager {
   private tasks = TaskManagerFactory<Ctx>();
   private logger = new ListrLogger({ useIcons: false });
@@ -35,7 +33,7 @@ export class TaskManager {
     this.tasks.add([{ title, task }]);
   }
 
-  public async run(title: string, task: Task): Promise<void> {
+  public async run(title: string, task: () => Promise<void>): Promise<void> {
     await this.tasks
       .run([
         {

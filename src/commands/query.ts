@@ -9,6 +9,12 @@ import { API_HOST, API_VERSION } from '../constants';
 import { initCommand } from './init';
 import { Agent } from '../agent';
 import { Logger } from '../utils/logger';
+import {
+  getWorkspaceChanges,
+  indexWorkspaceFiles,
+  syncWorkspaceFiles,
+  syncWorkspaceState,
+} from '../utils/workspace';
 
 marked.use(markedTerminal() as MarkedExtension);
 
@@ -61,6 +67,7 @@ export async function queryCommand(
 
   try {
     await agent.toggleLoader();
+    await synchroniseWorkspaceChanges(agent.name, workspace);
     const { data } = await axios.post(
       `${API_HOST}${API_VERSION}/agents/${agent.id}/query`,
       { query },
@@ -74,7 +81,9 @@ export async function queryCommand(
     );
 
     if (data.asynchronous && data.asynchronous === true) {
-      return agent.checkStatus();
+      return agent
+        .checkStatus()
+        .then(() => synchroniseWorkspaceChanges(agent.name, workspace));
     }
 
     if (data.response) {
@@ -82,15 +91,30 @@ export async function queryCommand(
     }
 
     if (data.actions) {
-      return await agent.processActions(
-        data.actions,
-        data.asynchronous === true
-      );
+      return await agent
+        .processActions(data.actions, data.asynchronous === true)
+        .then(() => synchroniseWorkspaceChanges(agent.name, workspace));
     }
 
     process.exit(0);
   } catch (error: any) {
     Logger.error('Error querying agent:', error);
     process.exit(0);
+  }
+}
+
+async function synchroniseWorkspaceChanges(
+  agentName: string,
+  workspace: string
+) {
+  const workspaceDiff = await getWorkspaceChanges(workspace);
+  if (workspaceDiff.hasChanges) {
+    Logger.debug('Agent : Workspace has changes, synchronizing...');
+    await syncWorkspaceState(workspace);
+    // TODO: improve and send only changed files ?
+    const workspaceResponse = await syncWorkspaceFiles(workspace);
+    if (workspaceResponse?.data && workspaceResponse?.files.length) {
+      await indexWorkspaceFiles(agentName, workspaceResponse.data);
+    }
   }
 }

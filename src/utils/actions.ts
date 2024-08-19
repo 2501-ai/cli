@@ -36,6 +36,99 @@ export async function write_file(args: { path: string; content: string }) {
     ${args.content}`;
 }
 
+type UpdateInstruction = {
+  lineStart?: number; // Optional starting line number for the update (required for update and remove)
+  lineEnd?: number; // Optional ending line number (exclusive) for the update (required for update and remove)
+  content?: string; // New content to replace or insert (if undefined, it removes the content)
+};
+
+export function update_file_content({
+  filePath,
+  updates,
+}: {
+  filePath: string;
+  updates: UpdateInstruction[];
+}): string {
+  console.log('UpdateFileContent', filePath);
+  console.log('updates:', updates);
+
+  // Read the file content from the filesystem
+  let fileContent = fs.readFileSync(filePath, 'utf8');
+
+  // Split the file content into lines
+  const lines = fileContent.split('\n');
+
+  // To track line changes due to insertions and deletions
+  let lineOffset = 0;
+
+  // Convert 1-based indices to 0-based for processing
+  const convertToZeroBased = (line?: number) =>
+    line !== undefined ? line - 1 : undefined;
+
+  // Sort the updates by their starting line number in descending order to handle index shifts
+  updates.sort(
+    (a, b) =>
+      (convertToZeroBased(b.lineStart) ?? Infinity) -
+      (convertToZeroBased(a.lineStart) ?? Infinity)
+  );
+
+  for (const update of updates) {
+    const { lineStart, lineEnd, content } = update;
+
+    // Convert lineStart and lineEnd to 0-based indexing for processing
+    const adjustedLineStart =
+      convertToZeroBased(lineStart) !== undefined
+        ? convertToZeroBased(lineStart)! + lineOffset
+        : undefined;
+    const adjustedLineEnd =
+      convertToZeroBased(lineEnd) !== undefined
+        ? convertToZeroBased(lineEnd)! + lineOffset
+        : undefined;
+
+    if (adjustedLineStart !== undefined && adjustedLineEnd !== undefined) {
+      // If both lineStart and lineEnd are defined, either update or remove content
+      if (adjustedLineStart >= 0 && adjustedLineEnd <= lines.length) {
+        if (content !== undefined) {
+          // Replace content
+          lines.splice(
+            adjustedLineStart,
+            adjustedLineEnd - adjustedLineStart,
+            ...content.split('\n')
+          );
+          lineOffset +=
+            content.split('\n').length - (adjustedLineEnd - adjustedLineStart);
+        } else {
+          // Remove content
+          lines.splice(adjustedLineStart, adjustedLineEnd - adjustedLineStart);
+          lineOffset -= adjustedLineEnd - adjustedLineStart;
+        }
+      }
+    } else if (adjustedLineStart !== undefined && content !== undefined) {
+      // If only lineStart is defined, insert the content at the specified line
+      if (adjustedLineStart >= 0 && adjustedLineStart <= lines.length) {
+        lines.splice(adjustedLineStart, 0, ...content.split('\n'));
+        lineOffset += content.split('\n').length;
+      }
+    }
+  }
+
+  // Join the lines back into a single string
+  fileContent = lines.join('\n');
+
+  console.log('Updated file content:', fileContent);
+
+  // Write the updated content back to the file
+  fs.writeFileSync(filePath, fileContent, 'utf8');
+
+  return `
+    File updated: ${filePath}
+    Content:
+    \`\`\`
+    ${fileContent}
+    \`\`\`
+  `;
+}
+
 /**
  * Updates content in a filePath synchronously, creating directories if necessary.
  * @param path The path of the filePath to update.
@@ -78,8 +171,8 @@ export async function modify_file({
 
   // For each modification, update the content
   for (const { content, lines } of modifications) {
-    Logger.debug('lines :', lines);
-    // Logger.debug('content :', content);
+    Logger.debug('lines :', JSON.stringify(lines));
+    Logger.debug('content :', content);
     Logger.debug('delta :', delta);
 
     // Inclusive range. Add 1 to include the last line.
@@ -116,7 +209,7 @@ export async function modify_file({
   // Write updated content to filePath
   try {
     fs.writeFileSync(filePath, updatedContent, 'utf8');
-    Logger.log(`File at "${filePath}" updated successfully.`);
+    Logger.log(`File at "${filePath}" updated.`);
     return `File at "${filePath}" has been updated. here is the new content to verify :
     ###BEGIN-UPDATED-FILE-CONTENT###
     ${updatedContent}

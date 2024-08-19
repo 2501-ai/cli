@@ -49,7 +49,7 @@ export async function jobSubscriptionCommand(options: {
   if (options.listen) {
     try {
       const workspace = options.workspace || process.cwd();
-      const config = await readConfig();
+      const config = readConfig();
 
       const [agent] = await listAgentsFromWorkspace(workspace);
 

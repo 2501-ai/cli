@@ -11,8 +11,9 @@ import { readConfig } from './conf';
 import { API_HOST, API_VERSION } from '../constants';
 import os from 'os';
 import crypto from 'crypto';
-import { getDirectoryMd5Hash } from './files';
+import { getDirectoryMd5Hash, getWorkspaceDiff } from './files';
 import { Logger } from './logger';
+import { WorkspaceState } from './types';
 
 axios.defaults.baseURL = `${API_HOST}${API_VERSION}`;
 axios.defaults.timeout = 8000;
@@ -195,7 +196,11 @@ export async function getFileFromWorkspace(path: string) {
   return Buffer.from(content).toString();
 }
 
-export async function syncWorkspaceFiles(workspace: string) {
+export async function syncWorkspaceFiles(
+  workspace: string
+): Promise<
+  { data: FormData; files: { id: string; name: string }[] } | undefined
+> {
   const files: { path: string; data: Buffer }[] =
     await getContextFromWorkspace(workspace);
   if (!files.length) {
@@ -222,13 +227,16 @@ export async function syncWorkspaceFiles(workspace: string) {
   return { data, files: response.data };
 }
 
-export type WorkspaceState = {
-  path: string;
-  hash: string;
-  files: { [key: string]: string };
-  // Mappings of file IDs to file paths
-  // indexed_files: Map<string, string>;
-};
+export async function indexWorkspaceFiles(agentName: string, data: FormData) {
+  const config = readConfig();
+  await axios.post(`/files/index?agent=${agentName}`, data, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+      Authorization: `Bearer ${config?.api_key}`,
+    },
+    timeout: 20000,
+  });
+}
 
 export function getWorkspaceConfName(workspace: string): string {
   // md5 hash of workspace path (better than to use the path in the config name...)
@@ -251,7 +259,8 @@ export function readWorkspaceState(workspace: string): WorkspaceState {
         filePath,
         JSON.stringify(
           <WorkspaceState>{
-            hash: '',
+            file_hashes: new Map(),
+            state_hash: '',
             path: workspace,
           },
           null,
@@ -261,7 +270,9 @@ export function readWorkspaceState(workspace: string): WorkspaceState {
       );
     }
     const data = fs.readFileSync(filePath, 'utf8');
-    return JSON.parse(data);
+    const state = JSON.parse(data);
+    state.file_hashes = new Map(Object.entries(state.file_hashes));
+    return state;
   } catch (error) {
     Logger.error('Error reading workspace state:', error);
     throw error;
@@ -271,7 +282,8 @@ export function readWorkspaceState(workspace: string): WorkspaceState {
 export function writeWorkspaceState(state: WorkspaceState): void {
   try {
     const filePath = getWorkspaceConfName(state.path);
-    const data = JSON.stringify(state, null, 2);
+    const entries = Object.fromEntries(state.file_hashes);
+    const data = JSON.stringify({ ...state, file_hashes: entries }, null, 2);
     fs.writeFileSync(filePath, data, 'utf8');
   } catch (error) {
     Logger.error('Error writing workspace state:', error);
@@ -283,13 +295,27 @@ export function writeWorkspaceState(state: WorkspaceState): void {
  * Synchronize the workspace state with the current state of the workspace.
  * This function will update the hash and files properties of the workspace state.
  */
-export async function syncWorkspaceState(workspace: string) {
-  const state = readWorkspaceState(workspace);
-  // Performance: Takes around 350ms on large codebases, 125ms on average.
+export async function syncWorkspaceState(workspace: string): Promise<boolean> {
+  const currentState = readWorkspaceState(workspace);
   const { md5, fileHashes } = await getDirectoryMd5Hash({
     directoryPath: workspace,
   });
-  state.hash = md5; // hash of the current state.
-  state.files = Object.fromEntries(fileHashes); // file hashes of the current state.
-  writeWorkspaceState(state);
+  const hasChanged = currentState.state_hash !== md5;
+  currentState.state_hash = md5; // hash of the current state.
+  currentState.file_hashes = fileHashes; // file hashes of the current state.
+  writeWorkspaceState(currentState);
+  return hasChanged;
+}
+
+export async function getWorkspaceChanges(workspace: string) {
+  const oldState = readWorkspaceState(workspace);
+  const newState = await getDirectoryMd5Hash({
+    directoryPath: workspace,
+  });
+
+  return getWorkspaceDiff(oldState, {
+    state_hash: newState.md5,
+    file_hashes: newState.fileHashes,
+    path: workspace,
+  });
 }

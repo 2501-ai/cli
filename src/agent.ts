@@ -5,12 +5,12 @@ import { jsonrepair } from 'jsonrepair';
 import { TaskManager } from './utils/taskManager';
 import { convertFormToJSON } from './utils/json';
 import {
-  hasError,
   browse_url,
+  hasError,
   read_file,
   run_shell,
+  update_file_content,
   write_file,
-  modify_file,
 } from './utils/actions';
 import { readConfig } from './utils/conf';
 
@@ -30,7 +30,7 @@ const ACTION_FNS = {
   read_file,
   run_shell,
   write_file,
-  modify_file,
+  update_file_content,
 };
 
 export type AgentCallbackType = (...args: unknown[]) => Promise<void>;
@@ -161,7 +161,7 @@ export class Agent {
           const previous =
             ACTION_FNS.read_file({ path: args.path }) || 'NO PREVIOUS VERSION';
           try {
-            const config = await readConfig();
+            const config = readConfig();
             const { data: correctionData } = await axios.post(
               `/agents/${this.id}/verifyOutput`,
               { task, previous, proposal: args.content },

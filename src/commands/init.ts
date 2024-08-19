@@ -1,7 +1,11 @@
 import axios from 'axios';
 import fs from 'fs';
 
-import { syncWorkspaceFiles, syncWorkspaceState } from '../utils/workspace';
+import {
+  indexWorkspaceFiles,
+  syncWorkspaceFiles,
+  syncWorkspaceState,
+} from '../utils/workspace';
 import { addAgent, readConfig } from '../utils/conf';
 import { TaskManager } from '../utils/taskManager';
 
@@ -55,9 +59,10 @@ export async function initCommand(options?: initCommandOptions): Promise<void> {
           Logger.error('Invalid configuration ID');
           process.exit(1);
         }
-        const workspaceResponse = await syncWorkspaceFiles(workspace);
-        await syncWorkspaceState(workspace);
+        const workspaceResponse = await syncWorkspaceFiles(workspace); // via Engine
+        await syncWorkspaceState(workspace); // Local stored state
 
+        // Create an Agent
         const { data: agent } = await axios.post(
           '/agents',
           {
@@ -82,17 +87,7 @@ export async function initCommand(options?: initCommandOptions): Promise<void> {
         });
 
         if (workspaceResponse?.data && workspaceResponse?.files.length) {
-          await axios.post(
-            `/files/index?agent=${agent.name}`,
-            workspaceResponse.data,
-            {
-              headers: {
-                'Content-Type': 'multipart/form-data',
-                Authorization: `Bearer ${config?.api_key}`,
-              },
-              timeout: 20000,
-            }
-          );
+          await indexWorkspaceFiles(agent.name, workspaceResponse.data);
         }
 
         Logger.log(`Agent ${agent.id} created in ${workspace}`);
