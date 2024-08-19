@@ -1,7 +1,7 @@
 import { Config, readConfig, setValue } from '../utils/conf';
 
-export async function setCommand() {
-  const config = await readConfig();
+export function setCommand() {
+  const config = readConfig();
   if (!config) return;
 
   const key = process.argv[3];
@@ -17,6 +17,6 @@ export async function setCommand() {
     return;
   }
 
-  await setValue(key as keyof Config, value);
+  setValue(key as keyof Config, value);
   console.log(`${key} set successfully.`);
 }

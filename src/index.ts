@@ -32,7 +32,8 @@ program
   .on('command:*', async (...args) => {
     const query = args[0] && args[0].join(' ');
     // @TODO : implement options support.
-    await Promise.all([authMiddleware(), queryCommand(query, {})]);
+    authMiddleware();
+    await queryCommand(query, {});
   });
 
 // Config command

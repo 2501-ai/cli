@@ -18,6 +18,26 @@ enum Colors {
 }
 // TODO: use a better logger ? Winston, Pino ? etc..
 
+enum LOG_LEVEL {
+  ERROR = 'error',
+  WARN = 'warn',
+  INFO = 'info',
+  SUCCESS = 'success',
+  DEBUG = 'debug',
+}
+
+if (process.env.LOG_LEVEL) {
+  // Validate the LOG_LEVEL environment variable
+  if (!Object.values(LOG_LEVEL).includes(process.env.LOG_LEVEL as any)) {
+    throw new Error(`Invalid LOG_LEVEL value: ${process.env.LOG_LEVEL}`);
+  }
+}
+
+// TODO: quick win, use a better tool..
+const logLevel =
+  process.env.DEBUG === 'true'
+    ? LOG_LEVEL.DEBUG
+    : (process.env.LOG_LEVEL as LOG_LEVEL);
 export class Logger {
   static error(...args: (Error | AxiosError | string | unknown)[]) {
     if ((args[0] as AxiosError).isAxiosError) {
@@ -42,7 +62,7 @@ export class Logger {
   }
 
   static warn(...args: unknown[]) {
-    terminal[Colors.YELLOW]('[WARN] ').defaultColor(...(args + '\n'));
+    terminal[Colors.YELLOW]('[WARN] ').defaultColor(...args, '\n');
   }
 
   static success(content: string) {
@@ -50,6 +70,11 @@ export class Logger {
   }
 
   static log(...args: unknown[]) {
-    terminal[Colors.BLUE]('[INFO] ').defaultColor(...(args + '\n'));
+    terminal[Colors.BLUE]('[INFO] ').defaultColor(...args, '\n');
+  }
+  static debug(...args: unknown[]) {
+    if (logLevel === LOG_LEVEL.DEBUG) {
+      terminal[Colors.MAGENTA]('[DEBUG] ').defaultColor(...args, '\n');
+    }
   }
 }

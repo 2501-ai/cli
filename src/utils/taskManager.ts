@@ -1,6 +1,7 @@
 import { Manager } from '@listr2/manager';
 import type { ListrBaseClassOptions } from 'listr2';
 import { ListrLogger } from 'listr2';
+import { Logger } from './logger';
 
 function TaskManagerFactory<T = TaskManager>(
   override?: ListrBaseClassOptions
@@ -21,6 +22,8 @@ interface Ctx {
   runTime?: number;
 }
 
+type Task = () => Promise<void>;
+
 export class TaskManager {
   private tasks = TaskManagerFactory<Ctx>();
   private logger = new ListrLogger({ useIcons: false });
@@ -32,7 +35,7 @@ export class TaskManager {
     this.tasks.add([{ title, task }]);
   }
 
-  public async run(title: string, task: () => Promise<void>): Promise<void> {
+  public async run(title: string, task: Task): Promise<void> {
     await this.tasks
       .run([
         {
@@ -41,7 +44,7 @@ export class TaskManager {
         },
       ])
       .catch((e) => {
-        console.error('TaskManager run error', e);
+        Logger.error('TaskManager run error', e);
       });
   }
 

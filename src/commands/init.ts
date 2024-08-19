@@ -1,7 +1,7 @@
 import axios from 'axios';
 import fs from 'fs';
 
-import { syncWorkspace } from '../utils/workspace';
+import { syncWorkspaceFiles, syncWorkspaceState } from '../utils/workspace';
 import { addAgent, readConfig } from '../utils/conf';
 import { TaskManager } from '../utils/taskManager';
 
@@ -48,8 +48,6 @@ export async function initCommand(options?: initCommandOptions): Promise<void> {
           },
         });
 
-        console.log('configurations', configurations.length);
-
         const selected_config = configurations.find(
           (config: { key: string; prompt: string }) => config.key === configId
         );
@@ -57,8 +55,8 @@ export async function initCommand(options?: initCommandOptions): Promise<void> {
           Logger.error('Invalid configuration ID');
           process.exit(1);
         }
-        const workspaceResponse = await syncWorkspace(workspace);
-        console.log('workspaceResponse', workspaceResponse);
+        const workspaceResponse = await syncWorkspaceFiles(workspace);
+        await syncWorkspaceState(workspace);
 
         const { data: agent } = await axios.post(
           '/agents',
@@ -74,7 +72,6 @@ export async function initCommand(options?: initCommandOptions): Promise<void> {
             },
           }
         );
-        console.log('agent', agent);
 
         addAgent({
           id: agent.id,
@@ -84,11 +81,7 @@ export async function initCommand(options?: initCommandOptions): Promise<void> {
           engine: config?.engine || defaultEngine,
         });
 
-        if (
-          workspaceResponse &&
-          workspaceResponse.data &&
-          workspaceResponse.files.length
-        ) {
+        if (workspaceResponse?.data && workspaceResponse?.files.length) {
           await axios.post(
             `/files/index?agent=${agent.name}`,
             workspaceResponse.data,

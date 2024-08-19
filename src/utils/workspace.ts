@@ -9,11 +9,15 @@ import { isText } from 'istextorbinary';
 import { readConfig } from './conf';
 
 import { API_HOST, API_VERSION } from '../constants';
+import os from 'os';
+import crypto from 'crypto';
+import { getDirectoryMd5Hash } from './files';
+import { Logger } from './logger';
 
 axios.defaults.baseURL = `${API_HOST}${API_VERSION}`;
 axios.defaults.timeout = 8000;
 
-const ignored = [
+export const IGNORED_FILE_PATTERNS = [
   '.env',
   'venv',
   '__pycache__',
@@ -53,7 +57,7 @@ const ignored = [
 async function createPDFFromFolder(
   targetFolder: string,
   outputFilePath: string,
-  ignoreFiles: string[] = ignored
+  ignoreFiles: string[] = IGNORED_FILE_PATTERNS
 ): Promise<void> {
   const ignorePatterns = ignoreFiles.map(
     (file) =>
@@ -152,7 +156,7 @@ async function getContextFromWorkspace(workspace: string) {
   const fileId = Math.floor(Math.random() * 100000);
   const outputFilePath = `/tmp/2501/_files/workspace_${fileId}.pdf`;
 
-  const ignorePatterns = ignored.map(
+  const ignorePatterns = IGNORED_FILE_PATTERNS.map(
     (file) =>
       new RegExp(
         '^' + file.replace(/[-/\\^$+?.()|[\]{}]/g, '\\$&').replace(/\*/g, '.*')
@@ -170,25 +174,19 @@ async function getContextFromWorkspace(workspace: string) {
   if (files.length === 0) return [];
 
   await createPDFFromFolder(workspace, outputFilePath)
-    .then(() => {
-      //console.log('Agent : Workspace files unified.');
-    })
-    .catch((err) => {
-      console.error(
-        'Agent : An error occurred while generating the PDF:' + err
-      );
-    });
+    .then(() => Logger.debug('Agent : Workspace files unified.'))
+    .catch((err) =>
+      Logger.error('Agent : An error occurred while generating the PDF:' + err)
+    );
 
   const pdfs = await getPDFsFromWorkspace(workspace);
 
-  const output = [outputFilePath].concat(pdfs).map((pdf) => {
+  return [outputFilePath].concat(pdfs).map((pdf) => {
     return {
       path: pdf,
       data: fs.readFileSync(pdf),
     };
   });
-
-  return output;
 }
 
 export async function getFileFromWorkspace(path: string) {
@@ -197,10 +195,9 @@ export async function getFileFromWorkspace(path: string) {
   return Buffer.from(content).toString();
 }
 
-export async function syncWorkspace(workspace: string) {
-  const files: { path: string; data: Buffer }[] = await getContextFromWorkspace(
-    workspace
-  );
+export async function syncWorkspaceFiles(workspace: string) {
+  const files: { path: string; data: Buffer }[] =
+    await getContextFromWorkspace(workspace);
   if (!files.length) {
     return;
   }
@@ -210,13 +207,89 @@ export async function syncWorkspace(workspace: string) {
     data.set('file' + i, new Blob([files[i].data]), name);
   }
 
-  const config = await readConfig();
-  const response = await axios.post('/files', data, {
-    headers: {
-      'Content-Type': 'multipart/form-data',
-      Authorization: `Bearer ${config?.api_key}`,
-    },
+  const config = readConfig();
+  const response = await axios.post<{ id: string; name: string }[]>(
+    '/files',
+    data,
+    {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+        Authorization: `Bearer ${config?.api_key}`,
+      },
+    }
+  );
+
+  return { data, files: response.data };
+}
+
+export type WorkspaceState = {
+  path: string;
+  hash: string;
+  files: { [key: string]: string };
+  // Mappings of file IDs to file paths
+  // indexed_files: Map<string, string>;
+};
+
+export function getWorkspaceConfName(workspace: string): string {
+  // md5 hash of workspace path (better than to use the path in the config name...)
+  const hash = crypto.createHash('md5').update(workspace).digest('hex');
+  return path.join(
+    path.join(os.homedir(), '.2501'),
+    `workspace_state_${hash}.conf`
+  );
+}
+
+export function readWorkspaceState(workspace: string): WorkspaceState {
+  try {
+    const filePath = getWorkspaceConfName(workspace);
+
+    if (!fs.existsSync(filePath)) {
+      fs.mkdirSync(path.dirname(filePath), {
+        recursive: true,
+      });
+      fs.writeFileSync(
+        filePath,
+        JSON.stringify(
+          <WorkspaceState>{
+            hash: '',
+            path: workspace,
+          },
+          null,
+          2
+        ),
+        'utf8'
+      );
+    }
+    const data = fs.readFileSync(filePath, 'utf8');
+    return JSON.parse(data);
+  } catch (error) {
+    Logger.error('Error reading workspace state:', error);
+    throw error;
+  }
+}
+
+export function writeWorkspaceState(state: WorkspaceState): void {
+  try {
+    const filePath = getWorkspaceConfName(state.path);
+    const data = JSON.stringify(state, null, 2);
+    fs.writeFileSync(filePath, data, 'utf8');
+  } catch (error) {
+    Logger.error('Error writing workspace state:', error);
+    throw error;
+  }
+}
+
+/**
+ * Synchronize the workspace state with the current state of the workspace.
+ * This function will update the hash and files properties of the workspace state.
+ */
+export async function syncWorkspaceState(workspace: string) {
+  const state = readWorkspaceState(workspace);
+  // Performance: Takes around 350ms on large codebases, 125ms on average.
+  const { md5, fileHashes } = await getDirectoryMd5Hash({
+    directoryPath: workspace,
   });
-  const form_files = response.data.map((file: { id: string }) => file.id);
-  return { data, files: form_files };
+  state.hash = md5; // hash of the current state.
+  state.files = Object.fromEntries(fileHashes); // file hashes of the current state.
+  writeWorkspaceState(state);
 }

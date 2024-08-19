@@ -38,22 +38,22 @@ export async function write_file(args: { path: string; content: string }) {
 
 /**
  * Updates content in a filePath synchronously, creating directories if necessary.
- * @param filePath The path of the filePath to update.
- * @param content The new content to write to the filePath.
- * @param lines The range of lines to replace in the filePath as 0-indexed tuple [start, end), where the first number is the inclusive start line and the second number is the end line exclusive.
+ * @param path The path of the filePath to update.
+ * @param modifications The modifications to apply to the content.
+ * @returns A message indicating the success or failure of the operation.
  */
 export async function modify_file({
   path: filePath,
-  content,
-  lines,
+  modifications,
 }: {
   path: string;
-  content: string;
-  lines: [number, number];
+  modifications: { content: string; lines: { start: number; end: number } }[];
 }) {
   // Ensure directory exists before updating filePath
   const directory = path.dirname(filePath);
   Logger.log(`Updating file at "${filePath}"`);
+  Logger.log('modifications :', modifications.length);
+
   try {
     fs.mkdirSync(directory, { recursive: true });
   } catch (err) {
@@ -70,26 +70,61 @@ export async function modify_file({
     return `${ERROR_BOL} reading filePath: ${(err as Error).message} \n ${err}`;
   }
 
-  // Update content in memory
-  const linesToUpdate = lines[1] - lines[0];
-  const fileLines = fileContent.split('\n');
-  let updatedLines: string[] | undefined = content.split('\n');
-  updatedLines = updatedLines.length > 0 ? updatedLines : undefined;
+  // Initialize updated content with the original content
+  let updatedContent = fileContent;
 
-  if (updatedLines) {
-    fileLines.splice(lines[0], linesToUpdate, ...updatedLines);
-  } else {
-    fileLines.splice(lines[0], linesToUpdate);
+  // As we modify the content, we need to keep track of the delta so update the line numbers correctly after each modification.
+  let delta = 0;
+
+  // For each modification, update the content
+  for (const { content, lines } of modifications) {
+    Logger.debug('lines :', lines);
+    // Logger.debug('content :', content);
+    Logger.debug('delta :', delta);
+
+    // Inclusive range. Add 1 to include the last line.
+    const linesToUpdate = lines.end - lines.start + 1;
+    const fileLines = updatedContent.split('\n');
+    Logger.debug('file lines :', fileLines);
+
+    let contentLines: string[] | undefined = content
+      .split('\n')
+      .filter((line) => !!line);
+    contentLines = contentLines.length > 0 ? contentLines : undefined;
+    Logger.debug('contentLines :', contentLines);
+    Logger.debug('Action :', contentLines ? 'Update' : 'Delete');
+
+    // Update the content
+    if (contentLines) {
+      fileLines.splice(lines.start - 1 + delta, linesToUpdate, ...contentLines);
+      // Take into account the delta for the next modification: the number of lines added or removed.
+      delta += (contentLines?.length || 0) - linesToUpdate;
+    } else {
+      if (!contentLines) {
+        // Delete the content
+        fileLines.splice(lines.start - 1 + delta, linesToUpdate);
+      } else {
+        // Insert the content
+        fileLines.splice(lines.start - 1 + delta, 0, contentLines);
+      }
+      // Take into account the delta for the next modification: the number of lines added or removed.
+      delta -= linesToUpdate;
+    }
+    updatedContent = fileLines.join('\n');
   }
-  const updatedContent = fileLines.join('\n');
 
   // Write updated content to filePath
   try {
     fs.writeFileSync(filePath, updatedContent, 'utf8');
-    return `File at "${filePath}" updated successfully.`;
+    Logger.log(`File at "${filePath}" updated successfully.`);
+    return `File at "${filePath}" has been updated. here is the new content to verify :
+    ###BEGIN-UPDATED-FILE-CONTENT###
+    ${updatedContent}
+    ###END-UPDATED-FILE-CONTENT###
+    `;
   } catch (err) {
     Logger.error(`Error writing to path: ${(err as Error).message}`);
-    return `${ERROR_BOL} writing to path: ${(err as Error).message} \n ${err}`;
+    return `Error writing to path: ${(err as Error).message} \n ${err}`;
   }
 }
 

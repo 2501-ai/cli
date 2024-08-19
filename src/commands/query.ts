@@ -84,7 +84,7 @@ export async function queryCommand(
     if (data.actions) {
       return await agent.processActions(
         data.actions,
-        data.asynchronous && data.asynchronous === true
+        data.asynchronous === true
       );
     }
 

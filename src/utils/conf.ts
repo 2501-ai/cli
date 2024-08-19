@@ -1,6 +1,7 @@
 import fs from 'fs';
 import os from 'os';
 import * as path from 'path';
+import { Logger } from './logger';
 
 interface AgentConfig {
   id: string;
@@ -17,8 +18,10 @@ export type Config = {
   agents: AgentConfig[];
 };
 
-const CONFIG_DIR = path.join(os.homedir(), '.2501');
-const CONFIG_FILE_PATH = path.join(CONFIG_DIR, '2501.conf');
+const CONFIG_FILE_PATH = path.join(
+  path.join(os.homedir(), '.2501'),
+  '2501.conf'
+);
 
 /**
  * Reads the configuration from the specified file.
@@ -38,7 +41,7 @@ export function readConfig(): Config | null {
     const data = fs.readFileSync(CONFIG_FILE_PATH, 'utf8');
     return JSON.parse(data);
   } catch (error) {
-    console.error('Error reading configuration:', error);
+    Logger.error('Error reading configuration:', error);
     return null;
   }
 }
@@ -48,10 +51,10 @@ export function readConfig(): Config | null {
  * @param key - The key to set.
  * @param value - The value to set.
  */
-export async function setValue<K extends keyof Config>(
+export function setValue<K extends keyof Config>(
   key: K,
   value: Config[K]
-): Promise<void> {
+): void {
   try {
     const config = readConfig();
     if (config) {
@@ -59,7 +62,7 @@ export async function setValue<K extends keyof Config>(
       writeConfig(config);
     }
   } catch (error) {
-    console.error('Error setting value:', error);
+    Logger.error('Error setting value:', error);
   }
 }
 
@@ -72,7 +75,7 @@ export function writeConfig(config: Config): void {
     const data = JSON.stringify(config, null, 2);
     fs.writeFileSync(CONFIG_FILE_PATH, data, 'utf8');
   } catch (error) {
-    console.error('Error writing configuration:', error);
+    Logger.error('Error writing configuration:', error);
   }
 }
 
@@ -124,7 +127,7 @@ export function addAgent(newAgent: AgentConfig): void {
     config.agents.push(newAgent);
     writeConfig(config);
   } else {
-    console.error('Invalid configuration');
+    Logger.error('Invalid configuration');
   }
 }
 
@@ -139,6 +142,6 @@ export async function flushAgents(): Promise<void> {
       writeConfig(config);
     }
   } catch (error) {
-    console.error('Error flushing agents:', error);
+    Logger.error('Error flushing agents:', error);
   }
 }

@@ -17,7 +17,7 @@ import { readConfig } from './utils/conf';
 import { API_HOST, API_VERSION } from './constants';
 import { Logger } from './utils/logger';
 
-let debugData: any = null;
+let debugData: any = '';
 
 enum QueryStatus {
   Completed = 'completed',
@@ -76,7 +76,7 @@ export class Agent {
 
   async checkStatus() {
     try {
-      const config = await readConfig();
+      const config = readConfig();
       const { data } = await axios.get(
         `${API_HOST}${API_VERSION}/agents/${this.id}/status`,
         {
@@ -110,12 +110,21 @@ export class Agent {
         return;
       }
     } catch (error: any) {
-      Logger.error(
+      console.error(
         'Error checking query status:',
         error.message,
         '\n Retrying...'
       );
-      Logger.log('debugData', JSON.stringify(debugData));
+      try {
+        if (error.message === 'Unexpected end of JSON input') {
+          const fixed_args = jsonrepair(debugData);
+          debugData = JSON.parse(convertFormToJSON(fixed_args));
+        } else {
+          Logger.log('debugData', JSON.stringify(debugData));
+        }
+      } catch (e) {
+        Logger.error('Error logging debugData', e);
+      }
     }
 
     // const self = this;
@@ -198,7 +207,7 @@ export class Agent {
 
     if (this.engine.includes('rhino') && asynchronous) {
       try {
-        const config = await readConfig();
+        const config = readConfig();
         await axios.post(
           `${API_HOST}${API_VERSION}/agents/${this.id}/submitOutput`,
           {

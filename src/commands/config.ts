@@ -6,7 +6,7 @@ import { readConfig } from '../utils/conf';
 
 export async function configCommand() {
   try {
-    const config = await readConfig();
+    const config = readConfig();
     const response = await axios.get(
       `${API_HOST}${API_VERSION}/configurations`,
       { headers: { Authorization: `Bearer ${config?.api_key}` } }
@@ -15,12 +15,10 @@ export async function configCommand() {
     terminal.table(
       [
         ['ID', 'Description'],
-        ...response.data.map(
-          (c: { id: string; description: string }) => [
-            c.id,
-            c.description,
-          ]
-        ),
+        ...response.data.map((c: { id: string; description: string }) => [
+          c.id,
+          c.description,
+        ]),
       ],
       {
         hasBorder: true,
