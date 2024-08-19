@@ -51,8 +51,8 @@ export async function modify_file({
 }) {
   // Ensure directory exists before updating filePath
   const directory = path.dirname(filePath);
-  Logger.log(`Updating file at "${filePath}"`);
-  Logger.log('modifications :', modifications.length);
+  Logger.debug(`Updating file at "${filePath}"`);
+  Logger.debug('modifications :', modifications.length);
 
   try {
     fs.mkdirSync(directory, { recursive: true });
