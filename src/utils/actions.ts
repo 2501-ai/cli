@@ -21,13 +21,14 @@ export const LOGFILE_PATH = `${LOG_DIR}/test.log`;
 export const ERRORFILE_PATH = `${LOG_DIR}/error.log`;
 
 export function read_file(args: { path: string }): string | null {
+  Logger.debug(`Reading file at "${args.path}"`);
   if (!fs.existsSync(args.path)) return null;
 
   return fs.readFileSync(args.path, 'utf8');
 }
 
 export async function write_file(args: { path: string; content: string }) {
-  Logger.log(`Writing file at "${args.path}"`);
+  Logger.debug(`Writing file at "${args.path}"`);
   fs.mkdirSync(path.dirname(args.path), { recursive: true });
   fs.writeFileSync(args.path, args.content);
   return `
@@ -49,8 +50,8 @@ export function update_file_content({
   filePath: string;
   updates: UpdateInstruction[];
 }): string {
-  console.log('UpdateFileContent', filePath);
-  console.log('updates:', updates);
+  Logger.debug(`Updating file at "${filePath}"`);
+  Logger.debug('Updates:', updates);
 
   // Read the file content from the filesystem
   let fileContent = fs.readFileSync(filePath, 'utf8');
@@ -115,14 +116,14 @@ export function update_file_content({
   // Join the lines back into a single string
   fileContent = lines.join('\n');
 
-  console.log('Updated file content:', fileContent);
+  Logger.debug('Updated file content:', fileContent);
 
   // Write the updated content back to the file
   fs.writeFileSync(filePath, fileContent, 'utf8');
 
   return `
     File updated: ${filePath}
-    Content:
+    New content:
     \`\`\`
     ${fileContent}
     \`\`\`
@@ -227,6 +228,7 @@ export async function run_shell(args: {
   env?: { [key: string]: string };
 }): Promise<string> {
   let output: string = '';
+  Logger.debug(`Running shell command: ${args.command}`);
 
   try {
     const { stderr, stdout } = await execa(args.command, {

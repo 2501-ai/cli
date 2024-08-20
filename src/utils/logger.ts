@@ -44,12 +44,18 @@ export class Logger {
       const [arg0, ...rest] = args;
       terminal[Colors.RED]('[HTTP ERROR] ').defaultColor(
         (arg0 as AxiosError).toJSON(),
-        ...rest,
-        '\n'
+        ...rest.map(
+          (a) => (typeof a === 'object' ? JSON.stringify(a, null, 2) : a) + '\n'
+        )
       );
     } else {
       // terminal[Colors.RED]('\n[ERROR] ').defaultColor(...args);
-      console.error('[ERROR] ', ...args, '\n');
+      console.error(
+        '[ERROR] ',
+        ...args.map(
+          (a) => (typeof a === 'object' ? JSON.stringify(a, null, 2) : a) + '\n'
+        )
+      );
     }
   }
 
@@ -62,7 +68,11 @@ export class Logger {
   }
 
   static warn(...args: unknown[]) {
-    terminal[Colors.YELLOW]('[WARN] ').defaultColor(...args, '\n');
+    terminal[Colors.YELLOW]('[WARN] ').defaultColor(
+      ...args.map(
+        (a) => (typeof a === 'object' ? JSON.stringify(a, null, 2) : a) + '\n'
+      )
+    );
   }
 
   static success(content: string) {
@@ -70,11 +80,20 @@ export class Logger {
   }
 
   static log(...args: unknown[]) {
-    terminal[Colors.BLUE]('[INFO] ').defaultColor(...args, '\n');
+    terminal[Colors.BLUE]('[INFO] ').defaultColor(
+      ...args.map(
+        (a) => (typeof a === 'object' ? JSON.stringify(a, null, 2) : a) + '\n'
+      ),
+      '\n'
+    );
   }
   static debug(...args: unknown[]) {
     if (logLevel === LOG_LEVEL.DEBUG) {
-      terminal[Colors.MAGENTA]('[DEBUG] ').defaultColor(...args, '\n');
+      terminal[Colors.MAGENTA]('[DEBUG] ').defaultColor(
+        ...args.map(
+          (a) => (typeof a === 'object' ? JSON.stringify(a, null, 2) : a) + '\n'
+        )
+      );
     }
   }
 }

@@ -120,7 +120,7 @@ export class Agent {
           const fixed_args = jsonrepair(debugData);
           debugData = JSON.parse(convertFormToJSON(fixed_args));
         } else {
-          Logger.log('debugData', JSON.stringify(debugData));
+          Logger.debug('debugData', JSON.stringify(debugData));
         }
       } catch (e) {
         Logger.error('Error logging debugData', e);
