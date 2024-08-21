@@ -7,7 +7,7 @@ import { listAgents, listAgentsFromWorkspace, readConfig } from '../utils/conf';
 import { API_HOST, API_VERSION } from '../constants';
 
 import { initCommand } from './init';
-import { Agent } from '../agent';
+import { AgentManager } from '../agentManager';
 import { Logger } from '../utils/logger';
 import {
   getWorkspaceChanges,
@@ -56,7 +56,7 @@ export async function queryCommand(
     Logger.debug(`Current workspace: ${eligible?.workspace || workspace} \n`);
   }
 
-  const agent = new Agent({
+  const agentClient = new AgentManager({
     id: eligible.id,
     name: eligible.name,
     engine: eligible.engine,
@@ -66,11 +66,14 @@ export async function queryCommand(
   });
 
   try {
-    await agent.toggleLoader();
-    const changed = await synchroniseWorkspaceChanges(agent.name, workspace);
+    await agentClient.toggleLoader();
+    const changed = await synchroniseWorkspaceChanges(
+      agentClient.name,
+      workspace
+    );
 
     const { data } = await axios.post(
-      `${API_HOST}${API_VERSION}/agents/${agent.id}/query`,
+      `${API_HOST}${API_VERSION}/agents/${agentClient.id}/query`,
       { query, changed },
       {
         headers: {
@@ -81,9 +84,11 @@ export async function queryCommand(
       }
     );
 
+    const taskManager = new TaskManager();
     if (data.asynchronous && data.asynchronous === true) {
-      return agent.checkStatus().then(async () => {
-        await synchroniseWorkspaceChanges(agent.name, workspace);
+      return taskManager.run('Thinking...', async () => {
+        await agentClient.checkStatus();
+        await synchroniseWorkspaceChanges(agentClient.name, workspace);
       });
     }
 
@@ -92,17 +97,21 @@ export async function queryCommand(
     }
 
     if (data.actions) {
-      return await agent
-        .processActions(data.actions, data.asynchronous === true)
-        .then(async () => {
-          await synchroniseWorkspaceChanges(agent.name, workspace);
-        });
+      return taskManager.run('Processing actions...', async () => {
+        await agentClient.processActions(
+          data.actions,
+          data.asynchronous === true
+        );
+        await synchroniseWorkspaceChanges(agentClient.name, workspace);
+      });
+    } else {
+      Logger.debug('No actions to process');
     }
 
     process.exit(0);
   } catch (error: any) {
     Logger.error('Error querying agent:', error);
-    process.exit(0);
+    process.exit(1);
   }
 }
 

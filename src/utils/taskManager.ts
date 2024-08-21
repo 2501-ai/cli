@@ -1,7 +1,6 @@
 import { Manager } from '@listr2/manager';
 import type { ListrBaseClassOptions } from 'listr2';
 import { ListrLogger } from 'listr2';
-import { Logger } from './logger';
 
 function TaskManagerFactory<T = TaskManager>(
   override?: ListrBaseClassOptions
@@ -34,16 +33,15 @@ export class TaskManager {
   }
 
   public async run(title: string, task: () => Promise<void>): Promise<void> {
-    await this.tasks
-      .run([
+    await this.tasks.run(
+      [
         {
           title,
           task,
         },
-      ])
-      .catch((e) => {
-        Logger.error('TaskManager run error', e);
-      });
+      ],
+      { exitOnError: true, collectErrors: 'full' }
+    );
   }
 
   public async runAllTasks(): Promise<void> {

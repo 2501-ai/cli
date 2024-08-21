@@ -1,0 +1,11 @@
+{
+  "path": "",
+  "updates": [
+    {
+      "lineStart": 17,
+      "lineEnd": 17,
+      "content": "\nconst FINAL_PROMPT = `\n  ### QUERY FORMAT ###\n  - Query format uses the XML tags <INTERNAL-NOTE /> and <USER-QUERY /> to separate internal notes from user queries.\n  - An optional <CONTEXT /> tag can be used to provide additional context to the AI agent.\n  - Internal notes are used to provide additional context to the AI agent, and are not visible to the user.\n\n  ### INSTRUCTIONS ###\n  ${this.prompt}`;\n"
+    },
+    { "lineStart": 68, "lineEnd": 76, "content": "" }
+  ]
+}

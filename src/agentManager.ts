@@ -14,15 +14,17 @@ import {
 } from './utils/actions';
 import { readConfig } from './utils/conf';
 
-import { API_HOST, API_VERSION } from './constants';
+import {
+  API_HOST,
+  API_VERSION,
+  OPENAI_TERMINAL_STATUSES,
+  QueryStatus,
+} from './constants';
 import { Logger } from './utils/logger';
 
 let debugData: any = '';
 
-enum QueryStatus {
-  Completed = 'completed',
-  Failed = 'failed',
-}
+const MAX_RETRY = 3;
 
 const ACTION_FNS = {
   hasError,
@@ -35,7 +37,7 @@ const ACTION_FNS = {
 
 export type AgentCallbackType = (...args: unknown[]) => Promise<void>;
 
-export class Agent {
+export class AgentManager {
   id: string;
   name: string;
   engine: string;
@@ -44,6 +46,8 @@ export class Agent {
 
   spinner: any;
   queryCommand: (...args: any[]) => Promise<void>;
+
+  errorRetries = 0;
 
   constructor(options: {
     id: string;
@@ -103,11 +107,19 @@ export class Agent {
         return process.exit(0);
       }
 
+      if (OPENAI_TERMINAL_STATUSES.includes(data.status)) {
+        await this.toggleLoader(true);
+        Logger.debug('Unhandled status', data.status);
+        Logger.debug('Data', data);
+        Logger.warn('TODO: Implement action required');
+        return process.exit(1);
+      }
+
       if (data.actions) {
         debugData = data;
         await this.toggleLoader(true);
         await this.processActions(data.actions);
-        return;
+        return process.exit(0);
       }
     } catch (error: any) {
       console.error(
@@ -115,6 +127,9 @@ export class Agent {
         error.message,
         '\n Retrying...'
       );
+      this.errorRetries++;
+
+      // Try to log debugData if available
       try {
         if (error.message === 'Unexpected end of JSON input') {
           const fixed_args = jsonrepair(debugData);
@@ -124,11 +139,15 @@ export class Agent {
         }
       } catch (e) {
         Logger.error('Error logging debugData', e);
+        return process.exit(1);
+      }
+      // Prevent infinite loop
+      if (this.errorRetries > MAX_RETRY) {
+        Logger.error('Max retries reached, exiting...');
+        process.exit(1);
       }
     }
-
-    // const self = this;
-    setTimeout(async () => await this.checkStatus.call(this), 2000);
+    setTimeout(async () => await this.checkStatus.call(this), 3000);
   }
 
   async processActions(actions: any[], asynchronous: boolean = true) {
@@ -219,8 +238,9 @@ export class Agent {
             },
           }
         );
-        // const self = this;
-        setTimeout(async () => await this.checkStatus.call(this), 2000);
+        // add a 2 sec delay
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+        await this.checkStatus();
       } catch (e) {
         await this.checkStatus();
       }

@@ -4,6 +4,8 @@ import TurndownService from 'turndown';
 import execa from 'execa';
 import * as cheerio from 'cheerio';
 import { Logger } from './logger';
+import { isNullOrUndefined } from './objects';
+import { UpdateInstruction } from './types';
 
 /**
  * Directory to store logs
@@ -37,11 +39,78 @@ export async function write_file(args: { path: string; content: string }) {
     ${args.content}`;
 }
 
-type UpdateInstruction = {
-  lineStart?: number; // Optional starting line number for the update (required for update and remove)
-  lineEnd?: number; // Optional ending line number (exclusive) for the update (required for update and remove)
-  content?: string; // New content to replace or insert (if undefined, it removes the content)
-};
+/**
+ * Apply content updates to a content.
+ */
+export function applyContentUpdates(
+  fileContent: string,
+  updates: UpdateInstruction[]
+) {
+  // Split the file content into lines
+  const fileLines = fileContent.split('\n');
+
+  // To track line changes due to insertions and deletions
+  let lineOffset = 0;
+
+  // Sort the updates by their starting line number in descending order to handle index shifts
+  updates.sort((a, b) => (b.lineStart ?? Infinity) - (a.lineStart ?? Infinity));
+
+  for (const update of updates) {
+    const { lineStart, lineEnd, content } = update;
+
+    // Calculate adjusted lineStart and lineEnd
+    const adjustedLineStart = isNullOrUndefined(lineStart)
+      ? undefined
+      : lineStart - 1 + lineOffset;
+    const adjustedLineEnd = isNullOrUndefined(lineEnd)
+      ? undefined
+      : lineEnd - 1 + lineOffset;
+
+    if (adjustedLineEnd && adjustedLineEnd > fileLines.length) {
+      throw new Error(
+        `Line end index ${lineEnd} is out of bounds for the file content.`
+      );
+    }
+    if (adjustedLineStart && adjustedLineStart < 0) {
+      throw new Error(
+        `Line start index ${lineStart} is out of bounds for the file content.`
+      );
+    }
+    const hasLineStart = !isNullOrUndefined(adjustedLineStart);
+    const hasLineEnd = !isNullOrUndefined(adjustedLineEnd);
+
+    if (hasLineStart && hasLineEnd && adjustedLineStart < adjustedLineEnd) {
+      // If both lineStart and lineEnd are defined, either update or remove content
+      if (content) {
+        const newLines = content.split('\n');
+        // Replace content
+        fileLines.splice(
+          adjustedLineStart,
+          adjustedLineEnd - adjustedLineStart,
+          ...newLines
+        );
+        lineOffset += newLines.length - (adjustedLineEnd - adjustedLineStart);
+      } else {
+        // Remove content
+        fileLines.splice(
+          adjustedLineStart,
+          adjustedLineEnd - adjustedLineStart
+        );
+        lineOffset -= adjustedLineEnd - adjustedLineStart;
+      }
+    } else if (hasLineStart && content) {
+      // If only lineStart is defined, insert the content at the specified line
+      if (adjustedLineStart >= 0 && adjustedLineStart <= fileLines.length) {
+        const newLines = content.split('\n');
+        fileLines.splice(adjustedLineStart, 0, ...newLines);
+        lineOffset += newLines.length;
+      }
+    }
+  }
+
+  // Join the lines back into a single string
+  return fileLines.join('\n');
+}
 
 export function update_file_content({
   filePath,
@@ -55,68 +124,9 @@ export function update_file_content({
 
   // Read the file content from the filesystem
   let fileContent = fs.readFileSync(filePath, 'utf8');
+  fileContent = applyContentUpdates(fileContent, updates);
 
-  // Split the file content into lines
-  const lines = fileContent.split('\n');
-
-  // To track line changes due to insertions and deletions
-  let lineOffset = 0;
-
-  // Convert 1-based indices to 0-based for processing
-  const convertToZeroBased = (line?: number) =>
-    line !== undefined ? line - 1 : undefined;
-
-  // Sort the updates by their starting line number in descending order to handle index shifts
-  updates.sort(
-    (a, b) =>
-      (convertToZeroBased(b.lineStart) ?? Infinity) -
-      (convertToZeroBased(a.lineStart) ?? Infinity)
-  );
-
-  for (const update of updates) {
-    const { lineStart, lineEnd, content } = update;
-
-    // Convert lineStart and lineEnd to 0-based indexing for processing
-    const adjustedLineStart =
-      convertToZeroBased(lineStart) !== undefined
-        ? convertToZeroBased(lineStart)! + lineOffset
-        : undefined;
-    const adjustedLineEnd =
-      convertToZeroBased(lineEnd) !== undefined
-        ? convertToZeroBased(lineEnd)! + lineOffset
-        : undefined;
-
-    if (adjustedLineStart !== undefined && adjustedLineEnd !== undefined) {
-      // If both lineStart and lineEnd are defined, either update or remove content
-      if (adjustedLineStart >= 0 && adjustedLineEnd <= lines.length) {
-        if (content !== undefined) {
-          // Replace content
-          lines.splice(
-            adjustedLineStart,
-            adjustedLineEnd - adjustedLineStart,
-            ...content.split('\n')
-          );
-          lineOffset +=
-            content.split('\n').length - (adjustedLineEnd - adjustedLineStart);
-        } else {
-          // Remove content
-          lines.splice(adjustedLineStart, adjustedLineEnd - adjustedLineStart);
-          lineOffset -= adjustedLineEnd - adjustedLineStart;
-        }
-      }
-    } else if (adjustedLineStart !== undefined && content !== undefined) {
-      // If only lineStart is defined, insert the content at the specified line
-      if (adjustedLineStart >= 0 && adjustedLineStart <= lines.length) {
-        lines.splice(adjustedLineStart, 0, ...content.split('\n'));
-        lineOffset += content.split('\n').length;
-      }
-    }
-  }
-
-  // Join the lines back into a single string
-  fileContent = lines.join('\n');
-
-  Logger.debug('Updated file content:', fileContent);
+  // Logger.debug('Updated file content:', fileContent);
 
   // Write the updated content back to the file
   fs.writeFileSync(filePath, fileContent, 'utf8');

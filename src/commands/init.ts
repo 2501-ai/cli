@@ -70,6 +70,7 @@ export async function initCommand(options?: initCommandOptions): Promise<void> {
             configuration: selected_config.id,
             prompt: selected_config.prompt,
             engine: config?.engine || defaultEngine,
+            files: workspaceResponse?.files.map((file) => file.id),
           },
           {
             headers: {
