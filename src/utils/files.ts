@@ -1,15 +1,14 @@
 import path from 'path';
 import crypto from 'crypto';
-// import { performance } from 'node:perf_hooks';
-import { IGNORED_FILE_PATTERNS } from './workspace';
 import fs from 'fs';
 import { WorkspaceState } from './types';
 import { Logger } from './logger';
+import { IGNORED_FILE_PATTERNS } from '../constants';
+import { getWorkspaceFiles } from './workspace';
 
 interface DirectoryMd5HashOptions {
   directoryPath: string;
   maxDepth?: number; // Optional parameter to limit directory depth
-  ignorePatterns?: string[]; // Optional array of patterns or names to ignore
 }
 
 interface WorkspaceDiff {
@@ -18,6 +17,37 @@ interface WorkspaceDiff {
   modified: string[]; // Files that are present in both states but have different hashes
   hasChanges: boolean; // True if there are any changes in the workspace
 }
+
+/**
+ * Get the list of files to ignore in the workspace, enriched with patterns from .gitignore if present.
+ */
+export function getIgnoredFiles(workspace: string): string[] {
+  const ignorePatterns = new Set(IGNORED_FILE_PATTERNS);
+
+  const hasGitIgnore = fs.existsSync(path.join(workspace, '.gitignore'));
+  if (hasGitIgnore) {
+    const gitIgnore = fs.readFileSync(
+      path.join(workspace, '.gitignore'),
+      'utf8'
+    );
+    gitIgnore
+      .split('\n')
+      .filter((line) => line.trim() !== '' && !line.startsWith('#'))
+      .map((v) => ignorePatterns.add(v));
+  }
+
+  return Array.from(ignorePatterns);
+}
+
+/**
+ * Converts a byte size to a human-readable format.
+ */
+export const toReadableSize = (bytes: number) => {
+  const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+  if (bytes === 0) return '0 Byte';
+  const i = Math.floor(Math.log(bytes) / Math.log(1024));
+  return `${(bytes / Math.pow(1024, i)).toFixed(2)} ${sizes[i]}`;
+};
 
 /**
  * Computes the MD5 hash of a directory and its contents asynchronously based on file metadata.
@@ -30,49 +60,27 @@ interface WorkspaceDiff {
 export async function getDirectoryMd5Hash({
   directoryPath,
   maxDepth = 10,
-  ignorePatterns = IGNORED_FILE_PATTERNS,
 }: DirectoryMd5HashOptions) {
-  const fileHashes = new Map<string, string>();
-  const ignoreSet = new Set(ignorePatterns);
-
-  async function processDirectory(
-    currentPath: string,
-    currentDepth: number
-  ): Promise<void> {
-    if (currentDepth > maxDepth) {
-      Logger.warn('Directory depth exceeds the maximum allowed depth.');
-      return;
-    }
-
-    const items = fs.readdirSync(currentPath, { withFileTypes: true });
-
-    await Promise.all(
-      items.map(async (item) => {
-        const itemPath = path.join(currentPath, item.name);
-
-        if (ignoreSet.has(item.name)) {
-          return; // Skip the item if it matches any of the ignore patterns
-        }
-
-        if (item.isDirectory()) {
-          // Recursively process subdirectories
-          await processDirectory(itemPath, currentDepth + 1);
-        } else if (item.isFile()) {
-          // Use streaming to read file and compute MD5 hash
-          const fileHash = computeFileMetadataHash(itemPath);
-          // Include the relative file path in the hash to ensure unique content
-          const relativePath = path.relative(directoryPath, itemPath);
-          fileHashes.set(relativePath, fileHash);
-        }
-      })
-    );
-  }
+  const ignoreSet = new Set(getIgnoredFiles(directoryPath));
+  Logger.debug('Directory:', directoryPath);
 
   // Start processing from the base directory with an initial depth of 0
-  await processDirectory(directoryPath, 0);
+  const result = await getWorkspaceFiles({
+    currentPath: '',
+    currentDepth: 0,
+    ignoreSet,
+    maxDepth,
+    directoryPath,
+  });
+
+  Logger.debug(
+    'Total size of files in directory:',
+    toReadableSize(result.totalSize)
+  );
+  Logger.debug('Total files hashed:', result.fileHashes.size);
 
   // Sort the file paths to ensure consistent ordering for the final hash
-  const sortedFileHashes = Array.from(fileHashes)
+  const sortedFileHashes = Array.from(result.fileHashes)
     .sort(([pathA], [pathB]) => pathA.localeCompare(pathB))
     .map(([relativePath, fileHash]) => `${fileHash}:${relativePath}`);
 
@@ -84,8 +92,9 @@ export async function getDirectoryMd5Hash({
 
   return {
     md5,
-    fileHashes,
+    fileHashes: result.fileHashes,
     directoryPath,
+    totalSize: result.totalSize,
   };
 }
 
@@ -93,27 +102,22 @@ export async function getDirectoryMd5Hash({
  * Computes a hash based on file metadata (size and modification time).
  * This is a faster alternative to reading the entire file content, but will not detect changes in file content, and not detect reverted changes (for example)
  */
-function computeFileMetadataHash(filePath: string): string {
+export function computeFileMetadataHash(filePath: string): {
+  hash: string;
+  size: number;
+} {
   const stats = fs.statSync(filePath);
   const metaHash = crypto.createHash('md5');
   metaHash.update(`${stats.size}:${stats.mtimeMs}`);
-  return metaHash.digest('hex');
+  // Logger.debug(
+  //   `Hashing metadata for file: ${filePath}`,
+  //   `${stats.size}:${stats.mtimeMs}`
+  // );
+  return {
+    hash: metaHash.digest('hex'),
+    size: stats.size,
+  };
 }
-
-/**
- * Computes the MD5 hash of a file asynchronously.
- * @deprecated This function is not used in the final implementation (too slow)
- */
-// async function computeFileHash(filePath: string): Promise<string> {
-//   return new Promise<string>((resolve, reject) => {
-//     const hash = crypto.createHash('md5');
-//     const stream = fs.createReadStream(filePath);
-
-//     stream.on('data', (chunk) => hash.update(chunk));
-//     stream.on('end', () => resolve(hash.digest('hex')));
-//     stream.on('error', reject);
-//   });
-// }
 
 /**
  * TODO: implement
@@ -151,46 +155,3 @@ export function getWorkspaceDiff(
 
   return { added, removed, modified, hasChanges };
 }
-
-/**
- * Wraps an asynchronous function to measure its execution time.
- * @returns A new function that, when called, executes the original async function and logs its performance.
- * @example
- *
- * // Assume getDirectoryMd5Hash is an async function that computes MD5 hash of a directory
- * const wrappedGetDirectoryMd5Hash = measurePerformance(
- *   getDirectoryMd5Hash,
- *   'getDirectoryMd5Hash'
- * );
- *
- * // Example usage:
- * const directoryPath = '/tmp/2501-workspace';
- * wrappedGetDirectoryMd5Hash({
- *   directoryPath,
- *   ignorePatterns: IGNORED_FILE_PATTERNS,
- * })
- *   .then(({ md5 }) => {
- *     console.log(`MD5 hash of the directory: ${md5}`);
- *   })
- *   .catch((err) => console.error(err));
- */
-// function measurePerformance<T>(
-//   asyncFn: (...args: any[]) => Promise<T>,
-//   fnName: string = 'Async Function'
-// ): (...args: Parameters<typeof asyncFn>) => Promise<T> {
-//   return async (...args: Parameters<typeof asyncFn>): Promise<T> => {
-//     const startTime = performance.now(); // Start the timer
-//     try {
-//       const result = await asyncFn(...args); // Execute the original function
-//       const endTime = performance.now(); // Stop the timer
-//       const duration = endTime - startTime; // Calculate the duration
-//       Logger.log(`${fnName} executed in: ${duration.toFixed(2)}ms`);
-//       return result; // Return the result of the original function
-//     } catch (error) {
-//       const endTime = performance.now(); // Stop the timer on error
-//       const duration = endTime - startTime; // Calculate the duration
-//       Logger.log(`${fnName} failed after: ${duration.toFixed(2)}ms`);
-//       throw error; // Rethrow the error after logging
-//     }
-//   };
-// }

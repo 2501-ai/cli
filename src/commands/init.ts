@@ -11,6 +11,8 @@ import { TaskManager } from '../utils/taskManager';
 
 import { API_HOST, API_VERSION } from '../constants';
 import { Logger } from '../utils/logger';
+import { createAgent, getConfigurations } from '../api';
+import { measurePerformance } from '../utils/performance';
 
 axios.defaults.baseURL = `${API_HOST}${API_VERSION}`;
 axios.defaults.timeout = 8000;
@@ -46,11 +48,7 @@ export async function initCommand(options?: initCommandOptions): Promise<void> {
     const taskManager = new TaskManager();
     await taskManager.run('Initializing agent...', async () => {
       try {
-        const { data: configurations } = await axios.get(`/configurations`, {
-          headers: {
-            Authorization: `Bearer ${config?.api_key}`,
-          },
-        });
+        const configurations = await measurePerformance(getConfigurations)();
 
         const selected_config = configurations.find(
           (config: { key: string; prompt: string }) => config.key === configId
@@ -63,20 +61,12 @@ export async function initCommand(options?: initCommandOptions): Promise<void> {
         const workspaceResponse = await syncWorkspaceFiles(workspace);
         await syncWorkspaceState(workspace);
 
-        const { data: agent } = await axios.post(
-          '/agents',
-          {
-            workspace,
-            configuration: selected_config.id,
-            prompt: selected_config.prompt,
-            engine: config?.engine || defaultEngine,
-            files: workspaceResponse?.files.map((file) => file.id),
-          },
-          {
-            headers: {
-              Authorization: `Bearer ${config?.api_key}`,
-            },
-          }
+        const agent = await measurePerformance(createAgent)(
+          workspace,
+          selected_config.id,
+          selected_config.prompt,
+          config?.engine || defaultEngine,
+          workspaceResponse?.files.map((file) => file.id) || []
         );
 
         addAgent({
@@ -88,7 +78,10 @@ export async function initCommand(options?: initCommandOptions): Promise<void> {
         });
 
         if (workspaceResponse?.data && workspaceResponse?.files.length) {
-          await indexWorkspaceFiles(agent.name, workspaceResponse.data);
+          await measurePerformance(indexWorkspaceFiles)(
+            agent.name,
+            workspaceResponse.data
+          );
         }
 
         Logger.log(`Agent ${agent.id} created in ${workspace}`);

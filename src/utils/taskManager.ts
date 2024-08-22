@@ -40,7 +40,7 @@ export class TaskManager {
           task,
         },
       ],
-      { exitOnError: true, collectErrors: 'full' }
+      { collectErrors: 'full' }
     );
   }
 
