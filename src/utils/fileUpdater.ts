@@ -44,8 +44,6 @@ export class FileUpdater {
     )) {
       const { content, lineStart, lineEnd } = this.adjustUpdate(update);
 
-      console.log('UPDATE EXECUTE', { lineStart, lineEnd });
-
       if (content && content.length > 0) {
         this.fileLines.splice(
           lineStart,
