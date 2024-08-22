@@ -44,10 +44,12 @@ export class FileUpdater {
     )) {
       const { content, lineStart, lineEnd } = this.adjustUpdate(update);
 
+      console.log('UPDATE EXECUTE', { lineStart, lineEnd });
+
       if (content && content.length > 0) {
         this.fileLines.splice(
           lineStart,
-          lineEnd - lineStart,
+          lineEnd - lineStart === 0 ? 0 : lineEnd - lineStart + 1,
           ...content.split('\n')
         );
         this.total_offset += content.split('\n').length;
