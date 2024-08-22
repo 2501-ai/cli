@@ -1,9 +1,10 @@
 import path from 'path';
 import crypto from 'crypto';
-import { performance } from 'node:perf_hooks';
+// import { performance } from 'node:perf_hooks';
 import { IGNORED_FILE_PATTERNS } from './workspace';
 import fs from 'fs';
 import { WorkspaceState } from './types';
+import { Logger } from './logger';
 
 interface DirectoryMd5HashOptions {
   directoryPath: string;
@@ -39,7 +40,7 @@ export async function getDirectoryMd5Hash({
     currentDepth: number
   ): Promise<void> {
     if (currentDepth > maxDepth) {
-      // console.warn('Directory depth exceeds the maximum allowed depth.');
+      Logger.warn('Directory depth exceeds the maximum allowed depth.');
       return;
     }
 
@@ -103,16 +104,16 @@ function computeFileMetadataHash(filePath: string): string {
  * Computes the MD5 hash of a file asynchronously.
  * @deprecated This function is not used in the final implementation (too slow)
  */
-async function computeFileHash(filePath: string): Promise<string> {
-  return new Promise<string>((resolve, reject) => {
-    const hash = crypto.createHash('md5');
-    const stream = fs.createReadStream(filePath);
+// async function computeFileHash(filePath: string): Promise<string> {
+//   return new Promise<string>((resolve, reject) => {
+//     const hash = crypto.createHash('md5');
+//     const stream = fs.createReadStream(filePath);
 
-    stream.on('data', (chunk) => hash.update(chunk));
-    stream.on('end', () => resolve(hash.digest('hex')));
-    stream.on('error', reject);
-  });
-}
+//     stream.on('data', (chunk) => hash.update(chunk));
+//     stream.on('end', () => resolve(hash.digest('hex')));
+//     stream.on('error', reject);
+//   });
+// }
 
 /**
  * TODO: implement
@@ -173,23 +174,23 @@ export function getWorkspaceDiff(
  *   })
  *   .catch((err) => console.error(err));
  */
-function measurePerformance<T>(
-  asyncFn: (...args: any[]) => Promise<T>,
-  fnName: string = 'Async Function'
-): (...args: Parameters<typeof asyncFn>) => Promise<T> {
-  return async (...args: Parameters<typeof asyncFn>): Promise<T> => {
-    const startTime = performance.now(); // Start the timer
-    try {
-      const result = await asyncFn(...args); // Execute the original function
-      const endTime = performance.now(); // Stop the timer
-      const duration = endTime - startTime; // Calculate the duration
-      console.log(`${fnName} executed in: ${duration.toFixed(2)}ms`);
-      return result; // Return the result of the original function
-    } catch (error) {
-      const endTime = performance.now(); // Stop the timer on error
-      const duration = endTime - startTime; // Calculate the duration
-      console.log(`${fnName} failed after: ${duration.toFixed(2)}ms`);
-      throw error; // Rethrow the error after logging
-    }
-  };
-}
+// function measurePerformance<T>(
+//   asyncFn: (...args: any[]) => Promise<T>,
+//   fnName: string = 'Async Function'
+// ): (...args: Parameters<typeof asyncFn>) => Promise<T> {
+//   return async (...args: Parameters<typeof asyncFn>): Promise<T> => {
+//     const startTime = performance.now(); // Start the timer
+//     try {
+//       const result = await asyncFn(...args); // Execute the original function
+//       const endTime = performance.now(); // Stop the timer
+//       const duration = endTime - startTime; // Calculate the duration
+//       Logger.log(`${fnName} executed in: ${duration.toFixed(2)}ms`);
+//       return result; // Return the result of the original function
+//     } catch (error) {
+//       const endTime = performance.now(); // Stop the timer on error
+//       const duration = endTime - startTime; // Calculate the duration
+//       Logger.log(`${fnName} failed after: ${duration.toFixed(2)}ms`);
+//       throw error; // Rethrow the error after logging
+//     }
+//   };
+// }

@@ -8,6 +8,7 @@
     "build:link": "npm run build && npm link",
     "unlink": "npm unlink @2501-ai/2501-cli",
     "start": "node .",
+    "run-action": "ts-node src/utils/__tests__/run.ts",
     "lint:fix": "eslint . --ext .ts,.tsx --fix",
     "prepare": "husky",
     "test": "jest --silent"

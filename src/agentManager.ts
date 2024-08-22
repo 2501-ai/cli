@@ -9,7 +9,7 @@ import {
   hasError,
   read_file,
   run_shell,
-  update_file_content,
+  update_file,
   write_file,
 } from './utils/actions';
 import { readConfig } from './utils/conf';
@@ -32,7 +32,7 @@ const ACTION_FNS = {
   read_file,
   run_shell,
   write_file,
-  update_file_content,
+  update_file,
 };
 
 export type AgentCallbackType = (...args: unknown[]) => Promise<void>;
@@ -102,9 +102,8 @@ export class AgentManager {
       }
 
       if (data.status === QueryStatus.Failed) {
-        console.error('Query failed:', data.error);
+        Logger.error('Query failed:', data.error);
         this.callback && (await this.callback(data.answer || data.error));
-        return process.exit(0);
       }
 
       if (OPENAI_TERMINAL_STATUSES.includes(data.status)) {
@@ -119,10 +118,9 @@ export class AgentManager {
         debugData = data;
         await this.toggleLoader(true);
         await this.processActions(data.actions);
-        return process.exit(0);
       }
     } catch (error: any) {
-      console.error(
+      Logger.error(
         'Error checking query status:',
         error.message,
         '\n Retrying...'
@@ -166,6 +164,8 @@ export class AgentManager {
         args = call.args;
       }
 
+      Logger.debug('PROCESS ACTIONS args', args);
+
       const function_name: keyof typeof ACTION_FNS =
         call.function.name || call.function;
 
@@ -179,6 +179,15 @@ export class AgentManager {
         await taskManager.run('Checking output for correction', async () => {
           const previous =
             ACTION_FNS.read_file({ path: args.path }) || 'NO PREVIOUS VERSION';
+
+          // const proposal = args.updates
+          //   ? ACTION_FNS.update_file({
+          //       path: args.path,
+          //       updates: args.updates,
+          //       write: false,
+          //     })
+          //   : args.content;
+
           try {
             const config = readConfig();
             const { data: correctionData } = await axios.post(
@@ -198,9 +207,14 @@ export class AgentManager {
             ) {
               corrected = true;
               args.content = correctionData.corrected_output;
+
+              // if (args.updates) {
+              //   delete args.updates;
+              //   function_name = ACTION_FNS.write_file.name as typeof function_name;
+              // }
             }
           } catch (e) {
-            console.error('verifyOutput error or timeout', e);
+            Logger.error('verifyOutput error or timeout', e);
           }
         });
       }
@@ -208,9 +222,11 @@ export class AgentManager {
       await taskManager.run(task, async () => {
         try {
           let output = await ACTION_FNS[function_name](args);
+
           if (corrected) {
             output += `\n\n NOTE: your original content for ${args.path} was corrected with the new version below before running the function: \n\n${args.content}`;
           }
+
           tool_outputs.push({
             tool_call_id: call.id,
             output,

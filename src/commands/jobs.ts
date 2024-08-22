@@ -54,7 +54,7 @@ export async function jobSubscriptionCommand(options: {
       const [agent] = await listAgentsFromWorkspace(workspace);
 
       if (!agent) {
-        return console.warn('No agents available in the workspace');
+        Logger.warn('No agents available in the workspace');
       }
 
       Logger.log(`Listening for new jobs for agent ${agent.id}`);

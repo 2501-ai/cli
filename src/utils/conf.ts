@@ -120,7 +120,7 @@ export function addAgent(newAgent: AgentConfig): void {
       (agent) => agent.id === newAgent.id
     );
     if (existingAgent) {
-      console.error('Agent with the same ID already exists:', newAgent.id);
+      Logger.error('Agent with the same ID already exists:', newAgent.id);
       return;
     }
 

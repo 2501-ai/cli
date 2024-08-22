@@ -59,10 +59,10 @@ export async function initCommand(options?: initCommandOptions): Promise<void> {
           Logger.error('Invalid configuration ID');
           process.exit(1);
         }
-        const workspaceResponse = await syncWorkspaceFiles(workspace); // via Engine
-        await syncWorkspaceState(workspace); // Local stored state
 
-        // Create an Agent
+        const workspaceResponse = await syncWorkspaceFiles(workspace);
+        await syncWorkspaceState(workspace);
+
         const { data: agent } = await axios.post(
           '/agents',
           {
@@ -93,7 +93,7 @@ export async function initCommand(options?: initCommandOptions): Promise<void> {
 
         Logger.log(`Agent ${agent.id} created in ${workspace}`);
       } catch (error) {
-        console.error('Task error :', (error as Error)?.message || error);
+        Logger.error('Task error :', (error as Error)?.message || error);
         throw error;
       }
     });

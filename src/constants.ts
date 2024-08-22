@@ -28,5 +28,4 @@ export const OPENAI_TERMINAL_STATUSES: QueryStatus[] = [
   QueryStatus.Expired,
   QueryStatus.Incomplete,
   QueryStatus.Cancelled,
-  // QueryStatus.RequiresAction,
 ];

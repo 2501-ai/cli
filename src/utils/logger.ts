@@ -1,11 +1,8 @@
 import { AxiosError } from 'axios';
-
-/**
- * using realTerminal in terminal-kit was on purpose since we were having issues not using it before.
- * That it might be necessary in case of issues
- */
 import { terminal } from 'terminal-kit';
 import { marked } from 'marked';
+
+// TODO: use a better logger ? Winston, Pino ? etc..
 
 enum Colors {
   RED = 'red',
@@ -16,7 +13,6 @@ enum Colors {
   CYAN = 'cyan',
   WHITE = 'white',
 }
-// TODO: use a better logger ? Winston, Pino ? etc..
 
 enum LOG_LEVEL {
   ERROR = 'error',
@@ -33,11 +29,11 @@ if (process.env.LOG_LEVEL) {
   }
 }
 
-// TODO: quick win, use a better tool..
 const logLevel =
   process.env.DEBUG === 'true'
     ? LOG_LEVEL.DEBUG
     : (process.env.LOG_LEVEL as LOG_LEVEL);
+
 export class Logger {
   static error(...args: (Error | AxiosError | string | unknown)[]) {
     if ((args[0] as AxiosError).isAxiosError) {
@@ -59,9 +55,6 @@ export class Logger {
     }
   }
 
-  /**
-   * Log the agent data in a formatted way
-   */
   static agent(data: any) {
     terminal.bold('\nAGENT:\n');
     terminal(marked.parse(data) + '\n');
@@ -87,6 +80,7 @@ export class Logger {
       '\n'
     );
   }
+
   static debug(...args: unknown[]) {
     if (logLevel === LOG_LEVEL.DEBUG) {
       terminal[Colors.MAGENTA]('[DEBUG] ').defaultColor(

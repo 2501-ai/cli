@@ -3,6 +3,7 @@ import { terminal } from 'terminal-kit';
 
 import { API_HOST, API_VERSION } from '../constants';
 import { readConfig } from '../utils/conf';
+import { Logger } from '../utils/logger';
 
 export async function configCommand() {
   try {
@@ -34,9 +35,9 @@ export async function configCommand() {
   } catch (error) {
     if (error instanceof Error) {
       // Type-check the error object
-      console.error('Failed to fetch configurations:', error.message);
+      Logger.error('Failed to fetch configurations:', error.message);
     } else {
-      console.error('An unexpected error occurred');
+      Logger.error('An unexpected error occurred');
     }
   }
 }

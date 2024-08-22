@@ -86,7 +86,7 @@ export async function queryCommand(
 
     const taskManager = new TaskManager();
     if (data.asynchronous && data.asynchronous === true) {
-      return taskManager.run('Thinking...', async () => {
+      return await taskManager.run('Thinking...', async () => {
         await agentClient.checkStatus();
         await synchroniseWorkspaceChanges(agentClient.name, workspace);
       });
@@ -97,7 +97,7 @@ export async function queryCommand(
     }
 
     if (data.actions) {
-      return taskManager.run('Processing actions...', async () => {
+      return await taskManager.run('Processing actions...', async () => {
         await agentClient.processActions(
           data.actions,
           data.asynchronous === true
