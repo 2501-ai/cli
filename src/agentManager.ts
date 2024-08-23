@@ -22,8 +22,6 @@ import {
 } from './constants';
 import { Logger } from './utils/logger';
 
-let debugData: any = '';
-
 const MAX_RETRY = 3;
 
 const ACTION_FNS = {
@@ -79,6 +77,7 @@ export class AgentManager {
   }
 
   async checkStatus() {
+    let debugData: any = '';
     try {
       const config = readConfig();
       const { data } = await axios.get(
@@ -273,6 +272,5 @@ export class AgentManager {
         }
       );
     }
-    return;
   }
 }

@@ -1,22 +1,34 @@
 import path from 'path';
 import crypto from 'crypto';
-// import { performance } from 'node:perf_hooks';
 import { IGNORED_FILE_PATTERNS } from './workspace';
 import fs from 'fs';
 import { WorkspaceState } from './types';
 import { Logger } from './logger';
 
+/**
+ * Options for computing the MD5 hash of a directory and its contents.
+ * @property {string} directoryPath - The path of the directory to hash
+ * @property {number} [maxDepth=10] - The maximum depth to traverse for directory contents
+ * @property {string[]} [ignorePatterns] - An array of patterns or names to ignore
+ */
 interface DirectoryMd5HashOptions {
   directoryPath: string;
-  maxDepth?: number; // Optional parameter to limit directory depth
-  ignorePatterns?: string[]; // Optional array of patterns or names to ignore
+  maxDepth?: number;
+  ignorePatterns?: string[];
 }
 
+/**
+ * Represents the difference between two workspace states.
+ * @property {string[]} added - Files that are present in the new state but not in the old state
+ * @property {string[]} removed - Files that are present in the old state but not in the new state
+ * @property {string[]} modified - Files that are present in both states but have different hashes
+ * @property {boolean} hasChanges - True if there are any changes in the workspace
+ */
 interface WorkspaceDiff {
-  added: string[]; // Files that are present in the new state but not in the old state
-  removed: string[]; // Files that are present in the old state but not in the new state
-  modified: string[]; // Files that are present in both states but have different hashes
-  hasChanges: boolean; // True if there are any changes in the workspace
+  added: string[];
+  removed: string[];
+  modified: string[];
+  hasChanges: boolean;
 }
 
 /**
@@ -101,21 +113,6 @@ function computeFileMetadataHash(filePath: string): string {
 }
 
 /**
- * Computes the MD5 hash of a file asynchronously.
- * @deprecated This function is not used in the final implementation (too slow)
- */
-// async function computeFileHash(filePath: string): Promise<string> {
-//   return new Promise<string>((resolve, reject) => {
-//     const hash = crypto.createHash('md5');
-//     const stream = fs.createReadStream(filePath);
-
-//     stream.on('data', (chunk) => hash.update(chunk));
-//     stream.on('end', () => resolve(hash.digest('hex')));
-//     stream.on('error', reject);
-//   });
-// }
-
-/**
  * TODO: implement
  * Computes the difference between two workspace states.
  * @param oldState - The previous state of the workspace.
@@ -151,46 +148,3 @@ export function getWorkspaceDiff(
 
   return { added, removed, modified, hasChanges };
 }
-
-/**
- * Wraps an asynchronous function to measure its execution time.
- * @returns A new function that, when called, executes the original async function and logs its performance.
- * @example
- *
- * // Assume getDirectoryMd5Hash is an async function that computes MD5 hash of a directory
- * const wrappedGetDirectoryMd5Hash = measurePerformance(
- *   getDirectoryMd5Hash,
- *   'getDirectoryMd5Hash'
- * );
- *
- * // Example usage:
- * const directoryPath = '/tmp/2501-workspace';
- * wrappedGetDirectoryMd5Hash({
- *   directoryPath,
- *   ignorePatterns: IGNORED_FILE_PATTERNS,
- * })
- *   .then(({ md5 }) => {
- *     console.log(`MD5 hash of the directory: ${md5}`);
- *   })
- *   .catch((err) => console.error(err));
- */
-// function measurePerformance<T>(
-//   asyncFn: (...args: any[]) => Promise<T>,
-//   fnName: string = 'Async Function'
-// ): (...args: Parameters<typeof asyncFn>) => Promise<T> {
-//   return async (...args: Parameters<typeof asyncFn>): Promise<T> => {
-//     const startTime = performance.now(); // Start the timer
-//     try {
-//       const result = await asyncFn(...args); // Execute the original function
-//       const endTime = performance.now(); // Stop the timer
-//       const duration = endTime - startTime; // Calculate the duration
-//       Logger.log(`${fnName} executed in: ${duration.toFixed(2)}ms`);
-//       return result; // Return the result of the original function
-//     } catch (error) {
-//       const endTime = performance.now(); // Stop the timer on error
-//       const duration = endTime - startTime; // Calculate the duration
-//       Logger.log(`${fnName} failed after: ${duration.toFixed(2)}ms`);
-//       throw error; // Rethrow the error after logging
-//     }
-//   };
-// }

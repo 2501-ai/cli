@@ -15,7 +15,7 @@ import { Logger } from '../utils/logger';
 axios.defaults.baseURL = `${API_HOST}${API_VERSION}`;
 axios.defaults.timeout = 8000;
 
-const defaultEngine = 'rhino';
+export const DEFAULT_ENGINE = 'rhino';
 
 interface initCommandOptions {
   name?: string;
@@ -69,7 +69,7 @@ export async function initCommand(options?: initCommandOptions): Promise<void> {
             workspace,
             configuration: selected_config.id,
             prompt: selected_config.prompt,
-            engine: config?.engine || defaultEngine,
+            engine: config?.engine || DEFAULT_ENGINE,
             files: workspaceResponse?.files.map((file) => file.id),
           },
           {
@@ -84,7 +84,7 @@ export async function initCommand(options?: initCommandOptions): Promise<void> {
           name: agent.name,
           workspace,
           configuration: selected_config.id,
-          engine: config?.engine || defaultEngine,
+          engine: config?.engine || DEFAULT_ENGINE,
         });
 
         if (workspaceResponse?.data && workspaceResponse?.files.length) {
