@@ -1,4 +1,4 @@
-import axios from 'axios';
+import axios, { AxiosError } from 'axios';
 import { terminal } from 'terminal-kit';
 import { jsonrepair } from 'jsonrepair';
 
@@ -6,7 +6,6 @@ import { TaskManager } from './taskManager';
 import { convertFormToJSON } from '../utils/json';
 import {
   browse_url,
-  hasError,
   read_file,
   run_shell,
   update_file,
@@ -25,7 +24,6 @@ import { Logger } from '../utils/logger';
 const MAX_RETRY = 3;
 
 const ACTION_FNS = {
-  hasError,
   browse_url,
   read_file,
   run_shell,
@@ -257,7 +255,16 @@ export class AgentManager {
         await new Promise((resolve) => setTimeout(resolve, 2000));
         await this.checkStatus();
       } catch (e) {
-        await this.checkStatus();
+        if ((e as AxiosError).isAxiosError) {
+          const axiosError = e as AxiosError;
+          if ((axiosError.response?.status || 500) >= 500) {
+            console.error('Server error, retrying...');
+            await this.checkStatus();
+          } else if ((axiosError.response?.status || 500) >= 400) {
+            Logger.error('Client error:', e);
+            process.exit(1);
+          }
+        }
       }
     } else {
       await this.queryCommand(

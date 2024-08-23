@@ -1,8 +1,7 @@
-import path from 'path';
 import crypto from 'crypto';
-import { IGNORED_FILE_PATTERNS } from '../helpers/workspace';
 import fs from 'fs';
 import { Logger } from './logger';
+import { getIgnoredFiles, getWorkspaceFiles } from '../helpers/workspace';
 
 /**
  * Options for computing the MD5 hash of a directory and its contents.
@@ -12,9 +11,19 @@ import { Logger } from './logger';
  */
 interface DirectoryMd5HashOptions {
   directoryPath: string;
-  maxDepth?: number;
-  ignorePatterns?: string[];
+  maxDepth?: number; // Optional parameter to limit directory depth
 }
+
+/**
+ * Converts a byte size to a human-readable format.
+ */
+export const toReadableSize = (bytes: number) => {
+  const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+  if (bytes === 0) return '0 Byte';
+  const i = Math.floor(Math.log(bytes) / Math.log(1024));
+  return `${(bytes / Math.pow(1024, i)).toFixed(2)} ${sizes[i]}`;
+};
+
 /**
  * Computes the MD5 hash of a directory and its contents asynchronously based on file metadata.
  *
@@ -26,49 +35,27 @@ interface DirectoryMd5HashOptions {
 export async function getDirectoryMd5Hash({
   directoryPath,
   maxDepth = 10,
-  ignorePatterns = IGNORED_FILE_PATTERNS,
 }: DirectoryMd5HashOptions) {
-  const fileHashes = new Map<string, string>();
-  const ignoreSet = new Set(ignorePatterns);
-
-  async function processDirectory(
-    currentPath: string,
-    currentDepth: number
-  ): Promise<void> {
-    if (currentDepth > maxDepth) {
-      Logger.warn('Directory depth exceeds the maximum allowed depth.');
-      return;
-    }
-
-    const items = fs.readdirSync(currentPath, { withFileTypes: true });
-
-    await Promise.all(
-      items.map(async (item) => {
-        const itemPath = path.join(currentPath, item.name);
-
-        if (ignoreSet.has(item.name)) {
-          return; // Skip the item if it matches any of the ignore patterns
-        }
-
-        if (item.isDirectory()) {
-          // Recursively process subdirectories
-          await processDirectory(itemPath, currentDepth + 1);
-        } else if (item.isFile()) {
-          // Use streaming to read file and compute MD5 hash
-          const fileHash = computeFileMetadataHash(itemPath);
-          // Include the relative file path in the hash to ensure unique content
-          const relativePath = path.relative(directoryPath, itemPath);
-          fileHashes.set(relativePath, fileHash);
-        }
-      })
-    );
-  }
+  const ignoreSet = getIgnoredFiles(directoryPath);
+  Logger.debug('Directory:', directoryPath);
 
   // Start processing from the base directory with an initial depth of 0
-  await processDirectory(directoryPath, 0);
+  const result = await getWorkspaceFiles({
+    currentPath: '',
+    currentDepth: 0,
+    ignoreSet,
+    maxDepth,
+    directoryPath,
+  });
+
+  Logger.debug(
+    'Total size of files in directory:',
+    toReadableSize(result.totalSize)
+  );
+  Logger.debug('Total files hashed:', result.fileHashes.size);
 
   // Sort the file paths to ensure consistent ordering for the final hash
-  const sortedFileHashes = Array.from(fileHashes)
+  const sortedFileHashes = Array.from(result.fileHashes)
     .sort(([pathA], [pathB]) => pathA.localeCompare(pathB))
     .map(([relativePath, fileHash]) => `${fileHash}:${relativePath}`);
 
@@ -80,8 +67,9 @@ export async function getDirectoryMd5Hash({
 
   return {
     md5,
-    fileHashes,
+    fileHashes: result.fileHashes,
     directoryPath,
+    totalSize: result.totalSize,
   };
 }
 
@@ -89,9 +77,19 @@ export async function getDirectoryMd5Hash({
  * Computes a hash based on file metadata (size and modification time).
  * This is a faster alternative to reading the entire file content, but will not detect changes in file content, and not detect reverted changes (for example)
  */
-function computeFileMetadataHash(filePath: string): string {
+export function computeFileMetadataHash(filePath: string): {
+  hash: string;
+  size: number;
+} {
   const stats = fs.statSync(filePath);
   const metaHash = crypto.createHash('md5');
   metaHash.update(`${stats.size}:${stats.mtimeMs}`);
-  return metaHash.digest('hex');
+  // Logger.debug(
+  //   `Hashing metadata for file: ${filePath}`,
+  //   `${stats.size}:${stats.mtimeMs}`
+  // );
+  return {
+    hash: metaHash.digest('hex'),
+    size: stats.size,
+  };
 }

@@ -3,70 +3,34 @@ import path from 'path';
 import axios from 'axios';
 import PDFDocument from 'pdfkit';
 import { FormData } from 'formdata-node';
-
 import { isText } from 'istextorbinary';
-
-import { readConfig } from '../utils/conf';
-
-import { API_HOST, API_VERSION } from '../constants';
 import os from 'os';
 import crypto from 'crypto';
-import { getDirectoryMd5Hash } from '../utils/files';
+
+import { readConfig } from '../utils/conf';
+import { API_HOST, API_VERSION, IGNORED_FILE_PATTERNS } from '../constants';
+import {
+  computeFileMetadataHash,
+  getDirectoryMd5Hash,
+  toReadableSize,
+} from '../utils/files';
 import { Logger } from '../utils/logger';
-import { WorkspaceState, WorkspaceDiff } from '../utils/types';
+import { WorkspaceDiff, WorkspaceState } from '../utils/types';
 
 axios.defaults.baseURL = `${API_HOST}${API_VERSION}`;
 axios.defaults.timeout = 8000;
 
-export const IGNORED_FILE_PATTERNS = [
-  '.env',
-  'venv',
-  '__pycache__',
-  'yarn.lock',
-  'package-lock.json',
-  'pnpm-lock.yaml',
-  'yarn-error.log',
-  'node_modules',
-  'build',
-  'dist',
-  '*.log',
-  'out',
-  '.DS_Store',
-  'Thumbs.db',
-  '.cache',
-  '*.tmp',
-  '*.temp',
-  '.svn',
-  '.svg',
-  '.hg',
-  'vendor',
-  '*.pyc',
-  '__pycache__',
-  'bin',
-  'obj',
-  '*.class',
-  '*.bak',
-  '*.swp',
-  '*.env.local',
-  '*.env.development',
-  '*.env.production',
-  'secrets.json',
-  'credentials.xml',
-  '(?:^|/).[^/]*$', // Ignore directories starting with .
-];
-
-async function createPDFFromFolder(
+/**
+ * Create a PDF document from a list of files in a directory.
+ * @param targetFolder - Path to the target directory
+ * @param outputFilePath - Path to the output PDF file
+ * @param fileList - List of files to include in the PDF
+ */
+function createPDFFromFiles(
   targetFolder: string,
   outputFilePath: string,
-  ignoreFiles: string[] = IGNORED_FILE_PATTERNS
-): Promise<void> {
-  const ignorePatterns = ignoreFiles.map(
-    (file) =>
-      new RegExp(
-        '^' + file.replace(/[-/\\^$+?.()|[\]{}]/g, '\\$&').replace(/\*/g, '.*')
-      )
-  );
-
+  fileList: string[]
+): Promise<string> {
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument();
 
@@ -77,112 +41,102 @@ async function createPDFFromFolder(
 
     const stream = fs.createWriteStream(outputFilePath);
 
-    stream.on('finish', () => resolve());
+    stream.on('finish', () => resolve(outputFilePath));
     stream.on('error', reject);
 
     doc.pipe(stream);
 
-    function addFilesFromDirectory(
-      directory: string,
-      relativePath: string = ''
-    ) {
-      const files = fs.readdirSync(directory);
-      for (const file of files) {
-        // Create a full path to match against ignore patterns
-        const fullPath = path.join(relativePath, file);
-
-        const filePath = path.join(directory, file);
-        const fileStats = fs.statSync(filePath);
-
-        if (
-          ignorePatterns.some((pattern) => pattern.test(fullPath)) ||
-          (fileStats.isDirectory() && file.startsWith('.'))
-        ) {
-          continue;
-        }
-
-        if (fileStats.isDirectory()) {
-          addFilesFromDirectory(filePath, path.join(relativePath, file));
-        } else if (fileStats.isFile()) {
-          doc.addPage();
+    fileList.forEach((file) => {
+      doc.addPage();
+      doc
+        .fontSize(12)
+        .text(`File: ${file}`, {
+          underline: true,
+        })
+        .moveDown(0.5);
+      if (isText(file)) {
+        const fileContent = fs.readFileSync(
+          path.join(targetFolder, file),
+          'utf8'
+        );
+        const lines = fileContent.split(/\r?\n/);
+        lines.forEach((line, index) => {
           doc
-            .fontSize(12)
-            .text(`File: ${fullPath}`, {
-              underline: true,
-            })
-            .moveDown(0.5);
-          if (isText(file) && fileStats.size < 500 * 1024) {
-            const fileContent = fs.readFileSync(filePath, 'utf8');
-            const lines = fileContent.split(/\r?\n/);
-            lines.forEach((line, index) => {
-              doc
-                .fontSize(10)
-                .text(`${index + 1}: ${line}`)
-                .moveDown(0.2);
-            });
-          } else {
-            doc
-              .fontSize(10)
-              .text('Content omitted (not text file or too large)')
-              .moveDown(0.5);
-          }
-        }
+            .fontSize(10)
+            .text(`${index + 1}: ${line}`)
+            .moveDown(0.2);
+        });
+      } else {
+        doc.fontSize(10).text('Content omitted (not text file)').moveDown(0.5);
       }
-    }
+    });
 
-    addFilesFromDirectory(targetFolder);
     doc.end();
   });
 }
 
-async function getPDFsFromWorkspace(directory: string): Promise<string[]> {
-  const pdfs: string[] = [];
-  const files = fs.readdirSync(directory);
-  for (const file of files) {
-    const filePath = path.join(directory, file);
-    const fileStats = fs.statSync(filePath);
+/**
+ * Get the list of files to ignore in the workspace, enriched with patterns from .gitignore if present.
+ */
+export function getIgnoredFiles(workspace: string): Set<string> {
+  const ignorePatterns = new Set(IGNORED_FILE_PATTERNS);
 
-    if (fileStats.isDirectory() && !file.startsWith('.')) {
-      await getPDFsFromWorkspace(filePath);
-    } else if (fileStats.isFile()) {
-      if (file.toLowerCase().endsWith('.pdf')) pdfs.push(filePath);
-    }
+  const hasGitIgnore = fs.existsSync(path.join(workspace, '.gitignore'));
+  if (hasGitIgnore) {
+    const gitIgnore = fs.readFileSync(
+      path.join(workspace, '.gitignore'),
+      'utf8'
+    );
+    gitIgnore
+      .split('\n')
+      .filter((line) => line.trim() !== '' && !line.startsWith('#'))
+      .map((v) => ignorePatterns.add(v));
   }
 
-  return pdfs;
+  return ignorePatterns;
 }
 
-async function getContextFromWorkspace(workspace: string) {
+async function generatePDFs(workspace: string): Promise<
+  {
+    path: string;
+    data: Buffer;
+  }[]
+> {
   // Note : Create a concatenated PDF of the workspace
   const fileId = Math.floor(Math.random() * 100000);
   const outputFilePath = `/tmp/2501/_files/workspace_${fileId}.pdf`;
 
-  const ignorePatterns = IGNORED_FILE_PATTERNS.map(
-    (file) =>
-      new RegExp(
-        '^' + file.replace(/[-/\\^$+?.()|[\]{}]/g, '\\$&').replace(/\*/g, '.*')
-      )
-  );
+  const ignorePatterns = getIgnoredFiles(workspace);
 
-  const files = fs.readdirSync(workspace).filter((file) => {
-    const isDirectory = fs.statSync(path.join(workspace, file)).isDirectory();
-    return (
-      !ignorePatterns.some((pattern) => pattern.test(file)) &&
-      !(isDirectory && file.startsWith('.'))
-    );
+  const workspaceFiles = await getWorkspaceFiles({
+    currentPath: '',
+    currentDepth: 0,
+    ignoreSet: ignorePatterns,
+    maxDepth: 10,
+    directoryPath: workspace,
   });
-  // no files, no workspace PDF
-  if (files.length === 0) return [];
 
-  await createPDFFromFolder(workspace, outputFilePath)
+  // no files, no workspace PDF
+  if (workspaceFiles.fileHashes.size === 0) {
+    return [];
+  }
+
+  Logger.debug(
+    'Total workspace size: ' + toReadableSize(workspaceFiles.totalSize)
+  );
+  Logger.debug('Files in workspace: ' + workspaceFiles.fileHashes.size);
+
+  await createPDFFromFiles(
+    workspace,
+    outputFilePath,
+    Array.from(workspaceFiles.fileHashes.keys())
+  )
     .then(() => Logger.debug('Agent : Workspace files unified.'))
     .catch((err) =>
       Logger.error('Agent : An error occurred while generating the PDF:' + err)
     );
 
-  const pdfs = await getPDFsFromWorkspace(workspace);
-
-  return [outputFilePath].concat(pdfs).map((pdf) => {
+  return [outputFilePath].map((pdf) => {
     return {
       path: pdf,
       data: fs.readFileSync(pdf),
@@ -190,10 +144,67 @@ async function getContextFromWorkspace(workspace: string) {
   });
 }
 
-export async function getFileFromWorkspace(path: string) {
-  if (!fs.existsSync(path)) return 'NO FILE YET';
-  const content = fs.readFileSync(path, { encoding: 'utf-8' });
-  return Buffer.from(content).toString();
+export async function getWorkspaceFiles(params: {
+  currentPath: string;
+  currentDepth: number;
+  ignoreSet: Set<string>;
+  maxDepth: number;
+  directoryPath: string;
+}): Promise<{ totalSize: number; fileHashes: Map<string, string> }> {
+  // Limit the depth of directory traversal to avoid excessive resource usage
+  if (params.currentDepth > params.maxDepth) {
+    Logger.warn('Directory depth exceeds the maximum allowed depth.');
+    return {
+      totalSize: 0,
+      fileHashes: new Map<string, string>(),
+    };
+  }
+
+  let totalSize = 0;
+  const fileHashes = new Map<string, string>();
+
+  const items = fs.readdirSync(
+    path.join(params.directoryPath, params.currentPath),
+    { withFileTypes: true }
+  );
+
+  await Promise.all(
+    items.map(async (item) => {
+      const itemPath = path.join(params.currentPath, item.name);
+
+      if (params.ignoreSet.has(item.name)) {
+        return; // Skip the item if it matches any of the ignore patterns
+      }
+
+      if (item.isDirectory()) {
+        // Recursively process subdirectories
+        const result = await getWorkspaceFiles({
+          currentPath: itemPath,
+          currentDepth: params.currentDepth + 1,
+          ignoreSet: params.ignoreSet,
+          maxDepth: params.maxDepth,
+          directoryPath: params.directoryPath,
+        });
+        totalSize += result.totalSize;
+        result.fileHashes.forEach((hash, relativePath) => {
+          fileHashes.set(relativePath, hash);
+        });
+      } else if (item.isFile()) {
+        // Use streaming to read file and compute MD5 hash
+        const { hash: fileHash, size: fileSize } =
+          computeFileMetadataHash(itemPath);
+        totalSize += fileSize;
+        // Include the relative file path in the hash to ensure unique content
+        const relativePath = path.relative(params.directoryPath, itemPath);
+        fileHashes.set(relativePath, fileHash);
+        return { totalSize, fileHashes };
+      }
+    })
+  );
+  return {
+    totalSize,
+    fileHashes,
+  };
 }
 
 export async function syncWorkspaceFiles(
@@ -201,8 +212,7 @@ export async function syncWorkspaceFiles(
 ): Promise<
   { data: FormData; files: { id: string; name: string }[] } | undefined
 > {
-  const files: { path: string; data: Buffer }[] =
-    await getContextFromWorkspace(workspace);
+  const files = await generatePDFs(workspace);
   if (!files.length) {
     return;
   }
@@ -223,6 +233,12 @@ export async function syncWorkspaceFiles(
       },
     }
   );
+
+  if (process.env.NODE_ENV !== 'dev') {
+    // Don't pollute the filesystem with temporary files
+    fs.unlinkSync(files[0].path);
+    Logger.debug('Agent : Workspace PDF deleted:', files[0].path);
+  }
 
   return { data, files: response.data };
 }
@@ -292,10 +308,12 @@ export function writeWorkspaceState(state: WorkspaceState): void {
 }
 
 /**
- * Synchronize the workspace state with the current state of the workspace.
+ * Synchronize the workspace state locally with the current state of the workspace.
+ *
  * This function will update the hash and files properties of the workspace state.
  */
 export async function syncWorkspaceState(workspace: string): Promise<boolean> {
+  Logger.debug('Syncing workspace state:', workspace);
   const currentState = readWorkspaceState(workspace);
   const { md5, fileHashes } = await getDirectoryMd5Hash({
     directoryPath: workspace,

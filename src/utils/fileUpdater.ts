@@ -39,9 +39,8 @@ export class FileUpdater {
     this.min_offset = Infinity;
     this.total_offset = 0;
 
-    for (const update of this.updates.sort(
-      (a, b) => a.lineStart - b.lineStart
-    )) {
+    const sorted = this.updates.sort((a, b) => a.lineStart - b.lineStart);
+    for (const update of sorted) {
       const { content, lineStart, lineEnd } = this.adjustUpdate(update);
 
       if (content && content.length > 0) {

@@ -9,6 +9,8 @@ import { UpdateInstruction } from '../utils/types';
 
 import { FileUpdater } from '../utils/fileUpdater';
 
+import { getIgnoredFiles } from './workspace';
+
 /**
  * Directory to store logs
  */
@@ -24,6 +26,9 @@ export const LOGFILE_PATH = `${LOG_DIR}/test.log`;
  */
 export const ERRORFILE_PATH = `${LOG_DIR}/error.log`;
 
+const isIgnoredFile = (filePath: string) =>
+  getIgnoredFiles(path.dirname(filePath)).has(filePath);
+
 export function read_file(args: { path: string }): string | null {
   Logger.debug(`Reading file at "${args.path}"`);
   if (!fs.existsSync(args.path)) return null;
@@ -35,10 +40,13 @@ export async function write_file(args: { path: string; content: string }) {
   Logger.debug(`Writing file at "${args.path}"`);
   fs.mkdirSync(path.dirname(args.path), { recursive: true });
   fs.writeFileSync(args.path, args.content);
+  const content = isIgnoredFile(args.path)
+    ? ''
+    : `Content :
+    ${args.content}`;
   return `
     File written to ${args.path}
-    Content :
-    ${args.content}`;
+    ${content}`;
 }
 
 export function update_file({
@@ -62,14 +70,16 @@ export function update_file({
     return fileContent;
   }
 
-  fs.writeFileSync(path, fileContent, 'utf8');
-  return `
-    File updated: ${path}
-    New content:
+  const content = isIgnoredFile(path)
+    ? ''
+    : `New Content :
     \`\`\`
     ${fileContent}
-    \`\`\`
-  `;
+    \`\`\``;
+
+  return `
+    File updated: ${path}
+    ${content}`;
 }
 
 export async function run_shell(args: {
