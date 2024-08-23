@@ -1,4 +1,4 @@
-import { ERROR_BOL } from './actions';
+import { ERROR_BOL } from '../helpers/actions';
 
 /**
  * .bashrc file might not exist (and still be a valid configuration)

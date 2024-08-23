@@ -5,9 +5,9 @@ import {
   indexWorkspaceFiles,
   syncWorkspaceFiles,
   syncWorkspaceState,
-} from '../utils/workspace';
+} from '../helpers/workspace';
 import { addAgent, readConfig } from '../utils/conf';
-import { TaskManager } from '../utils/taskManager';
+import { TaskManager } from '../managers/taskManager';
 
 import { API_HOST, API_VERSION } from '../constants';
 import { Logger } from '../utils/logger';

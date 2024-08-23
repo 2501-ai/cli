@@ -1,8 +1,7 @@
 import path from 'path';
 import crypto from 'crypto';
-import { IGNORED_FILE_PATTERNS } from './workspace';
+import { IGNORED_FILE_PATTERNS } from '../helpers/workspace';
 import fs from 'fs';
-import { WorkspaceState } from './types';
 import { Logger } from './logger';
 
 /**
@@ -16,21 +15,6 @@ interface DirectoryMd5HashOptions {
   maxDepth?: number;
   ignorePatterns?: string[];
 }
-
-/**
- * Represents the difference between two workspace states.
- * @property {string[]} added - Files that are present in the new state but not in the old state
- * @property {string[]} removed - Files that are present in the old state but not in the new state
- * @property {string[]} modified - Files that are present in both states but have different hashes
- * @property {boolean} hasChanges - True if there are any changes in the workspace
- */
-interface WorkspaceDiff {
-  added: string[];
-  removed: string[];
-  modified: string[];
-  hasChanges: boolean;
-}
-
 /**
  * Computes the MD5 hash of a directory and its contents asynchronously based on file metadata.
  *
@@ -110,41 +94,4 @@ function computeFileMetadataHash(filePath: string): string {
   const metaHash = crypto.createHash('md5');
   metaHash.update(`${stats.size}:${stats.mtimeMs}`);
   return metaHash.digest('hex');
-}
-
-/**
- * TODO: implement
- * Computes the difference between two workspace states.
- * @param oldState - The previous state of the workspace.
- * @param newState - The current state of the workspace.
- * @returns A WorkspaceDiff object containing arrays of added, removed, and modified files.
- */
-export function getWorkspaceDiff(
-  oldState: WorkspaceState,
-  newState: WorkspaceState
-): WorkspaceDiff {
-  const added: string[] = [];
-  const removed: string[] = [];
-  const modified: string[] = [];
-
-  // Check for added and modified files
-  newState.file_hashes.forEach((newHash, filePath) => {
-    if (!oldState.file_hashes.has(filePath)) {
-      added.push(filePath);
-    } else if (oldState.file_hashes.get(filePath) !== newHash) {
-      modified.push(filePath);
-    }
-  });
-
-  // Check for removed files
-  oldState.file_hashes.forEach((_, filePath) => {
-    if (!newState.file_hashes.has(filePath)) {
-      removed.push(filePath);
-    }
-  });
-
-  const hasChanges =
-    added.length > 0 || removed.length > 0 || modified.length > 0;
-
-  return { added, removed, modified, hasChanges };
 }

@@ -19,3 +19,17 @@ export type UpdateInstruction = {
   lineEnd?: number | null;
   content?: string | null;
 };
+
+/**
+ * Represents the difference between two workspace states.
+ * @property {string[]} added - Files that are present in the new state but not in the old state
+ * @property {string[]} removed - Files that are present in the old state but not in the new state
+ * @property {string[]} modified - Files that are present in both states but have different hashes
+ * @property {boolean} hasChanges - True if there are any changes in the workspace
+ */
+export interface WorkspaceDiff {
+  added: string[];
+  removed: string[];
+  modified: string[];
+  hasChanges: boolean;
+}

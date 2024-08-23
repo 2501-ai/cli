@@ -4,10 +4,10 @@ import TurndownService from 'turndown';
 import execa from 'execa';
 import * as cheerio from 'cheerio';
 
-import { Logger } from './logger';
-import { UpdateInstruction } from './types';
+import { Logger } from '../utils/logger';
+import { UpdateInstruction } from '../utils/types';
 
-import { FileUpdater } from './fileUpdater';
+import { FileUpdater } from '../utils/fileUpdater';
 
 /**
  * Directory to store logs

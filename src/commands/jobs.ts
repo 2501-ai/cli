@@ -6,12 +6,12 @@ import {
   hasError,
   LOGFILE_PATH,
   run_shell,
-} from '../utils/actions';
+} from '../helpers/actions';
 
 import { queryCommand } from './query';
 
 import { API_HOST, API_VERSION } from '../constants';
-import { unixSourceCommand } from '../utils/shell-commands';
+import { unixSourceCommand } from '../utils/shellCommands';
 import { Logger } from '../utils/logger';
 
 export async function jobSubscriptionCommand(options: {

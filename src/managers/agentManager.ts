@@ -2,8 +2,8 @@ import axios from 'axios';
 import { terminal } from 'terminal-kit';
 import { jsonrepair } from 'jsonrepair';
 
-import { TaskManager } from './utils/taskManager';
-import { convertFormToJSON } from './utils/json';
+import { TaskManager } from './taskManager';
+import { convertFormToJSON } from '../utils/json';
 import {
   browse_url,
   hasError,
@@ -11,16 +11,16 @@ import {
   run_shell,
   update_file,
   write_file,
-} from './utils/actions';
-import { readConfig } from './utils/conf';
+} from '../helpers/actions';
+import { readConfig } from '../utils/conf';
 
 import {
   API_HOST,
   API_VERSION,
   OPENAI_TERMINAL_STATUSES,
   QueryStatus,
-} from './constants';
-import { Logger } from './utils/logger';
+} from '../constants';
+import { Logger } from '../utils/logger';
 
 const MAX_RETRY = 3;
 
