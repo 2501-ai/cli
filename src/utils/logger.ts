@@ -14,25 +14,7 @@ enum Colors {
   WHITE = 'white',
 }
 
-enum LOG_LEVEL {
-  ERROR = 'error',
-  WARN = 'warn',
-  INFO = 'info',
-  SUCCESS = 'success',
-  DEBUG = 'debug',
-}
-
-if (process.env.LOG_LEVEL) {
-  // Validate the LOG_LEVEL environment variable
-  if (!Object.values(LOG_LEVEL).includes(process.env.LOG_LEVEL as any)) {
-    throw new Error(`Invalid LOG_LEVEL value: ${process.env.LOG_LEVEL}`);
-  }
-}
-
-const logLevel =
-  process.env.DEBUG === 'true'
-    ? LOG_LEVEL.DEBUG
-    : (process.env.LOG_LEVEL as LOG_LEVEL);
+const isDebug = process.env.DEBUG === 'true';
 
 export class Logger {
   static error(...args: (Error | AxiosError | string | unknown)[]) {
@@ -82,7 +64,7 @@ export class Logger {
   }
 
   static debug(...args: unknown[]) {
-    if (logLevel === LOG_LEVEL.DEBUG) {
+    if (isDebug) {
       terminal[Colors.MAGENTA]('[DEBUG] ').defaultColor(
         ...args.map(
           (a) => (typeof a === 'object' ? JSON.stringify(a, null, 2) : a) + '\n'

@@ -2,26 +2,24 @@ import axios, { AxiosError } from 'axios';
 import { terminal } from 'terminal-kit';
 import { jsonrepair } from 'jsonrepair';
 
-import { TaskManager } from './utils/taskManager';
-import { convertFormToJSON } from './utils/json';
+import { TaskManager } from './taskManager';
+import { convertFormToJSON } from '../utils/json';
 import {
   browse_url,
   read_file,
   run_shell,
   update_file,
   write_file,
-} from './utils/actions';
-import { readConfig } from './utils/conf';
+} from '../helpers/actions';
+import { readConfig } from '../utils/conf';
 
 import {
   API_HOST,
   API_VERSION,
   OPENAI_TERMINAL_STATUSES,
   QueryStatus,
-} from './constants';
-import { Logger } from './utils/logger';
-
-let debugData: any = '';
+} from '../constants';
+import { Logger } from '../utils/logger';
 
 const MAX_RETRY = 3;
 
@@ -77,6 +75,7 @@ export class AgentManager {
   }
 
   async checkStatus() {
+    let debugData: any = '';
     try {
       const config = readConfig();
       const { data } = await axios.get(
@@ -280,6 +279,5 @@ export class AgentManager {
         }
       );
     }
-    return;
   }
 }

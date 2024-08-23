@@ -5,9 +5,9 @@ import {
   indexWorkspaceFiles,
   syncWorkspaceFiles,
   syncWorkspaceState,
-} from '../utils/workspace';
+} from '../helpers/workspace';
 import { addAgent, readConfig } from '../utils/conf';
-import { TaskManager } from '../utils/taskManager';
+import { TaskManager } from '../managers/taskManager';
 
 import { API_HOST, API_VERSION } from '../constants';
 import { Logger } from '../utils/logger';
@@ -17,7 +17,7 @@ import { measurePerformance } from '../utils/performance';
 axios.defaults.baseURL = `${API_HOST}${API_VERSION}`;
 axios.defaults.timeout = 8000;
 
-const defaultEngine = 'rhino';
+export const DEFAULT_ENGINE = 'rhino';
 
 interface initCommandOptions {
   name?: string;
@@ -65,7 +65,7 @@ export async function initCommand(options?: initCommandOptions): Promise<void> {
           workspace,
           selected_config.id,
           selected_config.prompt,
-          config?.engine || defaultEngine,
+          config?.engine || DEFAULT_ENGINE,
           workspaceResponse?.files.map((file) => file.id) || []
         );
 
@@ -74,7 +74,7 @@ export async function initCommand(options?: initCommandOptions): Promise<void> {
           name: agent.name,
           workspace,
           configuration: selected_config.id,
-          engine: config?.engine || defaultEngine,
+          engine: config?.engine || DEFAULT_ENGINE,
         });
 
         if (workspaceResponse?.data && workspaceResponse?.files.length) {

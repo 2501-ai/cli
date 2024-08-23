@@ -85,7 +85,11 @@ program
   .option('--workspace <path>', 'Specify a different workspace path')
   .option(
     '--subscribe',
-    'Subscribe to the API for new jobs (updated every minute)'
+    'Subscribe to the API for new jobs on the current workspace (updated every minute)'
+  )
+  .option(
+    '--unsubscribe',
+    'Unsubscribe to the API for new jobs on the current workspace'
   )
   .option('--listen', 'Listen for new jobs from the API and execute them')
   .action(jobSubscriptionCommand);

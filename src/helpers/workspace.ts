@@ -6,20 +6,19 @@ import { FormData } from 'formdata-node';
 
 import { isText } from 'istextorbinary';
 
-import { readConfig } from './conf';
+import { readConfig } from '../utils/conf';
 
 import { API_HOST, API_VERSION } from '../constants';
 import os from 'os';
 import crypto from 'crypto';
 import {
   computeFileMetadataHash,
-  getDirectoryMd5Hash,
   getIgnoredFiles,
-  getWorkspaceDiff,
   toReadableSize,
-} from './files';
-import { Logger } from './logger';
-import { WorkspaceState } from './types';
+} from '../utils/files';
+import { getDirectoryMd5Hash } from '../utils/files';
+import { Logger } from '../utils/logger';
+import { WorkspaceDiff, WorkspaceState } from '../utils/types';
 
 axios.defaults.baseURL = `${API_HOST}${API_VERSION}`;
 axios.defaults.timeout = 8000;
@@ -319,4 +318,40 @@ export async function getWorkspaceChanges(workspace: string) {
     file_hashes: newState.fileHashes,
     path: workspace,
   });
+}
+
+/**
+ * Computes the difference between two workspace states.
+ * @param oldState - The previous state of the workspace.
+ * @param newState - The current state of the workspace.
+ * @returns A WorkspaceDiff object containing arrays of added, removed, and modified files.
+ */
+export function getWorkspaceDiff(
+  oldState: WorkspaceState,
+  newState: WorkspaceState
+): WorkspaceDiff {
+  const added: string[] = [];
+  const removed: string[] = [];
+  const modified: string[] = [];
+
+  // Check for added and modified files
+  newState.file_hashes.forEach((newHash, filePath) => {
+    if (!oldState.file_hashes.has(filePath)) {
+      added.push(filePath);
+    } else if (oldState.file_hashes.get(filePath) !== newHash) {
+      modified.push(filePath);
+    }
+  });
+
+  // Check for removed files
+  oldState.file_hashes.forEach((_, filePath) => {
+    if (!newState.file_hashes.has(filePath)) {
+      removed.push(filePath);
+    }
+  });
+
+  const hasChanges =
+    added.length > 0 || removed.length > 0 || modified.length > 0;
+
+  return { added, removed, modified, hasChanges };
 }

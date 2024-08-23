@@ -2,19 +2,19 @@ import axios from 'axios';
 import { marked, MarkedExtension } from 'marked';
 import { markedTerminal } from 'marked-terminal';
 
-import { TaskManager } from '../utils/taskManager';
+import { TaskManager } from '../managers/taskManager';
 import { listAgents, listAgentsFromWorkspace, readConfig } from '../utils/conf';
 import { API_HOST, API_VERSION } from '../constants';
 
 import { initCommand } from './init';
-import { AgentManager } from '../agentManager';
+import { AgentManager } from '../managers/agentManager';
 import { Logger } from '../utils/logger';
 import {
   getWorkspaceChanges,
   indexWorkspaceFiles,
   syncWorkspaceFiles,
   syncWorkspaceState,
-} from '../utils/workspace';
+} from '../helpers/workspace';
 
 marked.use(markedTerminal() as MarkedExtension);
 
