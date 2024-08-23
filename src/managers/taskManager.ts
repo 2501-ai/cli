@@ -33,12 +33,15 @@ export class TaskManager {
   }
 
   public async run(title: string, task: () => Promise<void>): Promise<void> {
-    await this.tasks.run([
-      {
-        title,
-        task,
-      },
-    ]);
+    await this.tasks.run(
+      [
+        {
+          title,
+          task,
+        },
+      ],
+      { exitOnError: true, collectErrors: 'full' }
+    );
   }
 
   public async runAllTasks(): Promise<void> {

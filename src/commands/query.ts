@@ -2,13 +2,19 @@ import axios from 'axios';
 import { marked, MarkedExtension } from 'marked';
 import { markedTerminal } from 'marked-terminal';
 
-import { TaskManager } from '../utils/taskManager';
+import { TaskManager } from '../managers/taskManager';
 import { listAgents, listAgentsFromWorkspace, readConfig } from '../utils/conf';
 import { API_HOST, API_VERSION } from '../constants';
 
 import { initCommand } from './init';
-import { Agent } from '../agent';
+import { AgentManager } from '../managers/agentManager';
 import { Logger } from '../utils/logger';
+import {
+  getWorkspaceChanges,
+  indexWorkspaceFiles,
+  syncWorkspaceFiles,
+  syncWorkspaceState,
+} from '../helpers/workspace';
 
 marked.use(markedTerminal() as MarkedExtension);
 
@@ -23,7 +29,7 @@ export async function queryCommand(
     noPersistentAgent?: boolean;
   }
 ): Promise<void> {
-  const config = await readConfig();
+  const config = readConfig();
 
   const workspace = options.workspace || process.cwd();
   const agentId = options.agentId;
@@ -37,7 +43,7 @@ export async function queryCommand(
   if (!skipWarmup) {
     if (!eligible) {
       const taskManager = new TaskManager();
-      Logger.warn('no agent found in the specified workspace, initializing...');
+      // Logger.warn('no agent found in the specified workspace, initializing...');
       await initCommand({ workspace });
       await taskManager.run(
         'Warming up... can take a few seconds.',
@@ -47,10 +53,10 @@ export async function queryCommand(
       await queryCommand(query, options);
       return;
     }
-    Logger.log(`Current workspace: ${eligible?.workspace || workspace} \n`);
+    Logger.debug(`Current workspace: ${eligible?.workspace || workspace} \n`);
   }
 
-  const agent = new Agent({
+  const agentClient = new AgentManager({
     id: eligible.id,
     name: eligible.name,
     engine: eligible.engine,
@@ -60,10 +66,15 @@ export async function queryCommand(
   });
 
   try {
-    await agent.toggleLoader();
+    await agentClient.toggleLoader();
+    const changed = await synchroniseWorkspaceChanges(
+      agentClient.name,
+      workspace
+    );
+
     const { data } = await axios.post(
-      `${API_HOST}${API_VERSION}/agents/${agent.id}/query`,
-      { query },
+      `${API_HOST}${API_VERSION}/agents/${agentClient.id}/query`,
+      { query, changed },
       {
         headers: {
           'Content-Type': 'application/json',
@@ -73,8 +84,12 @@ export async function queryCommand(
       }
     );
 
+    const taskManager = new TaskManager();
     if (data.asynchronous && data.asynchronous === true) {
-      return agent.checkStatus();
+      return await taskManager.run('Thinking...', async () => {
+        await agentClient.checkStatus();
+        await synchroniseWorkspaceChanges(agentClient.name, workspace);
+      });
     }
 
     if (data.response) {
@@ -82,15 +97,37 @@ export async function queryCommand(
     }
 
     if (data.actions) {
-      return await agent.processActions(
-        data.actions,
-        data.asynchronous && data.asynchronous === true
-      );
+      return await taskManager.run('Processing actions...', async () => {
+        await agentClient.processActions(
+          data.actions,
+          data.asynchronous === true
+        );
+        await synchroniseWorkspaceChanges(agentClient.name, workspace);
+      });
+    } else {
+      Logger.debug('No actions to process');
     }
 
     process.exit(0);
   } catch (error: any) {
     Logger.error('Error querying agent:', error);
-    process.exit(0);
+    process.exit(1);
   }
+}
+
+async function synchroniseWorkspaceChanges(
+  agentName: string,
+  workspace: string
+) {
+  const workspaceDiff = await getWorkspaceChanges(workspace);
+  if (workspaceDiff.hasChanges) {
+    Logger.debug('Agent : Workspace has changes, synchronizing...');
+    await syncWorkspaceState(workspace);
+    // TODO: improve and send only changed files ?
+    const workspaceResponse = await syncWorkspaceFiles(workspace);
+    if (workspaceResponse?.data && workspaceResponse?.files.length) {
+      await indexWorkspaceFiles(agentName, workspaceResponse.data);
+    }
+  }
+  return workspaceDiff.hasChanges;
 }

@@ -1,9 +1,13 @@
 import axios from 'axios';
 import fs from 'fs';
 
-import { syncWorkspace } from '../utils/workspace';
+import {
+  indexWorkspaceFiles,
+  syncWorkspaceFiles,
+  syncWorkspaceState,
+} from '../helpers/workspace';
 import { addAgent, readConfig } from '../utils/conf';
-import { TaskManager } from '../utils/taskManager';
+import { TaskManager } from '../managers/taskManager';
 
 import { API_HOST, API_VERSION } from '../constants';
 import { Logger } from '../utils/logger';
@@ -11,7 +15,7 @@ import { Logger } from '../utils/logger';
 axios.defaults.baseURL = `${API_HOST}${API_VERSION}`;
 axios.defaults.timeout = 8000;
 
-const defaultEngine = 'rhino';
+export const DEFAULT_ENGINE = 'rhino';
 
 interface initCommandOptions {
   name?: string;
@@ -37,68 +41,63 @@ export async function initCommand(options?: initCommandOptions): Promise<void> {
   try {
     const workspace = getWorkspace(options);
     const configId = (options && options.config) || 'CODING_AGENT';
-    const config = await readConfig();
+    const config = readConfig();
 
     const taskManager = new TaskManager();
     await taskManager.run('Initializing agent...', async () => {
-      const { data: configurations } = await axios.get(`/configurations`, {
-        headers: {
-          Authorization: `Bearer ${config?.api_key}`,
-        },
-      });
-
-      const selected_config = configurations.find(
-        (config: { key: string; prompt: string }) => config.key === configId
-      );
-      if (!selected_config) {
-        Logger.error('Invalid configuration ID');
-        process.exit(1);
-      }
-      const workspaceResponse = await syncWorkspace(workspace);
-      const { data: agent } = await axios.post(
-        '/agents',
-        {
-          workspace,
-          configuration: selected_config.id,
-          prompt: selected_config.prompt,
-          engine: config?.engine || defaultEngine,
-        },
-        {
+      try {
+        const { data: configurations } = await axios.get(`/configurations`, {
           headers: {
             Authorization: `Bearer ${config?.api_key}`,
           },
+        });
+
+        const selected_config = configurations.find(
+          (config: { key: string; prompt: string }) => config.key === configId
+        );
+        if (!selected_config) {
+          Logger.error('Invalid configuration ID');
+          process.exit(1);
         }
-      );
 
-      await addAgent({
-        id: agent.id,
-        name: agent.name,
-        workspace,
-        configuration: selected_config.id,
-        engine: config?.engine || defaultEngine,
-      });
+        const workspaceResponse = await syncWorkspaceFiles(workspace);
+        await syncWorkspaceState(workspace);
 
-      if (
-        workspaceResponse &&
-        workspaceResponse.data &&
-        workspaceResponse.files.length
-      ) {
-        await axios.post(
-          `/files/index?agent=${agent.name}`,
-          workspaceResponse.data,
+        const { data: agent } = await axios.post(
+          '/agents',
+          {
+            workspace,
+            configuration: selected_config.id,
+            prompt: selected_config.prompt,
+            engine: config?.engine || DEFAULT_ENGINE,
+            files: workspaceResponse?.files.map((file) => file.id),
+          },
           {
             headers: {
-              'Content-Type': 'multipart/form-data',
               Authorization: `Bearer ${config?.api_key}`,
             },
-            timeout: 20000,
           }
         );
-      }
 
-      Logger.log(`Agent ${agent.id} created in ${workspace}`);
+        addAgent({
+          id: agent.id,
+          name: agent.name,
+          workspace,
+          configuration: selected_config.id,
+          engine: config?.engine || DEFAULT_ENGINE,
+        });
+
+        if (workspaceResponse?.data && workspaceResponse?.files.length) {
+          await indexWorkspaceFiles(agent.name, workspaceResponse.data);
+        }
+
+        Logger.log(`Agent ${agent.id} created in ${workspace}`);
+      } catch (error) {
+        Logger.error('Task error :', (error as Error)?.message || error);
+        throw error;
+      }
     });
-  } catch (error: Error | unknown) {
+  } catch (error) {
     Logger.error('An error occurred:', (error as Error)?.message || error);
   }
 }

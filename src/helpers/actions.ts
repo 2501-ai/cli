@@ -4,6 +4,11 @@ import TurndownService from 'turndown';
 import execa from 'execa';
 import * as cheerio from 'cheerio';
 
+import { Logger } from '../utils/logger';
+import { UpdateInstruction } from '../utils/types';
+
+import { FileUpdater } from '../utils/fileUpdater';
+
 /**
  * Directory to store logs
  */
@@ -20,12 +25,14 @@ export const LOGFILE_PATH = `${LOG_DIR}/test.log`;
 export const ERRORFILE_PATH = `${LOG_DIR}/error.log`;
 
 export function read_file(args: { path: string }): string | null {
+  Logger.debug(`Reading file at "${args.path}"`);
   if (!fs.existsSync(args.path)) return null;
 
   return fs.readFileSync(args.path, 'utf8');
 }
 
 export async function write_file(args: { path: string; content: string }) {
+  Logger.debug(`Writing file at "${args.path}"`);
   fs.mkdirSync(path.dirname(args.path), { recursive: true });
   fs.writeFileSync(args.path, args.content);
   return `
@@ -34,12 +41,44 @@ export async function write_file(args: { path: string; content: string }) {
     ${args.content}`;
 }
 
+export function update_file({
+  path,
+  updates,
+  write = true,
+}: {
+  path: string;
+  updates: UpdateInstruction[];
+  write?: boolean;
+}): string {
+  Logger.debug(`Updating file at "${path}"`);
+  Logger.debug('Updates:', updates);
+
+  let fileContent = fs.readFileSync(path, 'utf8');
+
+  const updater = new FileUpdater(fileContent, updates);
+  fileContent = updater.execute();
+
+  if (write === false) {
+    return fileContent;
+  }
+
+  fs.writeFileSync(path, fileContent, 'utf8');
+  return `
+    File updated: ${path}
+    New content:
+    \`\`\`
+    ${fileContent}
+    \`\`\`
+  `;
+}
+
 export async function run_shell(args: {
   command: string;
   shell?: boolean | string;
   env?: { [key: string]: string };
 }): Promise<string> {
   let output: string = '';
+  Logger.debug(`Running shell command: ${args.command}`);
 
   try {
     const { stderr, stdout } = await execa(args.command, {
@@ -59,7 +98,7 @@ export async function run_shell(args: {
     fs.writeFileSync(LOGFILE_PATH, output);
 
     return output;
-  } catch (error: Error | unknown) {
+  } catch (error) {
     return `${ERROR_BOL} I failed to run ${args.command}, please fix the situation, errors below.\n ${(error as Error).message} \n ${error}`;
   }
 }

@@ -1,6 +1,7 @@
 import fs from 'fs';
 import os from 'os';
 import * as path from 'path';
+import { Logger } from './logger';
 
 interface AgentConfig {
   id: string;
@@ -17,15 +18,17 @@ export type Config = {
   agents: AgentConfig[];
 };
 
-const CONFIG_DIR = path.join(os.homedir(), '.2501');
-const CONFIG_FILE_PATH = path.join(CONFIG_DIR, '2501.conf');
+const CONFIG_FILE_PATH = path.join(
+  path.join(os.homedir(), '.2501'),
+  '2501.conf'
+);
 
 /**
  * Reads the configuration from the specified file.
  * If the file doesn't exist, it creates a new configuration file with default values.
  * @returns The configuration object if successful, or null if an error occurred.
  */
-export async function readConfig(): Promise<Config | null> {
+export function readConfig(): Config | null {
   try {
     if (!fs.existsSync(CONFIG_FILE_PATH)) {
       fs.mkdirSync(path.dirname(CONFIG_FILE_PATH), { recursive: true });
@@ -38,7 +41,7 @@ export async function readConfig(): Promise<Config | null> {
     const data = fs.readFileSync(CONFIG_FILE_PATH, 'utf8');
     return JSON.parse(data);
   } catch (error) {
-    console.error('Error reading configuration:', error);
+    Logger.error('Error reading configuration:', error);
     return null;
   }
 }
@@ -48,18 +51,18 @@ export async function readConfig(): Promise<Config | null> {
  * @param key - The key to set.
  * @param value - The value to set.
  */
-export async function setValue<K extends keyof Config>(
+export function setValue<K extends keyof Config>(
   key: K,
   value: Config[K]
-): Promise<void> {
+): void {
   try {
-    const config = await readConfig();
+    const config = readConfig();
     if (config) {
       config[key] = value;
-      await writeConfig(config);
+      writeConfig(config);
     }
   } catch (error) {
-    console.error('Error setting value:', error);
+    Logger.error('Error setting value:', error);
   }
 }
 
@@ -67,12 +70,12 @@ export async function setValue<K extends keyof Config>(
  * Writes the provided configuration object to the configuration file.
  * @param config - The configuration object to write.
  */
-export async function writeConfig(config: Config): Promise<void> {
+export function writeConfig(config: Config): void {
   try {
     const data = JSON.stringify(config, null, 2);
-    await fs.writeFileSync(CONFIG_FILE_PATH, data, 'utf8');
+    fs.writeFileSync(CONFIG_FILE_PATH, data, 'utf8');
   } catch (error) {
-    console.error('Error writing configuration:', error);
+    Logger.error('Error writing configuration:', error);
   }
 }
 
@@ -81,7 +84,7 @@ export async function writeConfig(config: Config): Promise<void> {
  * @returns An array of agent configurations.
  */
 export async function listAgents(): Promise<AgentConfig[]> {
-  const config = await readConfig();
+  const config = readConfig();
   if (config) {
     return config.agents;
   } else {
@@ -97,7 +100,7 @@ export async function listAgents(): Promise<AgentConfig[]> {
 export async function listAgentsFromWorkspace(
   workspaceUrl: string
 ): Promise<AgentConfig[]> {
-  const config = await readConfig();
+  const config = readConfig();
   if (config) {
     return config.agents.filter((agent) => agent.workspace === workspaceUrl);
   } else {
@@ -109,22 +112,22 @@ export async function listAgentsFromWorkspace(
  * Adds a new agent to the configuration if it doesn't already exist.
  * @param newAgent - The new agent configuration to add.
  */
-export async function addAgent(newAgent: AgentConfig): Promise<void> {
-  const config = await readConfig();
+export function addAgent(newAgent: AgentConfig): void {
+  const config = readConfig();
   if (config) {
     // Check if an agent with the same ID already exists
     const existingAgent = config.agents.find(
       (agent) => agent.id === newAgent.id
     );
     if (existingAgent) {
-      console.error('Agent with the same ID already exists:', newAgent.id);
+      Logger.error('Agent with the same ID already exists:', newAgent.id);
       return;
     }
 
     config.agents.push(newAgent);
-    await writeConfig(config);
+    writeConfig(config);
   } else {
-    console.error('Invalid configuration');
+    Logger.error('Invalid configuration');
   }
 }
 
@@ -133,12 +136,12 @@ export async function addAgent(newAgent: AgentConfig): Promise<void> {
  */
 export async function flushAgents(): Promise<void> {
   try {
-    const config = await readConfig();
+    const config = readConfig();
     if (config) {
       config.agents = []; // Empty the agents array
-      await writeConfig(config);
+      writeConfig(config);
     }
   } catch (error) {
-    console.error('Error flushing agents:', error);
+    Logger.error('Error flushing agents:', error);
   }
 }

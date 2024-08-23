@@ -6,12 +6,12 @@ import {
   hasError,
   LOGFILE_PATH,
   run_shell,
-} from '../utils/actions';
+} from '../helpers/actions';
 
 import { queryCommand } from './query';
 
 import { API_HOST, API_VERSION } from '../constants';
-import { unixSourceCommand } from '../utils/shell-commands';
+import { unixSourceCommand } from '../utils/shellCommands';
 import { Logger } from '../utils/logger';
 
 export async function jobSubscriptionCommand(options: {
@@ -66,12 +66,12 @@ export async function jobSubscriptionCommand(options: {
   if (options.listen) {
     try {
       const workspace = options.workspace || process.cwd();
-      const config = await readConfig();
+      const config = readConfig();
 
       const [agent] = await listAgentsFromWorkspace(workspace);
 
       if (!agent) {
-        return console.warn('No agents available in the workspace');
+        Logger.warn('No agents available in the workspace');
       }
 
       Logger.log(`Listening for new jobs for agent ${agent.id}`);

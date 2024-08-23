@@ -1,11 +1,8 @@
 import { AxiosError } from 'axios';
-
-/**
- * using realTerminal in terminal-kit was on purpose since we were having issues not using it before.
- * That it might be necessary in case of issues
- */
 import { terminal } from 'terminal-kit';
 import { marked } from 'marked';
+
+// TODO: use a better logger ? Winston, Pino ? etc..
 
 enum Colors {
   RED = 'red',
@@ -16,39 +13,63 @@ enum Colors {
   CYAN = 'cyan',
   WHITE = 'white',
 }
-// TODO: use a better logger ? Winston, Pino ? etc..
+
+const isDebug = process.env.DEBUG === 'true';
 
 export class Logger {
   static error(...args: (Error | AxiosError | string | unknown)[]) {
     if ((args[0] as AxiosError).isAxiosError) {
       const [arg0, ...rest] = args;
-      terminal[Colors.RED]('\n[HTTP ERROR] ').defaultColor(
+      terminal[Colors.RED]('[HTTP ERROR] ').defaultColor(
         (arg0 as AxiosError).toJSON(),
-        ...rest
+        ...rest.map(
+          (a) => (typeof a === 'object' ? JSON.stringify(a, null, 2) : a) + '\n'
+        )
       );
     } else {
       // terminal[Colors.RED]('\n[ERROR] ').defaultColor(...args);
-      console.error('\n[ERROR] ', ...args);
+      console.error(
+        '[ERROR] ',
+        ...args.map(
+          (a) => (typeof a === 'object' ? JSON.stringify(a, null, 2) : a) + '\n'
+        )
+      );
     }
   }
 
-  /**
-   * Log the agent data in a formatted way
-   */
   static agent(data: any) {
-    terminal.bold('\n\nAGENT:\n');
-    terminal(marked.parse(data));
+    terminal.bold('\nAGENT:\n');
+    terminal(marked.parse(data) + '\n');
   }
 
   static warn(...args: unknown[]) {
-    terminal[Colors.YELLOW]('\n[WARN] ').defaultColor(...args);
+    terminal[Colors.YELLOW]('[WARN] ').defaultColor(
+      ...args.map(
+        (a) => (typeof a === 'object' ? JSON.stringify(a, null, 2) : a) + '\n'
+      )
+    );
   }
 
   static success(content: string) {
-    terminal[Colors.GREEN]('\n[SUCCESS] ').defaultColor(content);
+    terminal[Colors.GREEN]('SUCCESS] ').defaultColor(content + '\n');
   }
 
   static log(...args: unknown[]) {
-    terminal[Colors.BLUE]('\n[INFO] ').defaultColor(...args);
+    terminal[Colors.BLUE]('[INFO] ').defaultColor(
+      ...args.map(
+        (a) => (typeof a === 'object' ? JSON.stringify(a, null, 2) : a) + '\n'
+      ),
+      '\n'
+    );
+  }
+
+  static debug(...args: unknown[]) {
+    if (isDebug) {
+      terminal[Colors.MAGENTA]('[DEBUG] ').defaultColor(
+        ...args.map(
+          (a) => (typeof a === 'object' ? JSON.stringify(a, null, 2) : a) + '\n'
+        )
+      );
+    }
   }
 }

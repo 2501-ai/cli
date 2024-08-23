@@ -2,26 +2,27 @@ import axios from 'axios';
 import { terminal } from 'terminal-kit';
 import { jsonrepair } from 'jsonrepair';
 
-import { TaskManager } from './utils/taskManager';
-import { convertFormToJSON } from './utils/json';
+import { TaskManager } from './taskManager';
+import { convertFormToJSON } from '../utils/json';
 import {
-  hasError,
   browse_url,
+  hasError,
   read_file,
   run_shell,
+  update_file,
   write_file,
-} from './utils/actions';
-import { readConfig } from './utils/conf';
+} from '../helpers/actions';
+import { readConfig } from '../utils/conf';
 
-import { API_HOST, API_VERSION } from './constants';
-import { Logger } from './utils/logger';
+import {
+  API_HOST,
+  API_VERSION,
+  OPENAI_TERMINAL_STATUSES,
+  QueryStatus,
+} from '../constants';
+import { Logger } from '../utils/logger';
 
-let debugData: any = null;
-
-enum QueryStatus {
-  Completed = 'completed',
-  Failed = 'failed',
-}
+const MAX_RETRY = 3;
 
 const ACTION_FNS = {
   hasError,
@@ -29,11 +30,12 @@ const ACTION_FNS = {
   read_file,
   run_shell,
   write_file,
+  update_file,
 };
 
 export type AgentCallbackType = (...args: unknown[]) => Promise<void>;
 
-export class Agent {
+export class AgentManager {
   id: string;
   name: string;
   engine: string;
@@ -42,6 +44,8 @@ export class Agent {
 
   spinner: any;
   queryCommand: (...args: any[]) => Promise<void>;
+
+  errorRetries = 0;
 
   constructor(options: {
     id: string;
@@ -73,8 +77,9 @@ export class Agent {
   }
 
   async checkStatus() {
+    let debugData: any = '';
     try {
-      const config = await readConfig();
+      const config = readConfig();
       const { data } = await axios.get(
         `${API_HOST}${API_VERSION}/agents/${this.id}/status`,
         {
@@ -96,16 +101,22 @@ export class Agent {
       }
 
       if (data.status === QueryStatus.Failed) {
-        console.error('Query failed:', data.error);
+        Logger.error('Query failed:', data.error);
         this.callback && (await this.callback(data.answer || data.error));
-        return process.exit(0);
+      }
+
+      if (OPENAI_TERMINAL_STATUSES.includes(data.status)) {
+        await this.toggleLoader(true);
+        Logger.debug('Unhandled status', data.status);
+        Logger.debug('Data', data);
+        Logger.warn('TODO: Implement action required');
+        return process.exit(1);
       }
 
       if (data.actions) {
         debugData = data;
         await this.toggleLoader(true);
         await this.processActions(data.actions);
-        return;
       }
     } catch (error: any) {
       Logger.error(
@@ -113,11 +124,27 @@ export class Agent {
         error.message,
         '\n Retrying...'
       );
-      Logger.log('debugData', JSON.stringify(debugData));
-    }
+      this.errorRetries++;
 
-    // const self = this;
-    setTimeout(async () => await this.checkStatus.call(this), 2000);
+      // Try to log debugData if available
+      try {
+        if (error.message === 'Unexpected end of JSON input') {
+          const fixed_args = jsonrepair(debugData);
+          debugData = JSON.parse(convertFormToJSON(fixed_args));
+        } else {
+          Logger.debug('debugData', JSON.stringify(debugData));
+        }
+      } catch (e) {
+        Logger.error('Error logging debugData', e);
+        return process.exit(1);
+      }
+      // Prevent infinite loop
+      if (this.errorRetries > MAX_RETRY) {
+        Logger.error('Max retries reached, exiting...');
+        process.exit(1);
+      }
+    }
+    setTimeout(async () => await this.checkStatus.call(this), 3000);
   }
 
   async processActions(actions: any[], asynchronous: boolean = true) {
@@ -136,7 +163,8 @@ export class Agent {
         args = call.args;
       }
 
-      const functions = ACTION_FNS;
+      Logger.debug('PROCESS ACTIONS args', args);
+
       const function_name: keyof typeof ACTION_FNS =
         call.function.name || call.function;
 
@@ -150,8 +178,17 @@ export class Agent {
         await taskManager.run('Checking output for correction', async () => {
           const previous =
             ACTION_FNS.read_file({ path: args.path }) || 'NO PREVIOUS VERSION';
+
+          // const proposal = args.updates
+          //   ? ACTION_FNS.update_file({
+          //       path: args.path,
+          //       updates: args.updates,
+          //       write: false,
+          //     })
+          //   : args.content;
+
           try {
-            const config = await readConfig();
+            const config = readConfig();
             const { data: correctionData } = await axios.post(
               `/agents/${this.id}/verifyOutput`,
               { task, previous, proposal: args.content },
@@ -169,19 +206,26 @@ export class Agent {
             ) {
               corrected = true;
               args.content = correctionData.corrected_output;
+
+              // if (args.updates) {
+              //   delete args.updates;
+              //   function_name = ACTION_FNS.write_file.name as typeof function_name;
+              // }
             }
           } catch (e) {
-            console.error('verifyOutput error or timeout', e);
+            Logger.error('verifyOutput error or timeout', e);
           }
         });
       }
 
       await taskManager.run(task, async () => {
         try {
-          let output = await functions[function_name](args);
+          let output = await ACTION_FNS[function_name](args);
+
           if (corrected) {
             output += `\n\n NOTE: your original content for ${args.path} was corrected with the new version below before running the function: \n\n${args.content}`;
           }
+
           tool_outputs.push({
             tool_call_id: call.id,
             output,
@@ -197,7 +241,7 @@ export class Agent {
 
     if (this.engine.includes('rhino') && asynchronous) {
       try {
-        const config = await readConfig();
+        const config = readConfig();
         await axios.post(
           `${API_HOST}${API_VERSION}/agents/${this.id}/submitOutput`,
           {
@@ -209,8 +253,9 @@ export class Agent {
             },
           }
         );
-        // const self = this;
-        setTimeout(async () => await this.checkStatus.call(this), 2000);
+        // add a 2 sec delay
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+        await this.checkStatus();
       } catch (e) {
         await this.checkStatus();
       }
@@ -227,6 +272,5 @@ export class Agent {
         }
       );
     }
-    return;
   }
 }

@@ -3,10 +3,11 @@ import { terminal } from 'terminal-kit';
 
 import { API_HOST, API_VERSION } from '../constants';
 import { readConfig } from '../utils/conf';
+import { Logger } from '../utils/logger';
 
 export async function configCommand() {
   try {
-    const config = await readConfig();
+    const config = readConfig();
     const response = await axios.get(
       `${API_HOST}${API_VERSION}/configurations`,
       { headers: { Authorization: `Bearer ${config?.api_key}` } }
@@ -15,12 +16,10 @@ export async function configCommand() {
     terminal.table(
       [
         ['ID', 'Description'],
-        ...response.data.map(
-          (c: { id: string; description: string }) => [
-            c.id,
-            c.description,
-          ]
-        ),
+        ...response.data.map((c: { id: string; description: string }) => [
+          c.id,
+          c.description,
+        ]),
       ],
       {
         hasBorder: true,
@@ -36,9 +35,9 @@ export async function configCommand() {
   } catch (error) {
     if (error instanceof Error) {
       // Type-check the error object
-      console.error('Failed to fetch configurations:', error.message);
+      Logger.error('Failed to fetch configurations:', error.message);
     } else {
-      console.error('An unexpected error occurred');
+      Logger.error('An unexpected error occurred');
     }
   }
 }
