@@ -218,6 +218,9 @@ export class AgentManager {
           }
 
           task.output = `Processing action: ${taskTitle} | On function ${function_name}`;
+          Logger.debug(
+            `Processing action: ${taskTitle} | On function ${function_name}`
+          );
           try {
             let output = (await ACTION_FNS[function_name](args)) as string;
 
@@ -230,6 +233,7 @@ export class AgentManager {
               output,
             });
           } catch (e: any) {
+            Logger.debug('Error processing action:', e);
             ctx.toolOutputs.push({
               tool_call_id: call.id,
               output: `I failed to run ${function_name}, please fix the situation, errors below.\n ${e.message}`,
@@ -242,7 +246,7 @@ export class AgentManager {
     if (this.engine.includes('rhino') && asynchronous) {
       tasks.push({
         title: 'Submitting output..',
-        task: async (ctx) => {
+        task: async (ctx, subtask) => {
           try {
             const config = readConfig();
             await axios.post(
@@ -258,9 +262,9 @@ export class AgentManager {
             );
             // add a 2 sec delay
             await new Promise((resolve) => setTimeout(resolve, 2000));
-            return await this.checkStatus();
+            return subtask.newListr(await this.checkStatus());
           } catch (e) {
-            return await this.checkStatus();
+            return subtask.newListr(await this.checkStatus());
           }
         },
       });

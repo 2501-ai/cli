@@ -116,46 +116,55 @@ export function getQueryTaskList(
     },
     {
       task: async (ctx, task) => {
-        return task.newListr([
-          {
-            title: 'Processing..',
-            task: async () => {
-              try {
-                if (
-                  ctx.agentResponse.asynchronous &&
-                  ctx.agentResponse.asynchronous === true
-                ) {
-                  task.title = 'Waiting for update..';
-                  return ctx.agentManager.checkStatus();
-                }
-
-                if (ctx.agentResponse.response) {
-                  Logger.agent(ctx.agentResponse.response);
-                }
-
-                task.title = 'Processing actions..';
-                if (ctx.agentResponse.actions) {
-                  await ctx.agentManager.processActions(
-                    ctx.agentResponse.actions,
+        return task.newListr(
+          [
+            {
+              title: 'Processing..',
+              task: async (_, subtask) => {
+                try {
+                  if (
+                    ctx.agentResponse.asynchronous &&
                     ctx.agentResponse.asynchronous === true
-                  );
+                  ) {
+                    task.title = 'Waiting for update..';
+                    return subtask.newListr(
+                      await ctx.agentManager.checkStatus()
+                    );
+                  }
+
+                  if (ctx.agentResponse.response) {
+                    Logger.agent(ctx.agentResponse.response);
+                  }
+
+                  task.title = 'Processing actions..';
+                  if (ctx.agentResponse.actions) {
+                    return subtask.newListr(
+                      ctx.agentManager.getProcessActionsTasks(
+                        ctx.agentResponse.actions,
+                        ctx.agentResponse.asynchronous === true
+                      )
+                    );
+                  }
+                  task.title = 'Done';
+                } catch (e) {
+                  Logger.error('Query Error :', e);
                 }
-                task.title = 'Done';
-              } catch (e) {
-                Logger.error('Query Error :', e);
-              }
+              },
             },
-          },
+            {
+              title: 'Synchronizing workspace..',
+              task: async () => {
+                await synchroniseWorkspaceChanges(
+                  ctx.agentManager.name,
+                  workspace
+                );
+              },
+            },
+          ],
           {
-            title: 'Synchronizing workspace..',
-            task: async () => {
-              await synchroniseWorkspaceChanges(
-                ctx.agentManager.name,
-                workspace
-              );
-            },
-          },
-        ]);
+            exitOnError: true,
+          }
+        );
       },
     },
   ];
