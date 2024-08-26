@@ -198,13 +198,11 @@ export async function getFileFromWorkspace(path: string) {
 
 export async function syncWorkspaceFiles(
   workspace: string
-): Promise<
-  { data: FormData; files: { id: string; name: string }[] } | undefined
-> {
+): Promise<{ data: FormData | null; files: { id: string; name: string }[] }> {
   const files: { path: string; data: Buffer }[] =
     await getContextFromWorkspace(workspace);
   if (!files.length) {
-    return;
+    return { data: null, files: [] };
   }
   const data = new FormData();
   for (let i = 0; i < files.length; i++) {

@@ -3,7 +3,7 @@ import os from 'os';
 import * as path from 'path';
 import { Logger } from './logger';
 
-interface AgentConfig {
+export interface AgentConfig {
   id: string;
   name: string;
   workspace: string;
@@ -83,7 +83,7 @@ export function writeConfig(config: Config): void {
  * Lists all agents from the configuration.
  * @returns An array of agent configurations.
  */
-export async function listAgents(): Promise<AgentConfig[]> {
+export function listAgents(): AgentConfig[] {
   const config = readConfig();
   if (config) {
     return config.agents;
@@ -97,9 +97,7 @@ export async function listAgents(): Promise<AgentConfig[]> {
  * @param workspaceUrl - The workspace URL to filter agents by.
  * @returns An array of agent configurations associated with the specified workspace URL.
  */
-export async function listAgentsFromWorkspace(
-  workspaceUrl: string
-): Promise<AgentConfig[]> {
+export function listAgentsFromWorkspace(workspaceUrl: string): AgentConfig[] {
   const config = readConfig();
   if (config) {
     return config.agents.filter((agent) => agent.workspace === workspaceUrl);

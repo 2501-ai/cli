@@ -3,10 +3,15 @@ import { marked, MarkedExtension } from 'marked';
 import { markedTerminal } from 'marked-terminal';
 
 import { TaskManager } from '../managers/taskManager';
-import { listAgents, listAgentsFromWorkspace, readConfig } from '../utils/conf';
+import {
+  AgentConfig,
+  listAgents,
+  listAgentsFromWorkspace,
+  readConfig,
+} from '../utils/conf';
 import { API_HOST, API_VERSION } from '../constants';
 
-import { initCommand } from './init';
+import { getInitTaskList } from './init';
 import { AgentManager } from '../managers/agentManager';
 import { Logger } from '../utils/logger';
 import {
@@ -15,8 +20,146 @@ import {
   syncWorkspaceFiles,
   syncWorkspaceState,
 } from '../helpers/workspace';
+import { ListrTask } from 'listr2';
 
 marked.use(markedTerminal() as MarkedExtension);
+
+function getElligibleAgents(
+  agentId: string | undefined,
+  workspace: string
+): AgentConfig | null {
+  const agents = agentId ? listAgents() : listAgentsFromWorkspace(workspace);
+  return agents.find((a) => a.id === agentId) || agents[0] || null;
+}
+
+export function getQueryTaskList(
+  options: {
+    workspace?: string;
+    agentId?: string;
+    skipWarmup?: boolean;
+    callback?: (...args: any[]) => Promise<void>;
+    noPersistentAgent?: boolean;
+  },
+  query: string
+): ListrTask[] {
+  const config = readConfig();
+  const workspace = options.workspace || process.cwd();
+  const agentId = options.agentId;
+  const skipWarmup = options.skipWarmup;
+
+  return [
+    {
+      title: 'Warming up...',
+      task: async (ctx, task) => {
+        return task.newListr([
+          {
+            title: 'Retrieving agents..',
+            task: async (_, subtask) => {
+              ctx.eligible = getElligibleAgents(agentId, workspace);
+              // initialize agent if not found
+              if (ctx.eligible || skipWarmup) {
+                return subtask.newListr(getInitTaskList({ workspace }));
+              }
+            },
+          },
+          {
+            title: 'Verifying..',
+            task: async (_, subtask) => {
+              ctx.eligible = getElligibleAgents(agentId, workspace);
+              if (!ctx.eligible) {
+                throw new Error('No eligible agents found');
+              }
+              subtask.title = `Using agent: (${ctx.eligible.id})`;
+            },
+          },
+          {
+            title: 'Reviewing workspace changes..',
+            retry: 3,
+            task: async (_, subtask) => {
+              const agentManager = new AgentManager({
+                id: ctx.eligible.id,
+                name: ctx.eligible.name,
+                engine: ctx.eligible.engine,
+                callback: options.callback,
+                workspace,
+                queryCommand,
+              });
+              ctx.agentManager = agentManager;
+              ctx.changed = await synchroniseWorkspaceChanges(
+                agentManager.name,
+                workspace
+              );
+              subtask.title = ctx.changed
+                ? `Workspace synchronised`
+                : `Workspace up to date`;
+            },
+          },
+        ]);
+      },
+    },
+    {
+      task: async (ctx, task) => {
+        task.title = 'Thinking..';
+        const { data } = await axios.post(
+          `${API_HOST}${API_VERSION}/agents/${ctx.agentManager.id}/query`,
+          { query, changed: ctx.changed },
+          {
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${config?.api_key}`,
+            },
+            timeout: 5 * 60 * 1000,
+          }
+        );
+        ctx.agentResponse = data;
+      },
+    },
+    {
+      task: async (ctx, task) => {
+        return task.newListr([
+          {
+            title: 'Processing..',
+            task: async () => {
+              try {
+                if (
+                  ctx.agentResponse.asynchronous &&
+                  ctx.agentResponse.asynchronous === true
+                ) {
+                  task.title = 'Waiting for update..';
+                  return ctx.agentManager.checkStatus();
+                }
+
+                if (ctx.agentResponse.response) {
+                  Logger.agent(ctx.agentResponse.response);
+                }
+
+                task.title = 'Processing actions..';
+                if (ctx.agentResponse.actions) {
+                  await ctx.agentManager.processActions(
+                    ctx.agentResponse.actions,
+                    ctx.agentResponse.asynchronous === true
+                  );
+                }
+                task.title = 'Done';
+              } catch (e) {
+                Logger.error('Query Error :', e);
+              }
+            },
+          },
+          {
+            title: 'Synchronizing workspace..',
+            task: async () => {
+              await synchroniseWorkspaceChanges(
+                ctx.agentManager.name,
+                workspace
+              );
+            },
+          },
+        ]);
+      },
+    },
+  ];
+}
 
 // Function to execute the query command
 export async function queryCommand(
@@ -28,90 +171,15 @@ export async function queryCommand(
     callback?: (...args: any[]) => Promise<void>;
     noPersistentAgent?: boolean;
   }
-): Promise<void> {
-  const config = readConfig();
-
-  const workspace = options.workspace || process.cwd();
-  const agentId = options.agentId;
-  const skipWarmup = options.skipWarmup;
-
-  const agents = agentId
-    ? await listAgents()
-    : await listAgentsFromWorkspace(workspace);
-  const eligible = agents.find((a) => a.id === agentId) || agents[0] || null;
-
-  if (!skipWarmup) {
-    if (!eligible) {
-      const taskManager = new TaskManager();
-      // Logger.warn('no agent found in the specified workspace, initializing...');
-      await initCommand({ workspace });
-      await taskManager.run(
-        'Warming up... can take a few seconds.',
-        async () => new Promise((resolve) => setTimeout(resolve, 5000))
-      );
-
-      await queryCommand(query, options);
-      return;
-    }
-    Logger.debug(`Current workspace: ${eligible?.workspace || workspace} \n`);
-  }
-
-  const agentClient = new AgentManager({
-    id: eligible.id,
-    name: eligible.name,
-    engine: eligible.engine,
-    callback: options.callback,
-    workspace,
-    queryCommand,
-  });
-
+) {
   try {
-    await agentClient.toggleLoader();
-    const changed = await synchroniseWorkspaceChanges(
-      agentClient.name,
-      workspace
-    );
-
-    const { data } = await axios.post(
-      `${API_HOST}${API_VERSION}/agents/${agentClient.id}/query`,
-      { query, changed },
-      {
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${config?.api_key}`,
-        },
-        timeout: 5 * 60 * 1000,
-      }
-    );
-
-    const taskManager = new TaskManager();
-    if (data.asynchronous && data.asynchronous === true) {
-      return await taskManager.run('Thinking...', async () => {
-        await agentClient.checkStatus();
-        await synchroniseWorkspaceChanges(agentClient.name, workspace);
-      });
-    }
-
-    if (data.response) {
-      Logger.agent(data.response);
-    }
-
-    if (data.actions) {
-      return await taskManager.run('Processing actions...', async () => {
-        await agentClient.processActions(
-          data.actions,
-          data.asynchronous === true
-        );
-        await synchroniseWorkspaceChanges(agentClient.name, workspace);
-      });
-    } else {
-      Logger.debug('No actions to process');
-    }
-
-    process.exit(0);
-  } catch (error: any) {
-    Logger.error('Error querying agent:', error);
-    process.exit(1);
+    await TaskManager.run(getQueryTaskList(options, query), {
+      concurrent: false,
+      exitOnError: false,
+      collectErrors: 'full',
+    });
+  } catch (e) {
+    Logger.error('Query error:', e);
   }
 }
 
