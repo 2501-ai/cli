@@ -88,7 +88,11 @@ export async function initCommand(options?: initCommandOptions): Promise<void> {
         });
 
         if (workspaceResponse?.data && workspaceResponse?.files.length) {
-          await indexWorkspaceFiles(agent.name, workspaceResponse.data);
+          await indexWorkspaceFiles(
+            agent.id,
+            workspaceResponse.data,
+            workspaceResponse.files
+          );
         }
 
         Logger.log(`Agent ${agent.id} created in ${workspace}`);

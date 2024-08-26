@@ -126,7 +126,11 @@ async function synchroniseWorkspaceChanges(
     // TODO: improve and send only changed files ?
     const workspaceResponse = await syncWorkspaceFiles(workspace);
     if (workspaceResponse?.data && workspaceResponse?.files.length) {
-      await indexWorkspaceFiles(agentName, workspaceResponse.data);
+      await indexWorkspaceFiles(
+        agentName,
+        workspaceResponse.data,
+        workspaceResponse.files
+      );
     }
   }
   return workspaceDiff.hasChanges;

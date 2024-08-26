@@ -27,9 +27,7 @@ export class Logger {
         )
       );
     } else {
-      // terminal[Colors.RED]('\n[ERROR] ').defaultColor(...args);
-      console.error(
-        '[ERROR] ',
+      terminal[Colors.RED]('\n[ERROR] ').defaultColor(
         ...args.map(
           (a) => (typeof a === 'object' ? JSON.stringify(a, null, 2) : a) + '\n'
         )

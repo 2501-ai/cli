@@ -37,8 +37,6 @@ export async function getDirectoryMd5Hash({
   maxDepth = 10,
 }: DirectoryMd5HashOptions) {
   const ignoreSet = getIgnoredFiles(directoryPath);
-  Logger.debug('Directory:', directoryPath);
-
   // Start processing from the base directory with an initial depth of 0
   const result = await getWorkspaceFiles({
     currentPath: '',
