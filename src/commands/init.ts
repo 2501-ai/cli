@@ -159,12 +159,12 @@ export function getInitTaskList(
       title: 'Indexing workspace files..',
       retry: 3,
       task: async (ctx, task) => {
-        // Logger.debug('Context:', ctx);
+        Logger.debug('Context:', ctx);
         if (!ctx.workspaceResponse.data) {
           task.title = `Nothing to index`;
           return;
         }
-        await indexWorkspaceFiles(ctx.agent.name, ctx.workspaceResponse.data);
+        await indexWorkspaceFiles(ctx.agent.id, ctx.workspaceResponse.data);
         task.title = `Workspace files indexed`;
       },
     },

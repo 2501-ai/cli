@@ -86,7 +86,7 @@ export function getQueryTaskList(
               });
               ctx.agentManager = agentManager;
               ctx.changed = await synchroniseWorkspaceChanges(
-                agentManager.name,
+                agentManager.id,
                 workspace
               );
               subtask.title = ctx.changed
@@ -155,7 +155,7 @@ export function getQueryTaskList(
               title: 'Synchronizing workspace..',
               task: async () => {
                 await synchroniseWorkspaceChanges(
-                  ctx.agentManager.name,
+                  ctx.agentManager.id,
                   workspace
                 );
               },
@@ -192,10 +192,7 @@ export async function queryCommand(
   }
 }
 
-async function synchroniseWorkspaceChanges(
-  agentName: string,
-  workspace: string
-) {
+async function synchroniseWorkspaceChanges(agentId: string, workspace: string) {
   const workspaceDiff = await getWorkspaceChanges(workspace);
   if (workspaceDiff.hasChanges) {
     Logger.debug('Agent : Workspace has changes, synchronizing...');
@@ -203,7 +200,7 @@ async function synchroniseWorkspaceChanges(
     // TODO: improve and send only changed files ?
     const workspaceResponse = await syncWorkspaceFiles(workspace);
     if (workspaceResponse?.data && workspaceResponse?.files.length) {
-      await indexWorkspaceFiles(agentName, workspaceResponse.data);
+      await indexWorkspaceFiles(agentId, workspaceResponse.data);
     }
   }
   return workspaceDiff.hasChanges;
