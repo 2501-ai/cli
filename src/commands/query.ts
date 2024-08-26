@@ -57,7 +57,7 @@ export function getQueryTaskList(
             task: async (_, subtask) => {
               ctx.eligible = getElligibleAgents(agentId, workspace);
               // initialize agent if not found
-              if (ctx.eligible || skipWarmup) {
+              if (!ctx.eligible && !skipWarmup) {
                 return subtask.newListr(getInitTaskList({ workspace }));
               }
             },

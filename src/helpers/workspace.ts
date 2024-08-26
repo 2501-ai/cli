@@ -174,11 +174,11 @@ async function getContextFromWorkspace(workspace: string) {
   // no files, no workspace PDF
   if (files.length === 0) return [];
 
-  await createPDFFromFolder(workspace, outputFilePath)
-    .then(() => Logger.debug('Agent : Workspace files unified.'))
-    .catch((err) =>
-      Logger.error('Agent : An error occurred while generating the PDF:' + err)
-    );
+  await createPDFFromFolder(workspace, outputFilePath);
+  // .then(() => Logger.debug('Agent : Workspace files unified.'))
+  // .catch((err) =>
+  //   Logger.error('Agent : An error occurred while generating the PDF:' + err)
+  // );
 
   const pdfs = await getPDFsFromWorkspace(workspace);
 
