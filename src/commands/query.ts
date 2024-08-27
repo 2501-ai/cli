@@ -317,7 +317,7 @@ export function getQueryTaskList(
         return task.newListr(tasks.concat([finalCheck]), {
           exitOnError: true,
           rendererOptions: {
-            // collapseSubtasks: true,
+            collapseSubtasks: true,
           },
         });
       },
