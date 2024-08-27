@@ -253,7 +253,7 @@ export function getQueryTaskList(
               ctx.agentManager.engine.includes('rhino') &&
               ctx.agentResponse.asynchronous
             ) {
-              subtask.title = `Running final check..`;
+              subtask.title = `Verifying..`;
               try {
                 const config = readConfig();
                 await axios.post(
@@ -317,7 +317,7 @@ export function getQueryTaskList(
         return task.newListr(tasks.concat([finalCheck]), {
           exitOnError: true,
           rendererOptions: {
-            collapseSubtasks: true,
+            // collapseSubtasks: true,
           },
         });
       },
