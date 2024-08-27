@@ -239,6 +239,7 @@ export async function queryCommand(
       collectErrors: 'full',
       rendererOptions: {
         indentation: 0,
+        collapseSubtasks: false,
       },
     });
   } catch (e) {
