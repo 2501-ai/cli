@@ -85,21 +85,21 @@ export function getInitTaskList(
   const configId = (options && options.config) || 'CODING_AGENT';
   return [
     {
-      title: 'Initializing agent...',
       task: async (ctx, task) => {
+        task.title = `Initializing agent..`;
         return task.newListr(
           [
             {
               title: 'Initializing workspace..',
-              task: async (_, task) => {
-                return task.newListr(
+              task: async (_, subtask) => {
+                return subtask.newListr(
                   [
                     {
                       task: () => {
                         if (options && options.workspace === false) {
                           const path = `/tmp/2501/${Date.now()}`;
                           fs.mkdirSync(path, { recursive: true });
-                          task.title = `Using workspace at ${ctx.workspace}`;
+                          subtask.title = `Using workspace at ${ctx.workspace}`;
                           return path;
                         }
                         const hasCustomWorkspace =
@@ -110,7 +110,7 @@ export function getInitTaskList(
                         ctx.workspace = hasCustomWorkspace
                           ? options.workspace
                           : process.cwd();
-                        task.title = `Using workspace at ${ctx.workspace}`;
+                        subtask.title = `Using workspace at ${ctx.workspace}`;
                       },
                     },
                     {
@@ -121,9 +121,9 @@ export function getInitTaskList(
                         await syncWorkspaceState(ctx.workspace);
                         ctx.workspaceResponse = workspaceResponse;
                         if (!workspaceResponse.data) {
-                          task.title = `Workspace is empty`;
+                          subtask.title = `Workspace is empty`;
                         } else {
-                          task.title = `Workspace files synchronized`;
+                          subtask.title = `Workspace files synchronized`;
                         }
                       },
                     },
@@ -134,14 +134,21 @@ export function getInitTaskList(
             },
             {
               title: 'Initializing configuration..',
-              task: async (_, task) => {
+              task: async (_, subtask) => {
                 ctx.selectedConfig = await initConfiguration(configId);
-                task.title = `Configuration ${ctx.selectedConfig.id} initialized`;
+                subtask.title = `Configuration ${ctx.selectedConfig.id} initialized`;
               },
             },
           ],
           { concurrent: true, rendererOptions: { collapseSubtasks: true } }
         );
+        // .add([
+        //   {
+        //     task: async (_, task) => {
+        //       task.task.parent!.title = `Initialization complete`;
+        //     },
+        //   },
+        // ]);
       },
     },
     {

@@ -132,7 +132,16 @@ export class AgentManager {
     return this.checkStatus();
   }
 
-  async executeAction(call: any, args: any): Promise<any> {
+  async executeAction(
+    call: any,
+    args: any
+  ): Promise<
+    | {
+        output: string;
+        tool_call_id: any;
+      }
+    | undefined
+  > {
     const function_name: keyof typeof ACTION_FNS =
       call.function.name || call.function;
 
@@ -140,25 +149,17 @@ export class AgentManager {
     if (args.url) {
       taskTitle = 'Browsing: ' + args.url;
     }
-
+    Logger.debug('    Action args:', args);
     let corrected = false;
+    // Specific to write_file action
     if (args.path && args.content) {
       const previous =
         ACTION_FNS.read_file({ path: args.path }) || 'NO PREVIOUS VERSION';
-
-      // const proposal = args.updates
-      //   ? ACTION_FNS.update_file({
-      //       path: args.path,
-      //       updates: args.updates,
-      //       write: false,
-      //     })
-      //   : args.content;
-
       try {
         const config = readConfig();
         const { data: correctionData } = await axios.post(
           `/agents/${this.id}/verifyOutput`,
-          { task: taskTitle, previous, proposal: args.content },
+          { task: taskTitle, previous, proposal: JSON.stringify(args) },
           {
             timeout: 60000,
             headers: {
@@ -167,6 +168,8 @@ export class AgentManager {
           }
         );
 
+        Logger.debug('Correction data:', correctionData);
+
         if (
           correctionData.corrected_output &&
           correctionData.corrected_output !== args.content
@@ -174,6 +177,7 @@ export class AgentManager {
           corrected = true;
           args.content = correctionData.corrected_output;
 
+          // prevent calling update function
           // if (args.updates) {
           //   delete args.updates;
           //   function_name = ACTION_FNS.write_file.name as typeof function_name;
@@ -183,29 +187,28 @@ export class AgentManager {
         Logger.error('verifyOutput error or timeout', e);
         throw e;
       }
+    }
+    Logger.debug(
+      `   Processing action: ${taskTitle} | On function ${function_name}`
+    );
 
-      Logger.debug(
-        `Processing action: ${taskTitle} | On function ${function_name}`
-      );
+    try {
+      let output = (await ACTION_FNS[function_name](args)) as string;
 
-      try {
-        let output = (await ACTION_FNS[function_name](args)) as string;
-
-        if (corrected) {
-          output += `\n\n NOTE: your original content for ${args.path} was corrected with the new version below before running the function: \n\n${args.content}`;
-        }
-
-        return {
-          tool_call_id: call.id,
-          output,
-        };
-      } catch (e: any) {
-        Logger.debug('Error processing action:', e);
-        return {
-          tool_call_id: call.id,
-          output: `I failed to run ${function_name}, please fix the situation, errors below.\n ${e.message}`,
-        };
+      if (corrected) {
+        output += `\n\n NOTE: your original content for ${args.path} was corrected with the new version below before running the function: \n\n${args.content}`;
       }
+
+      return {
+        tool_call_id: call.id,
+        output,
+      };
+    } catch (e: any) {
+      Logger.debug('Error processing action:', e);
+      return {
+        tool_call_id: call.id,
+        output: `I failed to run ${function_name}, please fix the situation, errors below.\n ${e.message}`,
+      };
     }
   }
 }

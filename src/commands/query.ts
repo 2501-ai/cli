@@ -24,6 +24,7 @@ import {
   syncWorkspaceFiles,
   syncWorkspaceState,
 } from '../helpers/workspace';
+import { queryAgent, QueryResponseDTO } from '../helpers/api';
 
 marked.use(markedTerminal() as MarkedExtension);
 
@@ -49,6 +50,50 @@ async function synchroniseWorkspaceChanges(agentId: string, workspace: string) {
   return workspaceDiff.hasChanges;
 }
 
+function getActionTaskList(ctx: {
+  agentResponse: QueryResponseDTO;
+  agentManager: AgentManager;
+  changed?: boolean;
+  eligible?: AgentConfig | null;
+  toolOutputs?: any[];
+}) {
+  const taskList: ListrTask[] = ctx.agentResponse.actions.map((action: any) => {
+    let args: any;
+
+    if (action.function.arguments) {
+      args = action.function.arguments;
+      if (typeof args === 'string') {
+        const fixed_args = jsonrepair(args);
+        args = JSON.parse(convertFormToJSON(fixed_args));
+      }
+    } else {
+      args = action.args;
+    }
+
+    let taskTitle: string = args.answer || args.command || '';
+    if (args.url) {
+      taskTitle = 'Browsing: ' + args.url;
+    }
+
+    return {
+      title: taskTitle,
+      task: async () => {
+        try {
+          const toolOutput = await ctx.agentManager.executeAction(action, args);
+          Logger.debug('Tool output2:', toolOutput);
+          if (!ctx.toolOutputs) {
+            ctx.toolOutputs = [];
+          }
+          ctx.toolOutputs.push(toolOutput);
+        } catch (e) {
+          Logger.error('Action Error :', e);
+        }
+      },
+    };
+  });
+  return taskList;
+}
+
 export function getQueryTaskList(
   options: {
     workspace?: string;
@@ -58,19 +103,28 @@ export function getQueryTaskList(
     noPersistentAgent?: boolean;
   },
   query: string
-): ListrTask[] {
-  const config = readConfig();
+): ListrTask<{
+  agentResponse: QueryResponseDTO;
+  agentManager: AgentManager;
+  changed?: boolean;
+  eligible?: AgentConfig | null;
+  toolOutputs?: any[];
+}>[] {
   const workspace = options.workspace || process.cwd();
   const agentId = options.agentId;
   const skipWarmup = options.skipWarmup;
 
   return [
     {
-      title: 'Syncing...',
+      rendererOptions: {
+        collapseSubtasks: true,
+      },
       task: async (ctx, subtask) => {
+        subtask.title = 'Syncing..';
         ctx.eligible = getEligibleAgents(agentId, workspace);
         // initialize agent if not found
         if (!ctx.eligible && !skipWarmup) {
+          // return TaskManager.addTask(getInitTaskList({ workspace }))
           return subtask.newListr(getInitTaskList({ workspace }));
         }
       },
@@ -78,6 +132,9 @@ export function getQueryTaskList(
     {
       task: async (ctx, subtask) => {
         ctx.eligible = getEligibleAgents(agentId, workspace);
+        if (!ctx.eligible) {
+          throw new Error('No agent found');
+        }
 
         subtask.title = `Using agent: (${ctx.eligible.id})`;
 
@@ -102,28 +159,21 @@ export function getQueryTaskList(
     {
       task: async (ctx, task) => {
         task.title = 'Thinking...';
+        if (ctx.changed === undefined) {
+          throw new Error('Workspace not synchronized');
+        }
         try {
           Logger.debug('Querying agent..', ctx.agentManager.id);
-          const { data } = await axios.post(
-            `${API_HOST}${API_VERSION}/agents/${ctx.agentManager.id}/query`,
-            { query, changed: ctx.changed },
-            {
-              headers: {
-                'Content-Type': 'application/json',
-                Authorization: `Bearer ${config?.api_key}`,
-              },
-              timeout: 5 * 60 * 1000,
-            }
+          ctx.agentResponse = await queryAgent(
+            ctx.agentManager.id,
+            ctx.changed,
+            query
           );
-          ctx.agentResponse = data;
 
-          if (
-            ctx.agentResponse.asynchronous &&
-            ctx.agentResponse.asynchronous === true
-          ) {
-            const { actions } = await ctx.agentManager.checkStatus();
-            if (actions) {
-              ctx.agentResponse.actions = actions;
+          if (ctx.agentResponse.asynchronous === true) {
+            const status = await ctx.agentManager.checkStatus();
+            if (status?.actions) {
+              ctx.agentResponse.actions = status.actions;
             }
           }
 
@@ -131,45 +181,48 @@ export function getQueryTaskList(
             Logger.agent(ctx.agentResponse.response);
           }
 
-          ctx.toolOutputs = [];
-          if (ctx.agentResponse.actions) {
-            task.title = `Running ${ctx.agentResponse.actions.length} step(s) ↴`;
-            return task.newListr(
-              ctx.agentResponse.actions.map((a: any) => {
-                let args: any;
-
-                if (a.function.arguments) {
-                  args = a.function.arguments;
-                  if (typeof args === 'string') {
-                    const fixed_args = jsonrepair(args);
-                    args = JSON.parse(convertFormToJSON(fixed_args));
-                  }
-                } else {
-                  args = a.args;
-                }
-
-                let taskTitle: string = args.answer || args.command || '';
-                if (args.url) {
-                  taskTitle = 'Browsing: ' + args.url;
-                }
-
-                return {
-                  title: taskTitle,
-                  task: async () => {
-                    try {
-                      const toolOutput = await ctx.agentManager.executeAction(
-                        a,
-                        args
-                      );
-                      ctx.toolOutputs.push(...toolOutput);
-                    } catch (e) {
-                      Logger.error('Action Error :', e);
-                    }
-                  },
-                };
-              })
-            );
-          }
+          // if (ctx.agentResponse.actions) {
+          //   task.title = `Running first ${ctx.agentResponse.actions.length} step(s) ↴`;
+          //   return task.newListr(
+          //     ctx.agentResponse.actions.map((action: any) => {
+          //       let args: any;
+          //
+          //       if (action.function.arguments) {
+          //         args = action.function.arguments;
+          //         if (typeof args === 'string') {
+          //           const fixed_args = jsonrepair(args);
+          //           args = JSON.parse(convertFormToJSON(fixed_args));
+          //         }
+          //       } else {
+          //         args = action.args;
+          //       }
+          //
+          //       let taskTitle: string = args.answer || args.command || '';
+          //       if (args.url) {
+          //         taskTitle = 'Browsing: ' + args.url;
+          //       }
+          //
+          //       return {
+          //         title: taskTitle,
+          //         task: async () => {
+          //           try {
+          //             const toolOutput = await ctx.agentManager.executeAction(
+          //               action,
+          //               args
+          //             );
+          //             Logger.debug('Tool output1:', toolOutput);
+          //             if (!ctx.toolOutputs) {
+          //               ctx.toolOutputs = [];
+          //             }
+          //             ctx.toolOutputs.push(toolOutput);
+          //           } catch (e) {
+          //             Logger.error('Action Error :', e);
+          //           }
+          //         },
+          //       };
+          //     })
+          //   );
+          // }
 
           // return task.newListr(
           //   ctx.agentManager.getProcessActionsTasks(
@@ -178,83 +231,85 @@ export function getQueryTaskList(
           //   )
           // );
         } catch (e) {
-          console.error(e);
-          // Logger.error('Query Error :', e);
+          Logger.error('Query Error :', e);
         }
       },
     },
     {
       task: async (ctx, task) => {
-        return task.newListr(
-          [
-            {
-              title: 'Final check...',
-              task: async () => {
-                if (
-                  ctx.agentManager.engine.includes('rhino') &&
-                  ctx.agentResponse.asynchronous
-                ) {
-                  try {
-                    const config = readConfig();
-                    await axios.post(
-                      `${API_HOST}${API_VERSION}/agents/${ctx.agentManager.id}/submitOutput`,
-                      {
-                        tool_outputs: ctx.toolOutputs,
-                      },
-                      {
-                        headers: {
-                          Authorization: `Bearer ${config?.api_key}`,
-                        },
-                      }
-                    );
-                    // add a 2 sec delay
-                    await new Promise((resolve) => setTimeout(resolve, 2000));
-                    await ctx.agentManager.checkStatus();
-                  } catch (e) {
-                    await ctx.agentManager.checkStatus();
+        task.title = `Running ${ctx.agentResponse.actions.length} step(s)`;
+
+        const finalCheck: ListrTask = {
+          title: 'Final check...',
+          task: async (_, subtask) => {
+            if (
+              ctx.agentManager.engine.includes('rhino') &&
+              ctx.agentResponse.asynchronous
+            ) {
+              try {
+                const config = readConfig();
+                await axios.post(
+                  `${API_HOST}${API_VERSION}/agents/${ctx.agentManager.id}/submitOutput`,
+                  {
+                    tool_outputs: ctx.toolOutputs,
+                  },
+                  {
+                    headers: {
+                      Authorization: `Bearer ${config?.api_key}`,
+                    },
                   }
-                } else {
-                  await queryCommand(
-                    `
-          Find below the output of the actions in the task context, if you're done on the main task and its related subtasks, you can stop and wait for my next instructions.
-          Output :
-          ${ctx.toolOutputs.map((o: { output: string }) => o.output).join('\n')}`,
+                );
+                // Reset toolOutputs after submition to OpenAI
+                ctx.toolOutputs = [];
+                Logger.debug('Final check : Output submitted');
+                // add a 2 sec delay
+                await new Promise((resolve) => setTimeout(resolve, 2000));
+                // retry
+                const statusResponse = await ctx.agentManager.checkStatus();
+                if (statusResponse?.actions) {
+                  ctx.agentResponse.actions = statusResponse.actions;
+
+                  subtask.title = `Running ${ctx.agentResponse.actions.length} additional step(s)`;
+                  return task.newListr(
+                    getActionTaskList(ctx).concat([finalCheck]),
                     {
-                      agentId: ctx.agentManager.id,
-                      workspace: process.cwd(),
-                      skipWarmup: true,
+                      exitOnError: true,
                     }
                   );
                 }
-              },
-            },
-          ],
-          {
-            exitOnError: true,
-          }
-        );
+              } catch (e) {
+                Logger.error(e);
+                await ctx.agentManager.checkStatus();
+                // retry
+                // if (status?.actions) {
+                //   ctx.agentResponse.actions = status.actions;
+                //   await task.run(ctx);
+                // }
+              }
+            } else {
+              if (!ctx.toolOutputs) {
+                ctx.toolOutputs = [];
+              }
+              await queryCommand(
+                `
+          Find below the output of the actions in the task context, if you're done on the main task and its related subtasks, you can stop and wait for my next instructions.
+          Output :
+          ${ctx.toolOutputs.map((o: { output: string }) => o.output).join('\n')}`,
+                {
+                  agentId: ctx.agentManager.id,
+                  workspace: process.cwd(),
+                  skipWarmup: true,
+                }
+              );
+            }
+          },
+        };
+
+        return task.newListr(getActionTaskList(ctx).concat([finalCheck]), {
+          exitOnError: true,
+        });
       },
     },
-    // {
-    //   task: async (ctx, task) => {
-    //     return task.newListr(
-    //       [
-    //         {
-    //           title: 'Resync workspace..',
-    //           task: async () => {
-    //             await synchroniseWorkspaceChanges(
-    //               ctx.agentManager.id,
-    //               workspace
-    //             );
-    //           },
-    //         },
-    //       ],
-    //       {
-    //         exitOnError: true,
-    //       }
-    //     );
-    //   },
-    // },
   ];
 }
 
