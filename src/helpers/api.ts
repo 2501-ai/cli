@@ -15,6 +15,9 @@ export type QueryResponseDTO = {
   }[];
 };
 
+/**
+ * Query the agent
+ */
 export const queryAgent: (
   agentId: string,
   changed: boolean,

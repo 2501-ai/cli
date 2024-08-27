@@ -353,3 +353,20 @@ export function getWorkspaceDiff(
 
   return { added, removed, modified, hasChanges };
 }
+
+export async function synchroniseWorkspaceChanges(
+  agentId: string,
+  workspace: string
+) {
+  const workspaceDiff = await getWorkspaceChanges(workspace);
+  if (workspaceDiff.hasChanges) {
+    Logger.debug('Agent : Workspace has changes, synchronizing...');
+    await syncWorkspaceState(workspace);
+    // TODO: improve and send only changed files ?
+    const workspaceResponse = await syncWorkspaceFiles(workspace);
+    if (workspaceResponse?.data && workspaceResponse?.files.length) {
+      await indexWorkspaceFiles(agentId, workspaceResponse.data);
+    }
+  }
+  return workspaceDiff.hasChanges;
+}

@@ -35,6 +35,13 @@ export class TaskManager {
     this.manager.add(tasks, options);
   }
 
+  public static indentTask(
+    tasks: ListrTask[],
+    options?: ListrBaseClassOptions
+  ) {
+    this.manager.indent(tasks, options);
+  }
+
   static run(taskList: ListrTask[], options?: ListrBaseClassOptions) {
     return this.manager.run(taskList, options);
   }

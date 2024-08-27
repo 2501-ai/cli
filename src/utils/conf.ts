@@ -143,3 +143,11 @@ export async function flushAgents(): Promise<void> {
     Logger.error('Error flushing agents:', error);
   }
 }
+
+export function getEligibleAgents(
+  agentId: string | undefined,
+  workspace: string
+): AgentConfig | null {
+  const agents = agentId ? listAgents() : listAgentsFromWorkspace(workspace);
+  return agents.find((a) => a.id === agentId) || agents[0] || null;
+}
