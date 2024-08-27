@@ -227,7 +227,7 @@ export async function syncWorkspaceFiles(
 
 export async function indexWorkspaceFiles(agentId: string, data: FormData) {
   const config = readConfig();
-  await axios.post(`/files/index?agentId=${agentId}`, data, {
+  await axios.post(`/agents/${agentId}/files/index`, data, {
     headers: {
       'Content-Type': 'multipart/form-data',
       Authorization: `Bearer ${config?.api_key}`,

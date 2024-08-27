@@ -62,7 +62,7 @@ export class AgentManager {
     this.queryCommand = options.queryCommand;
   }
 
-  async checkStatus(): Promise<ListrTask[]> {
+  async checkStatus(): Promise<any> {
     let debugData: any = '';
     try {
       const config = readConfig();
@@ -82,7 +82,7 @@ export class AgentManager {
 
       if (data.status === QueryStatus.Completed) {
         this.callback && (await this.callback(data.answer || data.response));
-        return [];
+        return {};
       }
 
       if (data.status === QueryStatus.Failed) {
@@ -99,7 +99,8 @@ export class AgentManager {
 
       if (data.actions) {
         debugData = data;
-        return this.getProcessActionsTasks(data.actions);
+        // Logger.debug('Actions:', this.getProcessActionsTasks(data.actions));
+        return { actions: data.actions };
       }
     } catch (error: any) {
       Logger.error(
@@ -130,6 +131,85 @@ export class AgentManager {
 
     await new Promise((resolve) => setTimeout(resolve, 2000));
     return this.checkStatus();
+  }
+
+  async executeAction(call: any, args: any): Promise<any> {
+    const function_name: keyof typeof ACTION_FNS =
+      call.function.name || call.function;
+
+    let taskTitle: string = args.answer || args.command || '';
+    if (args.url) {
+      taskTitle = 'Browsing: ' + args.url;
+    }
+
+    let corrected = false;
+    if (args.path && args.content) {
+      const previous =
+        ACTION_FNS.read_file({ path: args.path }) || 'NO PREVIOUS VERSION';
+
+      // const proposal = args.updates
+      //   ? ACTION_FNS.update_file({
+      //       path: args.path,
+      //       updates: args.updates,
+      //       write: false,
+      //     })
+      //   : args.content;
+
+      try {
+        const config = readConfig();
+        const { data: correctionData } = await axios.post(
+          `/agents/${this.id}/verifyOutput`,
+          { task: taskTitle, previous, proposal: args.content },
+          {
+            timeout: 60000,
+            headers: {
+              Authorization: `Bearer ${config?.api_key}`,
+            },
+          }
+        );
+
+        if (
+          correctionData.corrected_output &&
+          correctionData.corrected_output !== args.content
+        ) {
+          corrected = true;
+          args.content = correctionData.corrected_output;
+
+          // if (args.updates) {
+          //   delete args.updates;
+          //   function_name = ACTION_FNS.write_file.name as typeof function_name;
+          // }
+        }
+      } catch (e) {
+        Logger.error('verifyOutput error or timeout', e);
+        throw e;
+      }
+
+      Logger.debug(
+        `Processing action: ${taskTitle} | On function ${function_name}`
+      );
+      const tool_outputs = [];
+      try {
+        let output = (await ACTION_FNS[function_name](args)) as string;
+
+        if (corrected) {
+          output += `\n\n NOTE: your original content for ${args.path} was corrected with the new version below before running the function: \n\n${args.content}`;
+        }
+
+        tool_outputs.push({
+          tool_call_id: call.id,
+          output,
+        });
+      } catch (e: any) {
+        Logger.debug('Error processing action:', e);
+        tool_outputs.push({
+          tool_call_id: call.id,
+          output: `I failed to run ${function_name}, please fix the situation, errors below.\n ${e.message}`,
+        });
+      }
+
+      return tool_outputs;
+    }
   }
 
   getProcessActionsTasks(
