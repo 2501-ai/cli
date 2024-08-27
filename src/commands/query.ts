@@ -50,14 +50,17 @@ async function synchroniseWorkspaceChanges(agentId: string, workspace: string) {
   return workspaceDiff.hasChanges;
 }
 
-function getActionTaskList(ctx: {
-  agentResponse: QueryResponseDTO;
-  agentManager: AgentManager;
-  changed?: boolean;
-  eligible?: AgentConfig | null;
-  toolOutputs?: any[];
-}) {
-  const taskList: ListrTask[] = ctx.agentResponse.actions.map((action: any) => {
+function getActionTaskList(
+  ctx: {
+    agentResponse: QueryResponseDTO;
+    agentManager: AgentManager;
+    changed?: boolean;
+    eligible?: AgentConfig | null;
+    toolOutputs?: any[];
+  },
+  task: any
+): ListrTask[] {
+  return ctx.agentResponse.actions.map((action: any) => {
     let args: any;
 
     if (action.function.arguments) {
@@ -74,9 +77,9 @@ function getActionTaskList(ctx: {
     if (args.url) {
       taskTitle = 'Browsing: ' + args.url;
     }
+    task.output = taskTitle;
 
     return {
-      title: taskTitle,
       task: async () => {
         try {
           const toolOutput = await ctx.agentManager.executeAction(action, args);
@@ -91,7 +94,6 @@ function getActionTaskList(ctx: {
       },
     };
   });
-  return taskList;
 }
 
 export function getQueryTaskList(
@@ -120,7 +122,7 @@ export function getQueryTaskList(
         collapseSubtasks: true,
       },
       task: async (ctx, subtask) => {
-        subtask.title = 'Syncing..';
+        // subtask.title = 'Syncing..';
         ctx.eligible = getEligibleAgents(agentId, workspace);
         // initialize agent if not found
         if (!ctx.eligible && !skipWarmup) {
@@ -130,13 +132,14 @@ export function getQueryTaskList(
       },
     },
     {
+      title: 'Syncing workspace..',
       task: async (ctx, subtask) => {
         ctx.eligible = getEligibleAgents(agentId, workspace);
         if (!ctx.eligible) {
           throw new Error('No agent found');
         }
 
-        subtask.title = `Using agent: (${ctx.eligible.id})`;
+        subtask.output = `Using agent: (${ctx.eligible.id})`;
 
         const agentManager = new AgentManager({
           id: ctx.eligible.id,
@@ -157,8 +160,8 @@ export function getQueryTaskList(
       },
     },
     {
+      title: 'Thinking...',
       task: async (ctx, task) => {
-        task.title = 'Thinking...';
         if (ctx.changed === undefined) {
           throw new Error('Workspace not synchronized');
         }
@@ -233,11 +236,13 @@ export function getQueryTaskList(
         } catch (e) {
           Logger.error('Query Error :', e);
         }
+        task.title = 'Done';
       },
     },
     {
       task: async (ctx, task) => {
         task.title = `Running ${ctx.agentResponse.actions.length} step(s)`;
+        const tasks = getActionTaskList(ctx, task);
 
         const finalCheck: ListrTask = {
           title: 'Final check...',
@@ -271,7 +276,7 @@ export function getQueryTaskList(
 
                   subtask.title = `Running ${ctx.agentResponse.actions.length} additional step(s)`;
                   return task.newListr(
-                    getActionTaskList(ctx).concat([finalCheck]),
+                    getActionTaskList(ctx, task).concat([finalCheck]),
                     {
                       exitOnError: true,
                     }
@@ -305,7 +310,7 @@ export function getQueryTaskList(
           },
         };
 
-        return task.newListr(getActionTaskList(ctx).concat([finalCheck]), {
+        return task.newListr(tasks.concat([finalCheck]), {
           exitOnError: true,
         });
       },

@@ -86,12 +86,11 @@ export function getInitTaskList(
   return [
     {
       task: async (ctx, task) => {
-        task.title = `Initializing agent..`;
         return task.newListr(
           [
             {
-              title: 'Initializing workspace..',
               task: async (_, subtask) => {
+                subtask.title = 'Initializing workspace..';
                 return subtask.newListr(
                   [
                     {
