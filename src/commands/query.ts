@@ -131,6 +131,7 @@ export function getQueryTaskList(
             Logger.agent(ctx.agentResponse.response);
           }
 
+          ctx.toolOutputs = [];
           if (ctx.agentResponse.actions) {
             task.title = `Running ${ctx.agentResponse.actions.length} step(s) ↴`;
             return task.newListr(
@@ -156,11 +157,11 @@ export function getQueryTaskList(
                   title: taskTitle,
                   task: async () => {
                     try {
-                      const toolOutputs = await ctx.agentManager.executeAction(
+                      const toolOutput = await ctx.agentManager.executeAction(
                         a,
                         args
                       );
-                      ctx.toolOutputs = toolOutputs;
+                      ctx.toolOutputs.push(...toolOutput);
                     } catch (e) {
                       Logger.error('Action Error :', e);
                     }

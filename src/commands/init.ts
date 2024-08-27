@@ -140,7 +140,7 @@ export function getInitTaskList(
               },
             },
           ],
-          { concurrent: true }
+          { concurrent: true, rendererOptions: { collapseSubtasks: true } }
         );
       },
     },
