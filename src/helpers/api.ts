@@ -7,7 +7,7 @@ const config = readConfig();
 export type QueryResponseDTO = {
   asynchronous: boolean;
   response?: string;
-  actions: {
+  actions?: {
     function: {
       arguments: any;
     };

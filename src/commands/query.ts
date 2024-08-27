@@ -60,6 +60,9 @@ function getActionTaskList(
   },
   task: any
 ): ListrTask[] {
+  if (!ctx.agentResponse.actions) {
+    return [];
+  }
   return ctx.agentResponse.actions.map((action: any) => {
     let args: any;
 
@@ -77,11 +80,11 @@ function getActionTaskList(
     if (args.url) {
       taskTitle = 'Browsing: ' + args.url;
     }
-    task.output = taskTitle;
 
     return {
       task: async () => {
         try {
+          task.title = taskTitle;
           const toolOutput = await ctx.agentManager.executeAction(action, args);
           Logger.debug('Tool output2:', toolOutput);
           if (!ctx.toolOutputs) {
@@ -121,18 +124,19 @@ export function getQueryTaskList(
       rendererOptions: {
         collapseSubtasks: true,
       },
-      task: async (ctx, subtask) => {
+      task: async (ctx, task) => {
         // subtask.title = 'Syncing..';
         ctx.eligible = getEligibleAgents(agentId, workspace);
         // initialize agent if not found
         if (!ctx.eligible && !skipWarmup) {
+          task.title = 'Initializing workspace..';
           // return TaskManager.addTask(getInitTaskList({ workspace }))
-          return subtask.newListr(getInitTaskList({ workspace }));
+          return task.newListr(getInitTaskList({ workspace }));
         }
       },
     },
     {
-      title: 'Syncing workspace..',
+      // title: 'Syncing workspace..',
       task: async (ctx, subtask) => {
         ctx.eligible = getEligibleAgents(agentId, workspace);
         if (!ctx.eligible) {
@@ -154,24 +158,25 @@ export function getQueryTaskList(
           agentManager.id,
           workspace
         );
-        subtask.title = ctx.changed
-          ? `Workspace synchronised`
-          : `Workspace up to date`;
+        if (ctx.changed) {
+          subtask.title = `Workspace synchronised`;
+        }
       },
     },
     {
-      title: 'Thinking...',
       task: async (ctx, task) => {
         if (ctx.changed === undefined) {
           throw new Error('Workspace not synchronized');
         }
         try {
+          task.title = 'Thinking...';
           Logger.debug('Querying agent..', ctx.agentManager.id);
           ctx.agentResponse = await queryAgent(
             ctx.agentManager.id,
             ctx.changed,
             query
           );
+          task.title = ctx.agentResponse.response || task.title;
 
           if (ctx.agentResponse.asynchronous === true) {
             const status = await ctx.agentManager.checkStatus();
@@ -236,21 +241,19 @@ export function getQueryTaskList(
         } catch (e) {
           Logger.error('Query Error :', e);
         }
-        task.title = 'Done';
       },
     },
     {
       task: async (ctx, task) => {
-        task.title = `Running ${ctx.agentResponse.actions.length} step(s)`;
         const tasks = getActionTaskList(ctx, task);
 
         const finalCheck: ListrTask = {
-          title: 'Final check...',
           task: async (_, subtask) => {
             if (
               ctx.agentManager.engine.includes('rhino') &&
               ctx.agentResponse.asynchronous
             ) {
+              subtask.title = `Running final check..`;
               try {
                 const config = readConfig();
                 await axios.post(
@@ -266,6 +269,7 @@ export function getQueryTaskList(
                 );
                 // Reset toolOutputs after submition to OpenAI
                 ctx.toolOutputs = [];
+                // subtask.output = 'Final check...';
                 Logger.debug('Final check : Output submitted');
                 // add a 2 sec delay
                 await new Promise((resolve) => setTimeout(resolve, 2000));
@@ -274,9 +278,9 @@ export function getQueryTaskList(
                 if (statusResponse?.actions) {
                   ctx.agentResponse.actions = statusResponse.actions;
 
-                  subtask.title = `Running ${ctx.agentResponse.actions.length} additional step(s)`;
+                  subtask.title = `Running ${ctx.agentResponse.actions?.length ?? 0} additional step(s)`;
                   return task.newListr(
-                    getActionTaskList(ctx, task).concat([finalCheck]),
+                    getActionTaskList(ctx, subtask).concat([finalCheck]),
                     {
                       exitOnError: true,
                     }
@@ -312,6 +316,9 @@ export function getQueryTaskList(
 
         return task.newListr(tasks.concat([finalCheck]), {
           exitOnError: true,
+          rendererOptions: {
+            collapseSubtasks: true,
+          },
         });
       },
     },
@@ -332,7 +339,7 @@ export async function queryCommand(
   try {
     await TaskManager.run(getQueryTaskList(options, query), {
       concurrent: false,
-      exitOnError: false,
+      exitOnError: true,
       collectErrors: 'full',
     });
   } catch (e) {

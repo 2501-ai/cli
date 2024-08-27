@@ -89,12 +89,12 @@ export function getInitTaskList(
         return task.newListr(
           [
             {
-              task: async (_, subtask) => {
-                subtask.title = 'Initializing workspace..';
-                return subtask.newListr(
+              task: async (_, task) => {
+                task.title = 'Creating workspace..';
+                return task.newListr(
                   [
                     {
-                      task: () => {
+                      task: (_, subtask) => {
                         if (options && options.workspace === false) {
                           const path = `/tmp/2501/${Date.now()}`;
                           fs.mkdirSync(path, { recursive: true });
@@ -113,7 +113,7 @@ export function getInitTaskList(
                       },
                     },
                     {
-                      task: async () => {
+                      task: async (_, subtask) => {
                         const workspaceResponse = await syncWorkspaceFiles(
                           ctx.workspace
                         );
@@ -135,7 +135,7 @@ export function getInitTaskList(
               title: 'Initializing configuration..',
               task: async (_, subtask) => {
                 ctx.selectedConfig = await initConfiguration(configId);
-                subtask.title = `Configuration ${ctx.selectedConfig.id} initialized`;
+                subtask.task.parent!.title = `Configuration ${ctx.selectedConfig.id} initialized`;
               },
             },
           ],
@@ -176,7 +176,7 @@ export function getInitTaskList(
     },
     {
       task: async (_, task) => {
-        task.title = `Initialization complete`;
+        task.task.parent!.title = `Initialization complete`;
       },
     },
   ];
