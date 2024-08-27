@@ -60,7 +60,7 @@ function getActionTaskList(
   },
   task: any
 ): ListrTask[] {
-  if (!ctx.agentResponse.actions) {
+  if (!ctx.agentResponse?.actions) {
     return [];
   }
   return ctx.agentResponse.actions.map((action: any) => {
@@ -253,7 +253,6 @@ export function getQueryTaskList(
               ctx.agentManager.engine.includes('rhino') &&
               ctx.agentResponse.asynchronous
             ) {
-              subtask.title = `Verifying..`;
               try {
                 const config = readConfig();
                 await axios.post(
@@ -267,6 +266,7 @@ export function getQueryTaskList(
                     },
                   }
                 );
+
                 // Reset toolOutputs after submition to OpenAI
                 ctx.toolOutputs = [];
                 // subtask.output = 'Final check...';
