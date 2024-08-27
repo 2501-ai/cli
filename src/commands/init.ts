@@ -135,7 +135,11 @@ export function getInitTaskList(
               title: 'Initializing configuration..',
               task: async (_, subtask) => {
                 ctx.selectedConfig = await initConfiguration(configId);
-                subtask.task.parent!.title = `Configuration ${ctx.selectedConfig.id} initialized`;
+                if (subtask.task.parent) {
+                  subtask.task.parent.title = `Configuration ${ctx.selectedConfig.id} initialized`;
+                } else {
+                  subtask.task.title = `Configuration ${ctx.selectedConfig.id} initialized`;
+                }
               },
             },
           ],
@@ -176,7 +180,11 @@ export function getInitTaskList(
     },
     {
       task: async (_, task) => {
-        task.task.parent!.title = `Initialization complete`;
+        if (task.task.parent) {
+          task.task.parent.title = `Initialization complete`;
+        } else {
+          task.title = `Initialization complete`;
+        }
       },
     },
   ];
