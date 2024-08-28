@@ -252,7 +252,9 @@ const queryAgentTask: ListrTask<TaskCtx> = {
           if (event.event === 'thread.run.requires_action') {
             const actions =
               event.data.required_action.submit_tool_outputs.tool_calls;
-            task.output = JSON.parse(actions[0].function.arguments).answer;
+            task.output = JSON.parse(
+              actions[0].function.arguments || '{}'
+            ).answer;
             ctx.agentResponse = {
               response: 'Requires action',
               asynchronous: false,
@@ -265,6 +267,7 @@ const queryAgentTask: ListrTask<TaskCtx> = {
           }
         } catch (e) {
           Logger.error('Parsing error', e);
+          throw e;
         }
       }
     }
