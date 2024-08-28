@@ -407,5 +407,6 @@ export async function queryCommand(
     } else {
       Logger.error('Something bad happened 🥲', (e as Error).message);
     }
+    process.exit(1);
   }
 }
