@@ -266,8 +266,8 @@ const queryAgentTask: ListrTask<TaskCtx> = {
             };
           }
         } catch (e) {
-          Logger.error('Parsing error', e);
-          throw e;
+          // Logger.error('Parsing error', e);
+          // throw e;
         }
       }
     }
