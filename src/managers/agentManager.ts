@@ -4,7 +4,6 @@ import { jsonrepair } from 'jsonrepair';
 import { convertFormToJSON } from '../utils/json';
 import {
   browse_url,
-  hasError,
   read_file,
   run_shell,
   update_file,
@@ -23,7 +22,6 @@ import { Logger } from '../utils/logger';
 const MAX_RETRY = 3;
 
 const ACTION_FNS = {
-  hasError,
   browse_url,
   read_file,
   run_shell,
