@@ -19,6 +19,7 @@ marked.use(markedTerminal() as MarkedExtension);
 const isDebug = process.env.DEBUG === 'true';
 
 export type TaskCtx = {
+  streamState?: { requiresAction: boolean; runId: any };
   workspace: string;
   query: string;
   stream: boolean;
@@ -170,7 +171,9 @@ const initWorkspaceTask: ListrTask<TaskCtx> = {
     if (!ctx.eligible && !ctx.skipWarmup) {
       task.title = 'Initializing workspace..';
       // return TaskManager.addTask(getInitTaskList({ workspace }))
-      return task.newListr(getInitTaskList({ workspace: ctx.workspace }));
+      return task.newListr(getInitTaskList({ workspace: ctx.workspace }), {
+        exitOnError: true,
+      });
     }
   },
 };
@@ -255,6 +258,10 @@ const queryAgentTask: ListrTask<TaskCtx> = {
               asynchronous: false,
               actions,
             };
+            ctx.streamState = {
+              requiresAction: true,
+              runId: event.data.id,
+            };
           }
         } catch (e) {
           Logger.error('Parsing error', e);
@@ -293,6 +300,7 @@ const finalCheck: ListrTask<TaskCtx> = {
           `${API_HOST}${API_VERSION}/agents/${ctx.agentManager.id}/submitOutput`,
           {
             tool_outputs: ctx.toolOutputs,
+            runId: ctx.streamState?.runId,
           },
           {
             headers: {

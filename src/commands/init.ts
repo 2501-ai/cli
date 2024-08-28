@@ -134,7 +134,7 @@ export function getInitTaskList(
                       },
                     },
                   ],
-                  { concurrent: false }
+                  { concurrent: false, exitOnError: true }
                 );
               },
             },
@@ -150,7 +150,11 @@ export function getInitTaskList(
               },
             },
           ],
-          { concurrent: true, rendererOptions: { collapseSubtasks: true } }
+          {
+            concurrent: true,
+            rendererOptions: { collapseSubtasks: true },
+            exitOnError: true,
+          }
         );
         // .add([
         //   {
