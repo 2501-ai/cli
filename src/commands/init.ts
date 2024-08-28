@@ -89,8 +89,8 @@ export function getInitTaskList(
         return task.newListr(
           [
             {
+              title: 'Creating workspace..',
               task: async (_, task) => {
-                task.title = 'Creating workspace..';
                 return task.newListr(
                   [
                     {
@@ -126,6 +126,13 @@ export function getInitTaskList(
                         }
                       },
                     },
+                    {
+                      task: async (_, subtask) => {
+                        if (subtask.task.parent) {
+                          subtask.task.parent.title = `Workspace created`;
+                        }
+                      },
+                    },
                   ],
                   { concurrent: false }
                 );
@@ -135,11 +142,11 @@ export function getInitTaskList(
               title: 'Initializing configuration..',
               task: async (_, subtask) => {
                 ctx.selectedConfig = await initConfiguration(configId);
-                if (subtask.task.parent) {
-                  subtask.task.parent.title = `Configuration ${ctx.selectedConfig.id} initialized`;
-                } else {
-                  subtask.task.title = `Configuration ${ctx.selectedConfig.id} initialized`;
-                }
+                // if (subtask.task.parent) {
+                //   subtask.task.parent.title = `Configuration ${ctx.selectedConfig.id} initialized`;
+                // } else {
+                subtask.task.title = `Configuration ${ctx.selectedConfig.id} initialized`;
+                // }
               },
             },
           ],

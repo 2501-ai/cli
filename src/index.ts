@@ -9,6 +9,7 @@ import { setCommand } from './commands/set';
 import { jobSubscriptionCommand } from './commands/jobs';
 
 import { authMiddleware } from './middleware/auth';
+import { Logger } from './utils/logger';
 
 const program = new Command();
 
@@ -29,11 +30,17 @@ program
   )
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   .version(require('../package.json').version)
-  .on('command:*', async (...args) => {
-    const query = args[0] && args[0].join(' ');
+  .on('command:*', async (args, options) => {
+    Logger.debug('Args :', args);
+    Logger.debug('Options :', options);
+    const query = args?.join(' ');
+    if (!query) {
+      Logger.log('No query provided');
+      return;
+    }
     // @TODO : implement options support.
     authMiddleware();
-    await queryCommand(query, {});
+    await queryCommand(query, { stream: options.includes('--stream') });
   });
 
 // Config command
@@ -50,6 +57,7 @@ program
   .description('Execute a query using the specified agent')
   .option('--workspace <path>', 'Specify a different workspace path')
   .option('--agentId <id>', 'Specify the agent ID')
+  .option('--stream [stream]', 'Stream the output of the query', false)
   .hook('preAction', authMiddleware)
   .action(queryCommand);
 

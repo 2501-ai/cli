@@ -21,9 +21,11 @@ export class Logger {
     terminal[Colors.RED]('\n[ERROR] ').defaultColor(
       ...args.map((a) => {
         if (a instanceof Error) {
-          return `${a.message}\n${a.stack}`;
+          return `${a.message}\n${a.stack}\n`;
         }
-        return `${typeof a === 'object' ? JSON.stringify(a, null, 2) : a}`;
+        return (
+          `${typeof a === 'object' ? JSON.stringify(a, null, 2) : a}` + '\n'
+        );
       })
     );
   }

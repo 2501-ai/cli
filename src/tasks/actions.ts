@@ -7,11 +7,11 @@ import { TaskCtx } from '../commands/query';
 export function getActionTaskList(
   ctx: TaskCtx,
   parentTask: ListrTaskWrapper<TaskCtx, any, any>
-): ListrTask[] | null {
+): ListrTask<TaskCtx>[] | null {
   if (!ctx.agentResponse?.actions) {
     return null;
   }
-  return ctx.agentResponse.actions?.map((action) => {
+  return ctx.agentResponse.actions.map((action) => {
     let args: any;
 
     if (action.function.arguments) {
@@ -31,18 +31,17 @@ export function getActionTaskList(
 
     return {
       task: async (ctx) => {
-        try {
-          parentTask.title = taskTitle;
-          // subtask.output = taskTitle || action.function.arguments;
-          const toolOutput = await ctx.agentManager.executeAction(action, args);
-          Logger.debug('Tool output2:', toolOutput);
-          if (!ctx.toolOutputs) {
-            ctx.toolOutputs = [];
-          }
-          ctx.toolOutputs.push(toolOutput);
-        } catch (e) {
-          Logger.error('Action Error :', e);
+        if (!ctx.agentManager) {
+          throw new Error('No agent manager found');
         }
+        parentTask.title = taskTitle;
+        // subtask.output = taskTitle || action.function.arguments;
+        const toolOutput = await ctx.agentManager.executeAction(action, args);
+        Logger.debug('Tool output2:', toolOutput);
+        if (!ctx.toolOutputs) {
+          ctx.toolOutputs = [];
+        }
+        ctx.toolOutputs.push(toolOutput);
       },
     };
   });

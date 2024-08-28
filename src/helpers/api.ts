@@ -18,19 +18,17 @@ export type QueryResponseDTO = {
 /**
  * Query the agent
  */
-export const queryAgent: (
+export const queryAgent = async (
   agentId: string,
   changed: boolean,
-  query: string
-) => Promise<QueryResponseDTO> = async (
-  agentId: string,
-  changed: boolean,
-  query: string
+  query: string,
+  stream: boolean
 ) => {
   const { data } = await axios.post<QueryResponseDTO>(
     `${API_HOST}${API_VERSION}/agents/${agentId}/query`,
-    { query, changed },
+    { query, changed, stream },
     {
+      responseType: stream ? 'stream' : 'json',
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${config?.api_key}`,

@@ -42,7 +42,10 @@ export class TaskManager {
     this.manager.indent(tasks, options);
   }
 
-  static run(taskList: ListrTask[], options?: ListrBaseClassOptions) {
+  static run<Ctx = any>(
+    taskList: ListrTask<Ctx>[],
+    options?: ListrBaseClassOptions<Ctx>
+  ) {
     return this.manager.run(taskList, options);
   }
 

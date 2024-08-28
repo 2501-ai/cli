@@ -250,7 +250,7 @@ export async function indexWorkspaceFiles(
 
   data.set('fileIds', JSON.stringify(filesIds.map((file) => file.id)));
 
-  await axios.post(`/files/index?agentId=${agentId}`, data, {
+  await axios.post(`/agents/${agentId}/files/index`, data, {
     headers: {
       'Content-Type': 'multipart/form-data',
       Authorization: `Bearer ${config?.api_key}`,
