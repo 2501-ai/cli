@@ -38,7 +38,7 @@ program
     }
     // @TODO : implement options support.
     authMiddleware();
-    await queryCommand(query, { stream: options.includes('--stream') });
+    await queryCommand(query, { stream: !options.includes('--stream=false') });
   });
 
 // Config command
@@ -55,7 +55,7 @@ program
   .description('Execute a query using the specified agent')
   .option('--workspace <path>', 'Specify a different workspace path')
   .option('--agentId <id>', 'Specify the agent ID')
-  .option('--stream [stream]', 'Stream the output of the query', false)
+  .option('--stream [stream]', 'Stream the output of the query', true)
   .hook('preAction', authMiddleware)
   .action(queryCommand);
 
