@@ -1,9 +1,13 @@
-import { listAgents, listAgentsFromWorkspace, flushAgents } from '../utils/conf';
+import {
+  listAgents,
+  listAgentsFromWorkspace,
+  flushAgents,
+} from '../utils/conf';
 import { terminal } from 'terminal-kit';
 
 export async function agentsCommand(options: {
   all?: boolean;
-  flush?: boolean;  
+  flush?: boolean;
   workspace?: string;
 }): Promise<void> {
   if (options.flush) {
@@ -29,7 +33,7 @@ export async function agentsCommand(options: {
           agent.id,
           agent.configuration,
           agent.workspace,
-        ])
+        ]),
       ],
       {
         hasBorder: true,

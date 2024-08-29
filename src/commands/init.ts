@@ -174,7 +174,11 @@ export function getInitTaskList(
           task.title = `Nothing to index`;
           return;
         }
-        await indexWorkspaceFiles(ctx.agent.id, ctx.workspaceResponse.data);
+        await indexWorkspaceFiles(
+          ctx.agent.id,
+          ctx.workspaceResponse.data,
+          ctx.workspaceResponse.files
+        );
         task.title = `Workspace files indexed`;
       },
     },

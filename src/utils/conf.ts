@@ -149,5 +149,7 @@ export function getEligibleAgents(
   workspace: string
 ): AgentConfig | null {
   const agents = agentId ? listAgents() : listAgentsFromWorkspace(workspace);
-  return agents.find((a) => a.id === agentId) || agents[0] || null;
+  return (
+    agents.find((a) => a.id === agentId) || agents[agents.length - 1] || null
+  );
 }
