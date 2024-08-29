@@ -1,12 +1,12 @@
 {
   "name": "@2501-ai/cli",
-  "version": "0.0.15",
+  "version": "0.0.16",
   "description": "",
   "main": "dist/index.js",
   "scripts": {
     "build": "rm -rf dist && tsc",
     "build:link": "npm run build && npm link",
-    "unlink": "npm unlink @2501-ai/2501-cli",
+    "unlink": "npm unlink @2501-ai/cli",
     "start": "node .",
     "lint:fix": "eslint . --ext .ts,.tsx --fix",
     "prepare": "husky",

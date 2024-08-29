@@ -37,7 +37,7 @@ install_nodejs() {
 # Function to install @2501
 install_2501_cli() {
     echo "Installing @2501..."
-    npm install -g @2501-ai/@2501
+    npm install -g @2501-ai/cli
 }
 
 # Check if Homebrew is installed
