@@ -1,8 +1,7 @@
 import { Manager } from '@listr2/manager';
-import type { ListrBaseClassOptions } from 'listr2';
-import { ListrLogger } from 'listr2';
+import type { ListrBaseClassOptions, ListrTask } from 'listr2';
 
-function TaskManagerFactory<T = TaskManager>(
+export function TaskManagerFactory<T = TaskManager>(
   override?: ListrBaseClassOptions
 ): Manager<T> {
   return new Manager({
@@ -22,29 +21,32 @@ interface Ctx {
 }
 
 export class TaskManager {
-  private tasks = TaskManagerFactory<Ctx>();
-  private logger = new ListrLogger({ useIcons: false });
+  static #manager: Manager<Ctx>;
+  static #isRunning = false;
 
-  public async addTask(
-    title: string,
-    task: () => Promise<void>
-  ): Promise<void> {
-    this.tasks.add([{ title, task }]);
+  static get manager() {
+    if (!this.#manager) {
+      this.#manager = TaskManagerFactory<Ctx>();
+    }
+    return this.#manager;
   }
 
-  public async run(title: string, task: () => Promise<void>): Promise<void> {
-    await this.tasks.run(
-      [
-        {
-          title,
-          task,
-        },
-      ],
-      { exitOnError: true, collectErrors: 'full' }
-    );
+  public static addTask(tasks: ListrTask[], options?: ListrBaseClassOptions) {
+    this.manager.add(tasks, options);
   }
 
-  public async runAllTasks(): Promise<void> {
-    await this.tasks.runAll();
+  public static indentTask(
+    tasks: ListrTask[],
+    options?: ListrBaseClassOptions
+  ) {
+    this.manager.indent(tasks, options);
+  }
+
+  static run(taskList: ListrTask[], options?: ListrBaseClassOptions) {
+    return this.manager.run(taskList, options);
+  }
+
+  static runAll() {
+    return this.manager.runAll();
   }
 }

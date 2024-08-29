@@ -174,11 +174,11 @@ async function getContextFromWorkspace(workspace: string) {
   // no files, no workspace PDF
   if (files.length === 0) return [];
 
-  await createPDFFromFolder(workspace, outputFilePath)
-    .then(() => Logger.debug('Agent : Workspace files unified.'))
-    .catch((err) =>
-      Logger.error('Agent : An error occurred while generating the PDF:' + err)
-    );
+  await createPDFFromFolder(workspace, outputFilePath);
+  // .then(() => Logger.debug('Agent : Workspace files unified.'))
+  // .catch((err) =>
+  //   Logger.error('Agent : An error occurred while generating the PDF:' + err)
+  // );
 
   const pdfs = await getPDFsFromWorkspace(workspace);
 
@@ -198,13 +198,11 @@ export async function getFileFromWorkspace(path: string) {
 
 export async function syncWorkspaceFiles(
   workspace: string
-): Promise<
-  { data: FormData; files: { id: string; name: string }[] } | undefined
-> {
+): Promise<{ data: FormData | null; files: { id: string; name: string }[] }> {
   const files: { path: string; data: Buffer }[] =
     await getContextFromWorkspace(workspace);
   if (!files.length) {
-    return;
+    return { data: null, files: [] };
   }
   const data = new FormData();
   for (let i = 0; i < files.length; i++) {
@@ -227,9 +225,9 @@ export async function syncWorkspaceFiles(
   return { data, files: response.data };
 }
 
-export async function indexWorkspaceFiles(agentName: string, data: FormData) {
+export async function indexWorkspaceFiles(agentId: string, data: FormData) {
   const config = readConfig();
-  await axios.post(`/files/index?agent=${agentName}`, data, {
+  await axios.post(`/agents/${agentId}/files/index`, data, {
     headers: {
       'Content-Type': 'multipart/form-data',
       Authorization: `Bearer ${config?.api_key}`,
@@ -354,4 +352,21 @@ export function getWorkspaceDiff(
     added.length > 0 || removed.length > 0 || modified.length > 0;
 
   return { added, removed, modified, hasChanges };
+}
+
+export async function synchroniseWorkspaceChanges(
+  agentId: string,
+  workspace: string
+) {
+  const workspaceDiff = await getWorkspaceChanges(workspace);
+  if (workspaceDiff.hasChanges) {
+    Logger.debug('Agent : Workspace has changes, synchronizing...');
+    await syncWorkspaceState(workspace);
+    // TODO: improve and send only changed files ?
+    const workspaceResponse = await syncWorkspaceFiles(workspace);
+    if (workspaceResponse?.data && workspaceResponse?.files.length) {
+      await indexWorkspaceFiles(agentId, workspaceResponse.data);
+    }
+  }
+  return workspaceDiff.hasChanges;
 }
