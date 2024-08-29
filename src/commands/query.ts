@@ -216,7 +216,7 @@ const queryAgentTask: ListrTask<TaskCtx> = {
       throw new Error('AgentManager not initialized');
     }
 
-    task.title = 'Thinking...';
+    task.title = 'Working...';
     Logger.debug('Querying agent..', ctx.agentManager.id);
     ctx.agentResponse = await queryAgent(
       ctx.agentManager.id,
@@ -227,47 +227,54 @@ const queryAgentTask: ListrTask<TaskCtx> = {
 
     if (ctx.stream) {
       for await (const chunk of ctx.agentResponse as unknown as AsyncIterable<Buffer>) {
+        const content = chunk.toString('utf8');
+        let streamEvent: StreamEvent;
         try {
-          const event: StreamEvent = JSON.parse(chunk.toString('utf8'));
-          // Logger.debug(event);
-          switch (event.event) {
-            case 'thread.run.queued':
-              task.output = 'Starting..';
-              break;
-            // case 'thread.run.step.created':
-            //   task.output = 'Making a step further..';
-            //   break;
-            case 'thread.run.in_progress':
-            case 'thread.run.step.in_progress':
-              task.output = 'Progressing..';
-              break;
-            case 'thread.run.step.delta':
-              task.output = 'Finalizing..';
-              break;
-            default:
-              task.output = 'Thinking...';
-              break;
-          }
+          streamEvent = JSON.parse(content);
+        } catch (e) {
+          continue;
+          // Sometimes the stream is not a valid JSON
+        }
+        Logger.debug('Stream event:', { event: streamEvent.event });
+        switch (streamEvent.event) {
+          case 'thread.run.queued':
+            task.output = 'Starting..';
+            break;
+          // case 'thread.run.step.created':
+          //   task.output = 'Making a step further..';
+          //   break;
+          case 'thread.run.in_progress':
+          case 'thread.run.step.in_progress':
+            task.output = 'Progressing..';
+            break;
+          case 'thread.run.step.delta':
+            task.output = 'Thinking..';
+            break;
+          case 'thread.run.requires_action':
+            task.output = 'Talking to your machine..';
+            break;
+          default:
+            task.output = 'Mmmh...';
+            break;
+        }
 
-          if (event.event === 'thread.run.requires_action') {
-            const actions =
-              event.data.required_action.submit_tool_outputs.tool_calls;
+        if (streamEvent.event === 'thread.run.requires_action') {
+          const actions =
+            streamEvent.data.required_action.submit_tool_outputs.tool_calls;
+          try {
             task.output = JSON.parse(
               actions[0].function.arguments || '{}'
             ).answer;
-            ctx.agentResponse = {
-              response: 'Requires action',
-              asynchronous: false,
-              actions,
-            };
-            ctx.streamState = {
-              requiresAction: true,
-              runId: event.data.id,
-            };
-          }
-        } catch (e) {
-          // Logger.error('Parsing error', e);
-          // throw e;
+          } catch (e) {}
+          ctx.agentResponse = {
+            response: 'Requires action',
+            asynchronous: false,
+            actions,
+          };
+          ctx.streamState = {
+            requiresAction: true,
+            runId: streamEvent.data.id,
+          };
         }
       }
     }
@@ -395,7 +402,6 @@ export async function queryCommand(
       ctx: { ...options, workspace, query, stream, skipWarmup },
       concurrent: false,
       exitOnError: true,
-      collectErrors: 'full',
       rendererOptions: {
         indentation: 0,
         collapseSubtasks: false,

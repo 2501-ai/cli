@@ -134,7 +134,7 @@ export function getInitTaskList(
                       },
                     },
                   ],
-                  { concurrent: false, exitOnError: true }
+                  { concurrent: false }
                 );
               },
             },
@@ -153,7 +153,6 @@ export function getInitTaskList(
           {
             concurrent: true,
             rendererOptions: { collapseSubtasks: true },
-            exitOnError: true,
           }
         );
         // .add([
@@ -211,7 +210,6 @@ export async function initCommand(options?: initCommandOptions) {
     await TaskManager.run(getInitTaskList(options), {
       concurrent: false,
       exitOnError: true,
-      collectErrors: 'full',
     });
   } catch (e) {
     Logger.error('Initialization error:', e);

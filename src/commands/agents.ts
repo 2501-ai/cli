@@ -18,10 +18,10 @@ export async function agentsCommand(options: {
 
   let agents;
   if (options.all) {
-    agents = await listAgents();
+    agents = listAgents();
   } else {
     const workspaceUrl = options.workspace || process.cwd();
-    agents = await listAgentsFromWorkspace(workspaceUrl);
+    agents = listAgentsFromWorkspace(workspaceUrl);
   }
 
   if (agents.length > 0) {
