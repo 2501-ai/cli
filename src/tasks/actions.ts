@@ -7,11 +7,8 @@ import { TaskCtx } from '../commands/query';
 export function getActionTaskList(
   ctx: TaskCtx,
   parentTask: ListrTaskWrapper<TaskCtx, any, any>
-): ListrTask<TaskCtx>[] | null {
-  if (!ctx.agentResponse?.actions) {
-    return null;
-  }
-  return ctx.agentResponse.actions.map((action) => {
+): ListrTask<TaskCtx>[] {
+  return ctx.actions.map((action) => {
     let args: any;
 
     if (action.function.arguments) {
@@ -37,7 +34,7 @@ export function getActionTaskList(
         parentTask.title = taskTitle;
         // subtask.output = taskTitle || action.function.arguments;
         const toolOutput = await ctx.agentManager.executeAction(action, args);
-        Logger.debug('Tool output2:', toolOutput);
+        Logger.debug('Tool output:', toolOutput);
         if (!ctx.toolOutputs) {
           ctx.toolOutputs = [];
         }

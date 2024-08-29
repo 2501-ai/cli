@@ -31,8 +31,6 @@ program
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   .version(require('../package.json').version)
   .on('command:*', async (args, options) => {
-    Logger.debug('Args :', args);
-    Logger.debug('Options :', options);
     const query = args?.join(' ');
     if (!query) {
       Logger.log('No query provided');

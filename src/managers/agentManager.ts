@@ -18,6 +18,8 @@ import {
   QueryStatus,
 } from '../constants';
 import { Logger } from '../utils/logger';
+import { FunctionAction } from '../helpers/api';
+import fs from 'fs';
 
 const MAX_RETRY = 3;
 
@@ -36,10 +38,9 @@ export class AgentManager {
   name: string;
   engine: string;
   workspace: string;
-  callback?: AgentCallbackType;
-
-  spinner: any;
-  queryCommand: (...args: any[]) => Promise<void>;
+  // callback?: AgentCallbackType;
+  // spinner: any;
+  // queryCommand: (...args: any[]) => Promise<void>;
 
   errorRetries = 0;
 
@@ -49,17 +50,19 @@ export class AgentManager {
     engine: string;
     workspace: string;
     callback?: AgentCallbackType;
-    queryCommand: (...args: any[]) => Promise<void>;
+    // queryCommand: (...args: any[]) => Promise<void>;
   }) {
     this.id = options.id;
     this.name = options.name;
     this.engine = options.engine;
     this.workspace = options.workspace;
-    this.callback = options.callback;
-    this.queryCommand = options.queryCommand;
+    // this.callback = options.callback;
+    // this.queryCommand = options.queryCommand;
   }
 
-  async checkStatus(): Promise<any> {
+  async checkStatus(): Promise<void | {
+    actions: FunctionAction[];
+  }> {
     let debugData: any = '';
     try {
       const config = readConfig();
@@ -72,19 +75,19 @@ export class AgentManager {
         }
       );
 
-      Logger.debug('Check status', data);
+      Logger.debug('Check status', data.status);
       if (data.answer || data.response) {
         Logger.agent(data.answer || data.response);
       }
 
       if (data.status === QueryStatus.Completed) {
-        this.callback && (await this.callback(data.answer || data.response));
-        return {};
+        // this.callback && (await this.callback(data.answer || data.response));
+        return;
       }
 
       if (data.status === QueryStatus.Failed) {
         Logger.error('Query failed:', data.error);
-        this.callback && (await this.callback(data.answer || data.error));
+        // this.callback && (await this.callback(data.answer || data.error));
       }
 
       if (OPENAI_TERMINAL_STATUSES.includes(data.status)) {
@@ -142,6 +145,13 @@ export class AgentManager {
   > {
     const function_name: keyof typeof ACTION_FNS =
       call.function.name || call.function;
+
+    if (!ACTION_FNS[function_name]) {
+      return {
+        tool_call_id: call.id,
+        output: `Function '${function_name}' not found. Please verify the function name and try again.`,
+      };
+    }
 
     let taskTitle: string = args.answer || args.command || '';
     if (args.url) {
@@ -203,9 +213,25 @@ export class AgentManager {
       };
     } catch (e: any) {
       Logger.debug('Error processing action:', e);
+      // TODO: give the file content concerned ?
+      let content = '';
+      if (args.path) {
+        try {
+          content = `
+          File concerned: \`${args.path}\`
+          File content:
+          \`\`\`
+          ${fs.readFileSync(args.path, 'utf8')}
+          \`\`\``;
+        } catch (e) {}
+      }
       return {
         tool_call_id: call.id,
-        output: `I failed to run ${function_name}, please fix the situation, errors below.\n ${e.message}`,
+        output: `I failed to run ${function_name}, please fix the situation or files. Feel free to explore the files again if necessary.
+        Error message :
+        \`\`\`
+        ${e.message}
+        \`\`\`${content}`,
       };
     }
   }

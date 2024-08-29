@@ -4,15 +4,20 @@ import { readConfig } from '../utils/conf';
 
 const config = readConfig();
 
+export type FunctionAction = {
+  id: string; // ex: "call_fPPBsOHeRJGmpcZQeT3wRVTK",
+  type: string; // ex: 'function'
+  function: {
+    name: string; // ex: 'update_file_content';
+    arguments: any;
+  };
+  args: any;
+};
+
 export type QueryResponseDTO = {
   asynchronous: boolean;
   response?: string;
-  actions?: {
-    function: {
-      arguments: any;
-    };
-    args: any;
-  }[];
+  actions?: FunctionAction[];
 };
 
 /**
@@ -24,7 +29,7 @@ export const queryAgent = async (
   query: string,
   stream: boolean
 ) => {
-  const { data } = await axios.post<QueryResponseDTO>(
+  const { data } = await axios.post<QueryResponseDTO | AsyncIterable<Buffer>>(
     `${API_HOST}${API_VERSION}/agents/${agentId}/query`,
     { query, changed, stream },
     {
@@ -37,5 +42,29 @@ export const queryAgent = async (
     }
   );
 
+  return data;
+};
+
+/**
+ * Submit tool outputs to the agent
+ */
+export const submitToolOutputs = async (
+  agentId: string,
+  toolOutputs: any[],
+  stream: boolean
+) => {
+  const { data } = await axios.post<AsyncIterable<Buffer> | any>(
+    `${API_HOST}${API_VERSION}/agents/${agentId}/submitOutput`,
+    {
+      tool_outputs: toolOutputs,
+      stream,
+    },
+    {
+      responseType: stream ? 'stream' : 'json',
+      headers: {
+        Authorization: `Bearer ${config?.api_key}`,
+      },
+    }
+  );
   return data;
 };

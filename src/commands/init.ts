@@ -179,7 +179,7 @@ export function getInitTaskList(
       title: 'Indexing workspace files..',
       retry: 3,
       task: async (ctx, task) => {
-        Logger.debug('Context:', ctx);
+        // Logger.debug('Context:', ctx);
         if (!ctx.workspaceResponse.data) {
           task.title = `Nothing to index`;
           return;
