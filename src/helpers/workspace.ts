@@ -130,11 +130,11 @@ async function generatePDFs(workspace: string): Promise<
     workspace,
     outputFilePath,
     Array.from(workspaceFiles.fileHashes.keys())
-  )
-    .then(() => Logger.debug('Agent : Workspace files unified.'))
-    .catch((err) =>
-      Logger.error('Agent : An error occurred while generating the PDF:' + err)
-    );
+  );
+  // .then(() => Logger.debug('Agent : Workspace files unified.'))
+  // .catch((err) =>
+  //   Logger.error('Agent : An error occurred while generating the PDF:' + err)
+  // );
 
   return [outputFilePath].map((pdf) => {
     return {
@@ -209,12 +209,10 @@ export async function getWorkspaceFiles(params: {
 
 export async function syncWorkspaceFiles(
   workspace: string
-): Promise<
-  { data: FormData; files: { id: string; name: string }[] } | undefined
-> {
+): Promise<{ data: FormData | null; files: { id: string; name: string }[] }> {
   const files = await generatePDFs(workspace);
   if (!files.length) {
-    return;
+    return { data: null, files: [] };
   }
   const data = new FormData();
   for (let i = 0; i < files.length; i++) {
@@ -379,4 +377,25 @@ export function getWorkspaceDiff(
     added.length > 0 || removed.length > 0 || modified.length > 0;
 
   return { added, removed, modified, hasChanges };
+}
+
+export async function synchroniseWorkspaceChanges(
+  agentId: string,
+  workspace: string
+) {
+  const workspaceDiff = await getWorkspaceChanges(workspace);
+  if (workspaceDiff.hasChanges) {
+    Logger.debug('Agent : Workspace has changes, synchronizing...');
+    await syncWorkspaceState(workspace);
+    // TODO: improve and send only changed files ?
+    const workspaceResponse = await syncWorkspaceFiles(workspace);
+    if (workspaceResponse?.data && workspaceResponse?.files.length) {
+      await indexWorkspaceFiles(
+        agentId,
+        workspaceResponse.data,
+        workspaceResponse.files
+      );
+    }
+  }
+  return workspaceDiff.hasChanges;
 }

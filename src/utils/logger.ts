@@ -18,21 +18,14 @@ const isDebug = process.env.DEBUG === 'true';
 
 export class Logger {
   static error(...args: (Error | AxiosError | string | unknown)[]) {
-    if ((args[0] as AxiosError).isAxiosError) {
-      const [arg0, ...rest] = args;
-      terminal[Colors.RED]('[HTTP ERROR] ').defaultColor(
-        (arg0 as AxiosError).toJSON(),
-        ...rest.map(
-          (a) => (typeof a === 'object' ? JSON.stringify(a, null, 2) : a) + '\n'
-        )
-      );
-    } else {
-      terminal[Colors.RED]('\n[ERROR] ').defaultColor(
-        ...args.map(
-          (a) => (typeof a === 'object' ? JSON.stringify(a, null, 2) : a) + '\n'
-        )
-      );
-    }
+    terminal[Colors.RED]('\n[ERROR] ').defaultColor(
+      ...args.map((a) => {
+        if (a instanceof Error) {
+          return `${a.message}\n${a.stack}`;
+        }
+        return `${typeof a === 'object' ? JSON.stringify(a, null, 2) : a}`;
+      })
+    );
   }
 
   static agent(data: any) {

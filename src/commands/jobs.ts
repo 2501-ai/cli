@@ -68,7 +68,7 @@ export async function jobSubscriptionCommand(options: {
       const workspace = options.workspace || process.cwd();
       const config = readConfig();
 
-      const [agent] = await listAgentsFromWorkspace(workspace);
+      const [agent] = listAgentsFromWorkspace(workspace);
 
       if (!agent) {
         Logger.warn('No agents available in the workspace');
@@ -111,7 +111,7 @@ export async function jobSubscriptionCommand(options: {
         });
       }
     } catch (error) {
-      Logger.error(error);
+      Logger.error('Jobs error:', error);
     }
   }
 }

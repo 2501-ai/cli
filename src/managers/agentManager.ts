@@ -1,8 +1,6 @@
-import axios, { AxiosError } from 'axios';
-import { terminal } from 'terminal-kit';
+import axios from 'axios';
+// import { terminal } from 'terminal-kit';
 import { jsonrepair } from 'jsonrepair';
-
-import { TaskManager } from './taskManager';
 import { convertFormToJSON } from '../utils/json';
 import {
   browse_url,
@@ -61,20 +59,7 @@ export class AgentManager {
     this.queryCommand = options.queryCommand;
   }
 
-  async toggleLoader(destroy: boolean = false) {
-    try {
-      if (this.spinner || destroy) {
-        this.spinner && this.spinner.animate(false);
-        this.spinner = null;
-      } else {
-        this.spinner = await terminal.spinner();
-      }
-    } catch (e) {
-      Logger.warn('Error toggling loader', e);
-    }
-  }
-
-  async checkStatus() {
+  async checkStatus(): Promise<any> {
     let debugData: any = '';
     try {
       const config = readConfig();
@@ -87,15 +72,14 @@ export class AgentManager {
         }
       );
 
+      Logger.debug('Check status', data);
       if (data.answer || data.response) {
-        await this.toggleLoader(true);
         Logger.agent(data.answer || data.response);
       }
 
       if (data.status === QueryStatus.Completed) {
-        await this.toggleLoader(true);
         this.callback && (await this.callback(data.answer || data.response));
-        return process.exit(0);
+        return {};
       }
 
       if (data.status === QueryStatus.Failed) {
@@ -104,7 +88,6 @@ export class AgentManager {
       }
 
       if (OPENAI_TERMINAL_STATUSES.includes(data.status)) {
-        await this.toggleLoader(true);
         Logger.debug('Unhandled status', data.status);
         Logger.debug('Data', data);
         Logger.warn('TODO: Implement action required');
@@ -113,8 +96,8 @@ export class AgentManager {
 
       if (data.actions) {
         debugData = data;
-        await this.toggleLoader(true);
-        await this.processActions(data.actions);
+        // Logger.debug('Actions:', this.getProcessActionsTasks(data.actions));
+        return { actions: data.actions };
       }
     } catch (error: any) {
       Logger.error(
@@ -142,142 +125,88 @@ export class AgentManager {
         process.exit(1);
       }
     }
-    setTimeout(async () => await this.checkStatus.call(this), 3000);
+
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+    return this.checkStatus();
   }
 
-  async processActions(actions: any[], asynchronous: boolean = true) {
-    const taskManager = new TaskManager();
-    const tool_outputs: any[] = [];
-    for (const call of actions) {
-      let args: any;
-
-      if (call.function.arguments) {
-        args = call.function.arguments;
-        if (typeof args === 'string') {
-          const fixed_args = jsonrepair(args);
-          args = JSON.parse(convertFormToJSON(fixed_args));
-        }
-      } else {
-        args = call.args;
+  async executeAction(
+    call: any,
+    args: any
+  ): Promise<
+    | {
+        output: string;
+        tool_call_id: any;
       }
+    | undefined
+  > {
+    const function_name: keyof typeof ACTION_FNS =
+      call.function.name || call.function;
 
-      Logger.debug('PROCESS ACTIONS args', args);
-
-      const function_name: keyof typeof ACTION_FNS =
-        call.function.name || call.function;
-
-      let task: string = args.answer || args.command || '';
-      if (args.url) {
-        task = 'Browsing: ' + args.url;
-      }
-
-      let corrected = false;
-      if (args.path && args.content) {
-        await taskManager.run('Checking output for correction', async () => {
-          const previous =
-            ACTION_FNS.read_file({ path: args.path }) || 'NO PREVIOUS VERSION';
-
-          // const proposal = args.updates
-          //   ? ACTION_FNS.update_file({
-          //       path: args.path,
-          //       updates: args.updates,
-          //       write: false,
-          //     })
-          //   : args.content;
-
-          try {
-            const config = readConfig();
-            const { data: correctionData } = await axios.post(
-              `/agents/${this.id}/verifyOutput`,
-              { task, previous, proposal: args.content },
-              {
-                timeout: 60000,
-                headers: {
-                  Authorization: `Bearer ${config?.api_key}`,
-                },
-              }
-            );
-
-            if (
-              correctionData.corrected_output &&
-              correctionData.corrected_output !== args.content
-            ) {
-              corrected = true;
-              args.content = correctionData.corrected_output;
-
-              // if (args.updates) {
-              //   delete args.updates;
-              //   function_name = ACTION_FNS.write_file.name as typeof function_name;
-              // }
-            }
-          } catch (e) {
-            Logger.error('verifyOutput error or timeout', e);
-          }
-        });
-      }
-
-      await taskManager.run(task, async () => {
-        try {
-          let output = await ACTION_FNS[function_name](args);
-
-          if (corrected) {
-            output += `\n\n NOTE: your original content for ${args.path} was corrected with the new version below before running the function: \n\n${args.content}`;
-          }
-
-          tool_outputs.push({
-            tool_call_id: call.id,
-            output,
-          });
-        } catch (e: any) {
-          tool_outputs.push({
-            tool_call_id: call.id,
-            output: `I failed to run ${function_name}, please fix the situation, errors below.\n ${e.message}`,
-          });
-        }
-      });
+    let taskTitle: string = args.answer || args.command || '';
+    if (args.url) {
+      taskTitle = 'Browsing: ' + args.url;
     }
-
-    if (this.engine.includes('rhino') && asynchronous) {
+    Logger.debug('    Action args:', args);
+    let corrected = false;
+    // Specific to write_file action
+    if (args.path && args.content) {
+      const previous =
+        ACTION_FNS.read_file({ path: args.path }) || 'NO PREVIOUS VERSION';
       try {
         const config = readConfig();
-        await axios.post(
-          `${API_HOST}${API_VERSION}/agents/${this.id}/submitOutput`,
+        const { data: correctionData } = await axios.post(
+          `/agents/${this.id}/verifyOutput`,
+          { task: taskTitle, previous, proposal: JSON.stringify(args) },
           {
-            tool_outputs,
-          },
-          {
+            timeout: 60000,
             headers: {
               Authorization: `Bearer ${config?.api_key}`,
             },
           }
         );
-        // add a 2 sec delay
-        await new Promise((resolve) => setTimeout(resolve, 2000));
-        await this.checkStatus();
+
+        Logger.debug('Correction data:', correctionData);
+
+        if (
+          correctionData.corrected_output &&
+          correctionData.corrected_output !== args.content
+        ) {
+          corrected = true;
+          args.content = correctionData.corrected_output;
+
+          // prevent calling update function
+          // if (args.updates) {
+          //   delete args.updates;
+          //   function_name = ACTION_FNS.write_file.name as typeof function_name;
+          // }
+        }
       } catch (e) {
-        if ((e as AxiosError).isAxiosError) {
-          const axiosError = e as AxiosError;
-          if ((axiosError.response?.status || 500) >= 500) {
-            console.error('Server error, retrying...');
-            await this.checkStatus();
-          } else if ((axiosError.response?.status || 500) >= 400) {
-            Logger.error('Client error:', e);
-            process.exit(1);
-          }
-        }
+        Logger.error('verifyOutput error or timeout', e);
+        throw e;
       }
-    } else {
-      await this.queryCommand(
-        `
-        Find below the output of the actions in the task context, if you're done on the main task and its related subtasks, you can stop and wait for my next instructions.
-        Output :
-        ${tool_outputs.map((o) => o.output).join('\n')}`,
-        {
-          agentId: this.id,
-          workspace: process.cwd(),
-          skipWarmup: true,
-        }
-      );
+    }
+    Logger.debug(
+      `   Processing action: ${taskTitle} | On function ${function_name}`
+    );
+
+    try {
+      let output = (await ACTION_FNS[function_name](args)) as string;
+
+      if (corrected) {
+        output += `\n\n NOTE: your original content for ${args.path} was corrected with the new version below before running the function: \n\n${args.content}`;
+      }
+
+      return {
+        tool_call_id: call.id,
+        output,
+      };
+    } catch (e: any) {
+      Logger.debug('Error processing action:', e);
+      return {
+        tool_call_id: call.id,
+        output: `I failed to run ${function_name}, please fix the situation, errors below.\n ${e.message}`,
+      };
     }
   }
 }
