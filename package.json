@@ -1,5 +1,5 @@
 {
-  "name": "@2501-ai/2501-cli",
+  "name": "@2501-ai/cli",
   "version": "0.0.15",
   "description": "",
   "main": "dist/index.js",
