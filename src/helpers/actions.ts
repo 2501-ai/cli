@@ -36,82 +36,6 @@ export function read_file(args: { path: string }): string | null {
   return fs.readFileSync(args.path, 'utf8');
 }
 
-// export function update_file_v2({
-//   filePath,
-//   modifications,
-// }: {
-//   filePath: string;
-//   modifications: {
-//     target: string | RegExp;
-//     replacement: string;
-//     action?: 'replace' | 'insert' | 'remove';
-//   }[];
-// }) {
-//   let modifiedContent = fs.readFileSync(filePath, 'utf-8');
-//
-//   for (const modification of modifications) {
-//     const { target, replacement, action = 'replace' } = modification;
-//
-//     switch (action) {
-//       case 'replace':
-//         modifiedContent = modifiedContent.replace(target, replacement);
-//         break;
-//
-//       case 'insert':
-//         // For 'insert', we will insert the replacement before the target
-//         if (typeof target === 'string') {
-//           const regex = new RegExp(target, 'g');
-//           modifiedContent = modifiedContent.replace(
-//             regex,
-//             `${replacement}${target}`
-//           );
-//         } else {
-//           modifiedContent = modifiedContent.replace(
-//             target,
-//             (match) => `${replacement}${match}`
-//           );
-//         }
-//         break;
-//
-//       case 'remove':
-//         // For 'remove', we will replace the target with an empty string
-//         modifiedContent = modifiedContent.replace(target, '');
-//         break;
-//
-//       default:
-//         throw new Error(`Unknown action: ${action}`);
-//     }
-//   }
-//
-//   fs.writeFileSync(filePath, modifiedContent, 'utf-8');
-//
-//   return `File updated: ${filePath}\nNew content:\n\`\`\`\n${modifiedContent}\n\`\`\``;
-// }
-
-// export function update_file_v2({
-//   filePath,
-//   modifications,
-// }: {
-//   filePath: string;
-//   modifications: { target: string | RegExp; replacement: string }[];
-// }) {
-//   let modifiedContent = fs.readFileSync(filePath, 'utf-8');
-//
-//   for (const modification of modifications) {
-//     const { target, replacement } = modification;
-//     modifiedContent = modifiedContent.replace(target, replacement);
-//   }
-//
-//   fs.writeFileSync(filePath, modifiedContent, 'utf-8');
-//   return `
-//     File updated: ${filePath}
-//     New content:
-//     \`\`\`
-//     ${modifiedContent}
-//     \`\`\`
-//   `;
-// }
-
 export async function write_file(args: { path: string; content: string }) {
   Logger.debug(`Writing file at "${args.path}"`);
   fs.mkdirSync(path.dirname(args.path), { recursive: true });
@@ -152,6 +76,8 @@ export function update_file({
     \`\`\`
     ${fileContent}
     \`\`\``;
+
+  fs.writeFileSync(path, fileContent);
 
   return `
     File updated: ${path}

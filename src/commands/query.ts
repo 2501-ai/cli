@@ -235,7 +235,8 @@ const queryAgentTask: ListrTask<TaskCtx> = {
           continue;
           // Sometimes the stream is not a valid JSON
         }
-        Logger.debug('Stream event:', { event: streamEvent.event });
+        streamEvent.event != 'thread.message.delta' &&
+          Logger.debug('Stream event:', { event: streamEvent.event });
         switch (streamEvent.event) {
           case 'thread.run.queued':
             task.output = 'Starting..';
