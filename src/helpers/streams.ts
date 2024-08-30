@@ -4,8 +4,6 @@ import { StreamEvent } from '../utils/openaiThreads';
 import { TaskCtx } from '../commands/query';
 import { ACTION_FNS } from '../managers/agentManager';
 
-// import { Logger } from '../utils/logger';
-
 export async function processStreamedResponse(
   agentResponse: AsyncIterable<Buffer>,
   task: ListrTaskWrapper<TaskCtx, any, any>
@@ -15,16 +13,12 @@ export async function processStreamedResponse(
   for await (const chunk of agentResponse) {
     const content = Buffer.from(chunk).toString('utf8');
     let streamEvent: StreamEvent;
-    // Logger.debug('Stream content:', content);
     try {
       streamEvent = JSON.parse(content);
     } catch (e) {
       continue;
       // Sometimes the stream is not a valid JSON
     }
-    // streamEvent.event != 'thread.message.delta' &&
-    //   streamEvent.event != 'thread.run.step.delta' &&
-    // Logger.debug('Stream event:', { event: streamEvent.event });
 
     let actionMsg = 'Taking action(s) :';
     if (streamEvent.event === 'thread.run.requires_action') {
@@ -37,6 +31,9 @@ export async function processStreamedResponse(
           case 'write_file':
             actionMsg += `\n  - Writing to file: ${JSON.parse(action.function.arguments).path}`;
             break;
+          // case 'apply_diff':
+          //   actionMsg += `\n  - Applying diff to file: ${JSON.parse(action.function.arguments).path}`;
+          //   break;
           case 'update_file':
             actionMsg += `\n  - Updating file: ${JSON.parse(action.function.arguments).path}`;
             break;
@@ -51,6 +48,10 @@ export async function processStreamedResponse(
         }
       });
     }
+
+    // if (streamEvent.event === 'thread.run.completed') {
+    //   Logger.debug('Thread run completed', streamEvent.data);
+    // }
 
     switch (streamEvent.event) {
       case 'thread.run.queued':

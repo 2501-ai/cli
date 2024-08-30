@@ -1,7 +1,5 @@
 import axios from 'axios';
 // import { terminal } from 'terminal-kit';
-import { jsonrepair } from 'jsonrepair';
-import { convertFormToJSON } from '../utils/json';
 import {
   browse_url,
   read_file,
@@ -11,14 +9,9 @@ import {
 } from '../helpers/actions';
 import { readConfig } from '../utils/conf';
 
-import {
-  API_HOST,
-  API_VERSION,
-  OPENAI_TERMINAL_STATUSES,
-  QueryStatus,
-} from '../constants';
+import { OPENAI_TERMINAL_STATUSES, QueryStatus } from '../constants';
 import { Logger } from '../utils/logger';
-import { FunctionAction } from '../helpers/api';
+import { FunctionAction, getAgentStatus } from '../helpers/api';
 import fs from 'fs';
 
 const MAX_RETRY = 3;
@@ -38,9 +31,6 @@ export class AgentManager {
   name: string;
   engine: string;
   workspace: string;
-  // callback?: AgentCallbackType;
-  // spinner: any;
-  // queryCommand: (...args: any[]) => Promise<void>;
 
   errorRetries = 0;
 
@@ -50,44 +40,34 @@ export class AgentManager {
     engine: string;
     workspace: string;
     callback?: AgentCallbackType;
-    // queryCommand: (...args: any[]) => Promise<void>;
   }) {
     this.id = options.id;
     this.name = options.name;
     this.engine = options.engine;
     this.workspace = options.workspace;
-    // this.callback = options.callback;
-    // this.queryCommand = options.queryCommand;
   }
 
   async checkStatus(): Promise<void | {
     actions: FunctionAction[];
+    answer?: string;
   }> {
-    let debugData: any = '';
     try {
-      const config = readConfig();
-      const { data } = await axios.get(
-        `${API_HOST}${API_VERSION}/agents/${this.id}/status`,
-        {
-          headers: {
-            Authorization: `Bearer ${config?.api_key}`,
-          },
-        }
-      );
+      const data = await getAgentStatus(this.id);
 
       Logger.debug('Check status', data.status);
-      if (data.answer || data.response) {
-        Logger.agent(data.answer || data.response);
+      if (data.answer) {
+        Logger.agent(data.answer);
       }
 
       if (data.status === QueryStatus.Completed) {
-        // this.callback && (await this.callback(data.answer || data.response));
-        return;
+        return {
+          answer: data.answer,
+          actions: data.actions ?? [],
+        };
       }
 
       if (data.status === QueryStatus.Failed) {
         Logger.error('Query failed:', data.error);
-        // this.callback && (await this.callback(data.answer || data.error));
       }
 
       if (OPENAI_TERMINAL_STATUSES.includes(data.status)) {
@@ -98,8 +78,6 @@ export class AgentManager {
       }
 
       if (data.actions) {
-        debugData = data;
-        // Logger.debug('Actions:', this.getProcessActionsTasks(data.actions));
         return { actions: data.actions };
       }
     } catch (error: any) {
@@ -110,18 +88,6 @@ export class AgentManager {
       );
       this.errorRetries++;
 
-      // Try to log debugData if available
-      try {
-        if (error.message === 'Unexpected end of JSON input') {
-          const fixed_args = jsonrepair(debugData);
-          debugData = JSON.parse(convertFormToJSON(fixed_args));
-        } else {
-          Logger.debug('debugData', JSON.stringify(debugData));
-        }
-      } catch (e) {
-        Logger.error('Error logging debugData', e);
-        return process.exit(1);
-      }
       // Prevent infinite loop
       if (this.errorRetries > MAX_RETRY) {
         Logger.error('Max retries reached, exiting...');

@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { API_HOST, API_VERSION } from '../constants';
+import { API_HOST, API_VERSION, QueryStatus } from '../constants';
 import { readConfig } from '../utils/conf';
 
 const config = readConfig();
@@ -42,6 +42,20 @@ export const queryAgent = async (
     }
   );
 
+  return data;
+};
+
+export const getAgentStatus = async (
+  agentId: string
+): Promise<{
+  status: QueryStatus;
+  answer?: string;
+  error?: string;
+  actions?: FunctionAction[];
+}> => {
+  const { data } = await axios.get(
+    `${API_HOST}${API_VERSION}/agents/${agentId}/status`
+  );
   return data;
 };
 
