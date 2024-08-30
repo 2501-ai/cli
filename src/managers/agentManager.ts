@@ -23,7 +23,7 @@ import fs from 'fs';
 
 const MAX_RETRY = 3;
 
-const ACTION_FNS = {
+export const ACTION_FNS = {
   browse_url,
   read_file,
   run_shell,

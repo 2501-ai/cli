@@ -1,6 +1,7 @@
 import { marked, MarkedExtension } from 'marked';
 import { markedTerminal } from 'marked-terminal';
 import { ListrTask } from 'listr2';
+import axios, { AxiosError } from 'axios';
 
 import { TaskManager } from '../managers/taskManager';
 import { AgentConfig, getEligibleAgents } from '../utils/conf';
@@ -9,7 +10,12 @@ import { getInitTaskList } from './init';
 import { AgentManager } from '../managers/agentManager';
 import { Logger } from '../utils/logger';
 import { synchroniseWorkspaceChanges } from '../helpers/workspace';
-import { FunctionAction, queryAgent, submitToolOutputs } from '../helpers/api';
+import {
+  cancelQuery,
+  FunctionAction,
+  queryAgent,
+  submitToolOutputs,
+} from '../helpers/api';
 import { getActionTaskList } from '../tasks/actions';
 import {
   isStreamingContext,
@@ -20,6 +26,7 @@ marked.use(markedTerminal() as MarkedExtension);
 const isDebug = process.env.DEBUG === 'true';
 
 export type TaskCtx = {
+  init: boolean;
   actions: FunctionAction[];
   asynchronous: boolean;
   workspace: string;
@@ -45,7 +52,7 @@ const initWorkspaceTask: ListrTask<TaskCtx> = {
     // initialize agent if not found
     if (!ctx.eligible && !ctx.skipWarmup) {
       task.title = 'Initializing workspace..';
-      // return TaskManager.addTask(getInitTaskList({ workspace }))
+      ctx.init = true;
       return task.newListr(getInitTaskList({ workspace: ctx.workspace }), {
         exitOnError: true,
       });
@@ -54,13 +61,15 @@ const initWorkspaceTask: ListrTask<TaskCtx> = {
 };
 
 const initAgentTask: ListrTask<TaskCtx> = {
-  // title: 'Syncing workspace..',
   task: async (ctx, task) => {
     ctx.eligible = getEligibleAgents(ctx.agentId, ctx.workspace);
     if (!ctx.eligible) {
       throw new Error('No agent found');
     }
 
+    if (!task.task.parent) {
+      task.title = 'Synchronising workspace..';
+    }
     task.output = `Using agent: (${ctx.eligible.id})`;
 
     const agentManager = new AgentManager({
@@ -70,10 +79,12 @@ const initAgentTask: ListrTask<TaskCtx> = {
       workspace: ctx.workspace,
     });
     ctx.agentManager = agentManager;
-    ctx.changed = await synchroniseWorkspaceChanges(
-      agentManager.id,
-      ctx.workspace
-    );
+    if (!ctx.init) {
+      ctx.changed = await synchroniseWorkspaceChanges(
+        agentManager.id,
+        ctx.workspace
+      );
+    }
     if (ctx.changed) {
       task.title = `Workspace synchronised`;
     }
@@ -97,6 +108,25 @@ const queryAgentTask: ListrTask<TaskCtx> = {
       ctx.query,
       ctx.stream
     );
+
+    // console.debug('Agent response:', agentResponse);
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-expect-error
+    if (agentResponse.prompt) {
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-expect-error
+      Logger.debug('Prompt:', agentResponse.prompt.trim());
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-expect-error
+      task.title = `Last query was: '${agentResponse.prompt.trim()}'. Continuing..`;
+      // ctx.stream = false;
+      // ctx.asynchronous = true;
+      task.title = 'Cancelling previous task..';
+      await cancelQuery(ctx.agentManager.id);
+      return task.newListr([queryAgentTask], {
+        exitOnError: true,
+      });
+    }
 
     if (isStreamingContext(ctx, agentResponse)) {
       ctx.actions = await processStreamedResponse(agentResponse, task);
@@ -127,17 +157,17 @@ const finalReviewTask: ListrTask<TaskCtx> = {
       throw new Error('Context not initialized');
     }
 
-    if (!ctx.toolOutputs?.length) {
-      task.title = 'No command left to verify.';
-      return;
-    }
+    // if (!ctx.toolOutputs?.length) {
+    //   task.title = 'No command left to verify.';
+    //   return;
+    // }
 
     task.title = 'Reviewing..';
-    if (!ctx.asynchronous && !ctx.stream) {
+    if (!ctx.asynchronous && !ctx.stream && ctx.toolOutputs) {
       ctx.query = `
           Find below the output of the actions in the task context, if you're done on the main task and its related subtasks, you can stop and wait for my next instructions.
           Output :
-          ${ctx.toolOutputs.map((o: { output: string }) => o.output).join('\n')}`;
+          ${ctx.toolOutputs?.map((o: { output: string }) => o.output).join('\n')}`;
       return task.newListr([queryAgentTask], {
         exitOnError: true,
       });
@@ -149,22 +179,25 @@ const finalReviewTask: ListrTask<TaskCtx> = {
       //   toolCallIds: ctx.toolOutputs.map((o) => o.tool_call_id),
       //   stream: ctx.stream,
       // });
-      const submitReponse = await submitToolOutputs(
-        ctx.agentManager.id,
-        ctx.toolOutputs,
-        ctx.stream
-      );
+      let submitReponse;
+      if (ctx.toolOutputs?.length) {
+        submitReponse = await submitToolOutputs(
+          ctx.agentManager.id,
+          ctx.toolOutputs,
+          ctx.stream
+        );
+      }
+
       // Reset toolOutputs after submition to OpenAI
       ctx.toolOutputs = [];
 
       // Streaming mode
-      if (isStreamingContext(ctx, submitReponse)) {
+      if (submitReponse && isStreamingContext(ctx, submitReponse)) {
         ctx.actions = await processStreamedResponse(submitReponse, task);
       } else {
         // Standard status polling mode
         const statusResponse = await ctx.agentManager.checkStatus();
         if (!statusResponse?.actions?.length) {
-          // subtask.title = 'No additional steps to make.';
           Logger.debug('No additional steps found');
           return;
         }
@@ -181,7 +214,6 @@ const finalReviewTask: ListrTask<TaskCtx> = {
       task.title = 'No additional steps to make.';
     } catch (e) {
       Logger.error('Submition Error', e);
-      // await ctx.agentManager.checkStatus();
     }
   },
 };
@@ -212,11 +244,11 @@ export async function queryCommand(
         {
           task: async (ctx, task) => {
             const tasks = getActionTaskList(ctx, task);
-            if (tasks.length) {
-              return task.newListr(tasks.concat([finalReviewTask]), {
-                exitOnError: true,
-              });
-            }
+            // if (tasks.length) {
+            return task.newListr(tasks.concat([finalReviewTask]), {
+              exitOnError: true,
+            });
+            // }
           },
         },
       ],
@@ -229,6 +261,7 @@ export async function queryCommand(
           skipWarmup,
           actions: [],
           asynchronous: false,
+          init: false,
         },
         concurrent: false,
         exitOnError: true,
@@ -240,9 +273,23 @@ export async function queryCommand(
     );
   } catch (e) {
     if (isDebug) {
-      Logger.error('Command error', e);
+      if (axios.isAxiosError(e)) {
+        const axiosError = e as AxiosError;
+        Logger.error('Command error - Axios error', {
+          data: axiosError.response?.data ?? '(no data)',
+          config: axiosError.config,
+          status:
+            axiosError.status ?? axiosError.response?.status ?? '(no status)',
+          statusText:
+            axiosError.response?.statusText ??
+            axiosError.response?.statusText ??
+            '(no statusText)',
+        });
+      } else {
+        Logger.error('Command error', e);
+      }
     } else {
-      Logger.error('Something bad happened 🥲', (e as Error).message);
+      Logger.error('Something bad happened 🥲');
     }
     process.exit(1);
   }

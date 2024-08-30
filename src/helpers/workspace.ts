@@ -396,6 +396,8 @@ export async function synchroniseWorkspaceChanges(
         workspaceResponse.files
       );
     }
+  } else {
+    Logger.debug('Agent : Workspace has no changes.');
   }
   return workspaceDiff.hasChanges;
 }

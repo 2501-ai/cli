@@ -19,7 +19,7 @@ axios.defaults.timeout = 8000;
 
 export const DEFAULT_ENGINE = 'rhino';
 
-interface initCommandOptions {
+interface InitCommandOptions {
   name?: string;
   workspace?: string | boolean;
   config?: string;
@@ -79,10 +79,20 @@ async function initAgent(
   return agent;
 }
 
+export type InitTaskContext = {
+  workspace: string;
+  workspaceResponse: {
+    data: FormData | null;
+    files: { id: string; name: string }[];
+  };
+  selectedConfig: any;
+  agent: any;
+};
+
 export function getInitTaskList(
-  options: initCommandOptions | undefined
-): ListrTask[] {
-  const configId = (options && options.config) || 'CODING_AGENT';
+  options: InitCommandOptions | undefined
+): ListrTask<InitTaskContext>[] {
+  const configId = options?.config || 'CODING_AGENT';
   return [
     {
       task: async (ctx, task) => {
@@ -101,14 +111,15 @@ export function getInitTaskList(
                           subtask.title = `Using workspace at ${ctx.workspace}`;
                           return path;
                         }
-                        const hasCustomWorkspace =
-                          options &&
-                          typeof options.workspace === 'string' &&
-                          !!options.workspace;
 
-                        ctx.workspace = hasCustomWorkspace
-                          ? options.workspace
-                          : process.cwd();
+                        if (
+                          typeof options?.workspace === 'string' &&
+                          !!options.workspace
+                        ) {
+                          ctx.workspace = options.workspace;
+                        } else {
+                          ctx.workspace = process.cwd();
+                        }
                         subtask.title = `Using workspace at ${ctx.workspace}`;
                       },
                     },
@@ -142,11 +153,7 @@ export function getInitTaskList(
               title: 'Initializing configuration..',
               task: async (_, subtask) => {
                 ctx.selectedConfig = await initConfiguration(configId);
-                // if (subtask.task.parent) {
-                //   subtask.task.parent.title = `Configuration ${ctx.selectedConfig.id} initialized`;
-                // } else {
                 subtask.task.title = `Configuration ${ctx.selectedConfig.id} initialized`;
-                // }
               },
             },
           ],
@@ -155,13 +162,6 @@ export function getInitTaskList(
             rendererOptions: { collapseSubtasks: true },
           }
         );
-        // .add([
-        //   {
-        //     task: async (_, task) => {
-        //       task.task.parent!.title = `Initialization complete`;
-        //     },
-        //   },
-        // ]);
       },
     },
     {
@@ -179,7 +179,6 @@ export function getInitTaskList(
       title: 'Indexing workspace files..',
       retry: 3,
       task: async (ctx, task) => {
-        // Logger.debug('Context:', ctx);
         if (!ctx.workspaceResponse.data) {
           task.title = `Nothing to index`;
           return;
@@ -205,7 +204,7 @@ export function getInitTaskList(
 }
 
 // This function will be called when the `init` command is executed
-export async function initCommand(options?: initCommandOptions) {
+export async function initCommand(options?: InitCommandOptions) {
   try {
     await TaskManager.run(getInitTaskList(options), {
       concurrent: false,

@@ -4,6 +4,9 @@ import { readConfig } from '../utils/conf';
 
 const config = readConfig();
 
+axios.defaults.headers.common['Authorization'] = `Bearer ${config?.api_key}`;
+axios.defaults.baseURL = `${API_HOST}${API_VERSION}`;
+
 export type FunctionAction = {
   id: string; // ex: "call_fPPBsOHeRJGmpcZQeT3wRVTK",
   type: string; // ex: 'function'
@@ -18,6 +21,7 @@ export type QueryResponseDTO = {
   asynchronous: boolean;
   response?: string;
   actions?: FunctionAction[];
+  prompt?: string;
 };
 
 /**
@@ -30,14 +34,10 @@ export const queryAgent = async (
   stream: boolean
 ) => {
   const { data } = await axios.post<QueryResponseDTO | AsyncIterable<Buffer>>(
-    `${API_HOST}${API_VERSION}/agents/${agentId}/query`,
+    `/agents/${agentId}/query`,
     { query, changed, stream },
     {
       responseType: stream ? 'stream' : 'json',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${config?.api_key}`,
-      },
       timeout: 5 * 60 * 1000,
     }
   );
@@ -54,17 +54,19 @@ export const submitToolOutputs = async (
   stream: boolean
 ) => {
   const { data } = await axios.post<AsyncIterable<Buffer> | any>(
-    `${API_HOST}${API_VERSION}/agents/${agentId}/submitOutput`,
+    `/agents/${agentId}/submitOutput`,
     {
       tool_outputs: toolOutputs,
       stream,
     },
     {
       responseType: stream ? 'stream' : 'json',
-      headers: {
-        Authorization: `Bearer ${config?.api_key}`,
-      },
     }
   );
+  return data;
+};
+
+export const cancelQuery = async (agentId: string) => {
+  const { data } = await axios.post(`/agents/${agentId}/cancel`);
   return data;
 };

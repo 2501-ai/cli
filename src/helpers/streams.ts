@@ -2,6 +2,9 @@ import { ListrTaskWrapper } from 'listr2';
 import { FunctionAction } from './api';
 import { StreamEvent } from '../utils/openaiThreads';
 import { TaskCtx } from '../commands/query';
+import { ACTION_FNS } from '../managers/agentManager';
+
+// import { Logger } from '../utils/logger';
 
 export async function processStreamedResponse(
   agentResponse: AsyncIterable<Buffer>,
@@ -22,6 +25,33 @@ export async function processStreamedResponse(
     // streamEvent.event != 'thread.message.delta' &&
     //   streamEvent.event != 'thread.run.step.delta' &&
     // Logger.debug('Stream event:', { event: streamEvent.event });
+
+    let actionMsg = 'Taking action(s) :';
+    if (streamEvent.event === 'thread.run.requires_action') {
+      actions = streamEvent.data.required_action.submit_tool_outputs.tool_calls;
+      actions.forEach((action) => {
+        switch (action.function.name as keyof typeof ACTION_FNS) {
+          case 'read_file':
+            actionMsg += `\n  - Reading file: ${JSON.parse(action.function.arguments).path}`;
+            break;
+          case 'write_file':
+            actionMsg += `\n  - Writing to file: ${JSON.parse(action.function.arguments).path}`;
+            break;
+          case 'update_file':
+            actionMsg += `\n  - Updating file: ${JSON.parse(action.function.arguments).path}`;
+            break;
+          case 'run_shell':
+            actionMsg += `\n  - Running shell command: ${JSON.parse(action.function.arguments).command}`;
+            break;
+          case 'browse_url':
+            actionMsg += `\n  - Browsing URL: ${action.args.url}`;
+            break;
+          default:
+            actionMsg += `\n- ${action.function.name}`;
+        }
+      });
+    }
+
     switch (streamEvent.event) {
       case 'thread.run.queued':
         task.output = 'Starting..';
@@ -33,26 +63,12 @@ export async function processStreamedResponse(
       case 'thread.run.step.in_progress':
         task.output = 'Progressing..';
         break;
-      case 'thread.run.step.delta':
-        task.output = 'Thinking..';
-        break;
       case 'thread.run.requires_action':
-        task.output = 'Talking to your machine..';
+        task.title = actionMsg;
         break;
       default:
-        task.output = 'Mmmh...';
+        task.output = 'Thinking..';
         break;
-    }
-
-    if (streamEvent.event === 'thread.run.requires_action') {
-      actions = streamEvent.data.required_action.submit_tool_outputs.tool_calls;
-      // try {
-      //   task.output = JSON.parse(actions[0].function.arguments || '{}').answer;
-      //   if (!task.output) {
-      //     Logger.debug('Undefined answer for actions:', { actions });
-      //     task.output = '...';
-      //   }
-      // } catch (e) {}
     }
   }
   return actions;
