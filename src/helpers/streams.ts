@@ -1,5 +1,6 @@
 import { FunctionAction } from './api';
 import { StreamEvent } from '../utils/openaiThreads';
+
 // import { ACTION_FNS } from '../managers/agentManager';
 
 export async function processStreamedResponse(
@@ -10,6 +11,7 @@ export async function processStreamedResponse(
   for await (const chunk of agentResponse) {
     const content = Buffer.from(chunk).toString('utf8');
     let streamEvent: StreamEvent;
+    // Logger.debug('Stream content:', content);
     try {
       streamEvent = JSON.parse(content);
     } catch (e) {

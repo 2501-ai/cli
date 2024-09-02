@@ -17,7 +17,7 @@ enum Colors {
 }
 
 export default class Logger {
-  spin: any;
+  constructor(public spin = p.spinner()) {}
 
   intro(message: string) {
     p.intro(message);
@@ -28,7 +28,6 @@ export default class Logger {
   }
 
   start(message?: string) {
-    this.spin = p.spinner();
     this.spin.start(message);
   }
 
