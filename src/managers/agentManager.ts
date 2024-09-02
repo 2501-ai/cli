@@ -1,7 +1,7 @@
 import axios from 'axios';
-// import { terminal } from 'terminal-kit';
-import { jsonrepair } from 'jsonrepair';
-import { convertFormToJSON } from '../utils/json';
+import fs from 'fs';
+import { OPENAI_TERMINAL_STATUSES, QueryStatus } from '../constants';
+
 import {
   browse_url,
   read_file,
@@ -9,19 +9,15 @@ import {
   update_file,
   write_file,
 } from '../helpers/actions';
+
+import Logger from '../utils/logger';
 import { readConfig } from '../utils/conf';
 
-import {
-  API_HOST,
-  API_VERSION,
-  OPENAI_TERMINAL_STATUSES,
-  QueryStatus,
-} from '../constants';
-import { Logger } from '../utils/logger';
+import { FunctionAction, getAgentStatus } from '../helpers/api';
 
 const MAX_RETRY = 3;
 
-const ACTION_FNS = {
+export const ACTION_FNS = {
   browse_url,
   read_file,
   run_shell,
@@ -36,10 +32,6 @@ export class AgentManager {
   name: string;
   engine: string;
   workspace: string;
-  callback?: AgentCallbackType;
-
-  spinner: any;
-  queryCommand: (...args: any[]) => Promise<void>;
 
   errorRetries = 0;
 
@@ -49,54 +41,44 @@ export class AgentManager {
     engine: string;
     workspace: string;
     callback?: AgentCallbackType;
-    queryCommand: (...args: any[]) => Promise<void>;
   }) {
     this.id = options.id;
     this.name = options.name;
     this.engine = options.engine;
     this.workspace = options.workspace;
-    this.callback = options.callback;
-    this.queryCommand = options.queryCommand;
   }
 
-  async checkStatus(): Promise<any> {
-    let debugData: any = '';
+  async checkStatus(): Promise<void | {
+    actions: FunctionAction[];
+    answer?: string;
+  }> {
     try {
-      const config = readConfig();
-      const { data } = await axios.get(
-        `${API_HOST}${API_VERSION}/agents/${this.id}/status`,
-        {
-          headers: {
-            Authorization: `Bearer ${config?.api_key}`,
-          },
-        }
-      );
+      const data = await getAgentStatus(this.id);
 
-      Logger.debug('Check status', data);
-      if (data.answer || data.response) {
-        Logger.agent(data.answer || data.response);
+      Logger.debug('Check status', data.status);
+      if (data.answer) {
+        Logger.agent(data.answer);
       }
 
       if (data.status === QueryStatus.Completed) {
-        this.callback && (await this.callback(data.answer || data.response));
-        return {};
+        return {
+          answer: data.answer,
+          actions: data.actions ?? [],
+        };
       }
 
       if (data.status === QueryStatus.Failed) {
         Logger.error('Query failed:', data.error);
-        this.callback && (await this.callback(data.answer || data.error));
       }
 
       if (OPENAI_TERMINAL_STATUSES.includes(data.status)) {
         Logger.debug('Unhandled status', data.status);
         Logger.debug('Data', data);
-        Logger.warn('TODO: Implement action required');
+        Logger.log('TODO: Implement action required');
         return process.exit(1);
       }
 
       if (data.actions) {
-        debugData = data;
-        // Logger.debug('Actions:', this.getProcessActionsTasks(data.actions));
         return { actions: data.actions };
       }
     } catch (error: any) {
@@ -107,18 +89,6 @@ export class AgentManager {
       );
       this.errorRetries++;
 
-      // Try to log debugData if available
-      try {
-        if (error.message === 'Unexpected end of JSON input') {
-          const fixed_args = jsonrepair(debugData);
-          debugData = JSON.parse(convertFormToJSON(fixed_args));
-        } else {
-          Logger.debug('debugData', JSON.stringify(debugData));
-        }
-      } catch (e) {
-        Logger.error('Error logging debugData', e);
-        return process.exit(1);
-      }
       // Prevent infinite loop
       if (this.errorRetries > MAX_RETRY) {
         Logger.error('Max retries reached, exiting...');
@@ -142,6 +112,13 @@ export class AgentManager {
   > {
     const function_name: keyof typeof ACTION_FNS =
       call.function.name || call.function;
+
+    if (!ACTION_FNS[function_name]) {
+      return {
+        tool_call_id: call.id,
+        output: `Function '${function_name}' not found. Please verify the function name and try again.`,
+      };
+    }
 
     let taskTitle: string = args.answer || args.command || '';
     if (args.url) {
@@ -203,9 +180,25 @@ export class AgentManager {
       };
     } catch (e: any) {
       Logger.debug('Error processing action:', e);
+      // TODO: give the file content concerned ?
+      let content = '';
+      if (args.path) {
+        try {
+          content = `
+          File concerned: \`${args.path}\`
+          File content:
+          \`\`\`
+          ${fs.readFileSync(args.path, 'utf8')}
+          \`\`\``;
+        } catch (e) {}
+      }
       return {
         tool_call_id: call.id,
-        output: `I failed to run ${function_name}, please fix the situation, errors below.\n ${e.message}`,
+        output: `I failed to run ${function_name}, please fix the situation or files. Feel free to explore the files again if necessary.
+        Error message :
+        \`\`\`
+        ${e.message}
+        \`\`\`${content}`,
       };
     }
   }

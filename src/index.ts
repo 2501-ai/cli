@@ -29,11 +29,14 @@ program
   )
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   .version(require('../package.json').version)
-  .on('command:*', async (...args) => {
-    const query = args[0] && args[0].join(' ');
+  .on('command:*', async (args, options) => {
+    const query = args?.join(' ');
+    if (!query) {
+      return;
+    }
     // @TODO : implement options support.
     authMiddleware();
-    await queryCommand(query, {});
+    await queryCommand(query, { stream: !options.includes('--stream=false') });
   });
 
 // Config command
@@ -50,6 +53,7 @@ program
   .description('Execute a query using the specified agent')
   .option('--workspace <path>', 'Specify a different workspace path')
   .option('--agentId <id>', 'Specify the agent ID')
+  .option('--stream [stream]', 'Stream the output of the query', true)
   .hook('preAction', authMiddleware)
   .action(queryCommand);
 

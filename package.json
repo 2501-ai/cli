@@ -1,6 +1,6 @@
 {
   "name": "@2501-ai/2501-cli",
-  "version": "0.0.15",
+  "version": "0.0.18",
   "description": "",
   "main": "dist/index.js",
   "scripts": {
@@ -28,16 +28,16 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@listr2/manager": "^2.0.11",
+    "@clack/prompts": "^0.7.0",
     "@types/node": "^16.18.105",
     "axios": "^1.7.4",
     "cheerio": "^1.0.0",
     "commander": "^12.1.0",
+    "consola": "^3.2.3",
     "execa": "^5.1.1",
     "formdata-node": "^6.0.3",
     "istextorbinary": "^9.5.0",
     "jsonrepair": "^3.8.0",
-    "listr2": "^8.2.4",
     "marked": "^12.0.2",
     "marked-terminal": "^7.1.0",
     "pdfkit": "^0.15.0",

@@ -29,8 +29,8 @@ export class FileUpdater {
       lineStart,
       lineEnd: update.lineEnd
         ? this.isOffsetted(update)
-          ? update.lineEnd - 1 + this.total_offset
-          : update.lineEnd - 1
+          ? update.lineEnd + this.total_offset
+          : update.lineEnd
         : lineStart,
     };
   }

@@ -1,7 +1,8 @@
 import fs from 'fs';
 import os from 'os';
 import * as path from 'path';
-import { Logger } from './logger';
+
+import Logger from '../utils/logger';
 
 export interface AgentConfig {
   id: string;
@@ -144,12 +145,7 @@ export async function flushAgents(): Promise<void> {
   }
 }
 
-export function getEligibleAgents(
-  agentId: string | undefined,
-  workspace: string
-): AgentConfig | null {
-  const agents = agentId ? listAgents() : listAgentsFromWorkspace(workspace);
-  return (
-    agents.find((a) => a.id === agentId) || agents[agents.length - 1] || null
-  );
+export function getEligibleAgents(workspace: string): AgentConfig | null {
+  const agents = workspace ? listAgents() : listAgentsFromWorkspace(workspace);
+  return agents[agents.length - 1];
 }

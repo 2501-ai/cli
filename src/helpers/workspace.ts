@@ -7,14 +7,16 @@ import { isText } from 'istextorbinary';
 import os from 'os';
 import crypto from 'crypto';
 
-import { readConfig } from '../utils/conf';
 import { API_HOST, API_VERSION, IGNORED_FILE_PATTERNS } from '../constants';
+
+import Logger from '../utils/logger';
+import { readConfig } from '../utils/conf';
 import {
   computeFileMetadataHash,
   getDirectoryMd5Hash,
   toReadableSize,
 } from '../utils/files';
-import { Logger } from '../utils/logger';
+
 import { WorkspaceDiff, WorkspaceState } from '../utils/types';
 
 axios.defaults.baseURL = `${API_HOST}${API_VERSION}`;
@@ -153,7 +155,7 @@ export async function getWorkspaceFiles(params: {
 }): Promise<{ totalSize: number; fileHashes: Map<string, string> }> {
   // Limit the depth of directory traversal to avoid excessive resource usage
   if (params.currentDepth > params.maxDepth) {
-    Logger.warn('Directory depth exceeds the maximum allowed depth.');
+    Logger.error('Directory depth exceeds the maximum allowed depth.');
     return {
       totalSize: 0,
       fileHashes: new Map<string, string>(),
@@ -207,13 +209,15 @@ export async function getWorkspaceFiles(params: {
   };
 }
 
-export async function syncWorkspaceFiles(
-  workspace: string
-): Promise<{ data: FormData | null; files: { id: string; name: string }[] }> {
+export async function syncWorkspaceFiles(workspace: string): Promise<{
+  files: { path: string; data: Buffer }[];
+  vectorStoredFiles: { id: string; name: string }[];
+}> {
   const files = await generatePDFs(workspace);
   if (!files.length) {
-    return { data: null, files: [] };
+    return { files: [], vectorStoredFiles: [] };
   }
+
   const data = new FormData();
   for (let i = 0; i < files.length; i++) {
     const name = files[i].path.split('/').pop();
@@ -238,19 +242,25 @@ export async function syncWorkspaceFiles(
     Logger.debug('Agent : Workspace PDF deleted:', files[0].path);
   }
 
-  return { data, files: response.data };
+  return { files, vectorStoredFiles: response.data };
 }
 
 export async function indexWorkspaceFiles(
   agentId: string,
-  data: FormData,
+  files: { path: string; data: Buffer }[],
   filesIds: { id: string; name: string }[]
 ) {
   const config = readConfig();
 
+  const data = new FormData();
+  for (let i = 0; i < files.length; i++) {
+    const name = files[i].path.split('/').pop();
+    data.set('file' + i, new Blob([files[i].data]), name);
+  }
+
   data.set('fileIds', JSON.stringify(filesIds.map((file) => file.id)));
 
-  await axios.post(`/files/index?agentId=${agentId}`, data, {
+  await axios.post(`/agents/${agentId}/files/index`, data, {
     headers: {
       'Content-Type': 'multipart/form-data',
       Authorization: `Bearer ${config?.api_key}`,
@@ -389,13 +399,18 @@ export async function synchroniseWorkspaceChanges(
     await syncWorkspaceState(workspace);
     // TODO: improve and send only changed files ?
     const workspaceResponse = await syncWorkspaceFiles(workspace);
-    if (workspaceResponse?.data && workspaceResponse?.files.length) {
+    if (
+      workspaceResponse?.vectorStoredFiles &&
+      workspaceResponse?.vectorStoredFiles.length
+    ) {
       await indexWorkspaceFiles(
         agentId,
-        workspaceResponse.data,
-        workspaceResponse.files
+        workspaceResponse.files,
+        workspaceResponse.vectorStoredFiles
       );
     }
+  } else {
+    Logger.debug('Agent : Workspace has no changes.');
   }
   return workspaceDiff.hasChanges;
 }

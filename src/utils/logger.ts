@@ -1,8 +1,10 @@
+import * as p from '@clack/prompts';
 import { AxiosError } from 'axios';
-import { terminal } from 'terminal-kit';
 import { marked } from 'marked';
 
-// TODO: use a better logger ? Winston, Pino ? etc..
+import { terminal } from 'terminal-kit';
+
+const isDebug = process.env.DEBUG === 'true';
 
 enum Colors {
   RED = 'red',
@@ -14,18 +16,27 @@ enum Colors {
   WHITE = 'white',
 }
 
-const isDebug = process.env.DEBUG === 'true';
+export default class Logger {
+  constructor(public spin = p.spinner()) {}
 
-export class Logger {
-  static error(...args: (Error | AxiosError | string | unknown)[]) {
-    terminal[Colors.RED]('\n[ERROR] ').defaultColor(
-      ...args.map((a) => {
-        if (a instanceof Error) {
-          return `${a.message}\n${a.stack}`;
-        }
-        return `${typeof a === 'object' ? JSON.stringify(a, null, 2) : a}`;
-      })
-    );
+  intro(message: string) {
+    p.intro(message);
+  }
+
+  outro(message: string) {
+    p.outro(message);
+  }
+
+  start(message?: string) {
+    this.spin.start(message);
+  }
+
+  message(message: string) {
+    this.spin.message(message);
+  }
+
+  stop(message?: string) {
+    this.spin.stop(message);
   }
 
   static agent(data: any) {
@@ -33,24 +44,24 @@ export class Logger {
     terminal(marked.parse(data) + '\n');
   }
 
-  static warn(...args: unknown[]) {
-    terminal[Colors.YELLOW]('[WARN] ').defaultColor(
+  static log(...args: unknown[]) {
+    terminal.defaultColor(
       ...args.map(
         (a) => (typeof a === 'object' ? JSON.stringify(a, null, 2) : a) + '\n'
       )
     );
   }
 
-  static success(content: string) {
-    terminal[Colors.GREEN]('SUCCESS] ').defaultColor(content + '\n');
-  }
-
-  static log(...args: unknown[]) {
-    terminal[Colors.BLUE]('[INFO] ').defaultColor(
-      ...args.map(
-        (a) => (typeof a === 'object' ? JSON.stringify(a, null, 2) : a) + '\n'
-      ),
-      '\n'
+  static error(...args: (Error | AxiosError | string | unknown)[]) {
+    terminal[Colors.RED]('\n[ERROR] ').defaultColor(
+      ...args.map((a) => {
+        if (a instanceof Error) {
+          return `${a.message}\n${a.stack}\n`;
+        }
+        return (
+          `${typeof a === 'object' ? JSON.stringify(a, null, 2) : a}` + '\n'
+        );
+      })
     );
   }
 
