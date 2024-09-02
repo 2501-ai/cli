@@ -28,11 +28,13 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@clack/prompts": "^0.7.0",
     "@listr2/manager": "^2.0.11",
     "@types/node": "^16.18.105",
     "axios": "^1.7.4",
     "cheerio": "^1.0.0",
     "commander": "^12.1.0",
+    "consola": "^3.2.3",
     "execa": "^5.1.1",
     "formdata-node": "^6.0.3",
     "istextorbinary": "^9.5.0",
