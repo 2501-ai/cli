@@ -33,3 +33,14 @@ export interface WorkspaceDiff {
   modified: string[];
   hasChanges: boolean;
 }
+
+export type StreamEventTypes =
+  | 'in_progress'
+  | 'failed'
+  | 'completed'
+  | 'requires_action';
+
+export type StreamEvent = {
+  event: StreamEventTypes;
+  data: any;
+};

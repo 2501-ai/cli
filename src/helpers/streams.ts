@@ -1,7 +1,7 @@
 import { ListrTaskWrapper } from 'listr2';
 
 import { FunctionAction } from './api';
-import { StreamEvent } from '../utils/openaiThreads';
+import { StreamEvent } from '../utils/types';
 import { TaskCtx } from '../commands/query';
 import { ACTION_FNS } from '../managers/agentManager';
 
@@ -22,7 +22,7 @@ export async function processStreamedResponse(
     }
 
     let actionMsg = 'Taking action(s) :';
-    if (streamEvent.event === 'thread.run.requires_action') {
+    if (streamEvent.event === 'requires_action') {
       actions = streamEvent.data.required_action.submit_tool_outputs.tool_calls;
       actions.forEach((action) => {
         switch (action.function.name as keyof typeof ACTION_FNS) {
@@ -55,21 +55,17 @@ export async function processStreamedResponse(
     // }
 
     switch (streamEvent.event) {
-      case 'thread.run.queued':
-        task.output = 'Starting..';
+      case 'in_progress':
+        task.output = 'Thinking..';
         break;
-      // case 'thread.run.step.created':
-      //   task.output = 'Making a step further..';
-      //   break;
-      case 'thread.run.in_progress':
-      case 'thread.run.step.in_progress':
-        task.output = 'Progressing..';
-        break;
-      case 'thread.run.requires_action':
+      case 'requires_action':
         task.title = actionMsg;
         break;
-      default:
-        task.output = 'Thinking..';
+      case 'failed':
+        task.output = 'Task Failed';
+        break;
+      case 'completed':
+        task.output = 'Task Completed';
         break;
     }
   }
