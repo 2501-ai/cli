@@ -18,7 +18,8 @@ export async function configCommand() {
       }
     );
 
-    logger.stop('Configurations :');
+    logger.stop('Configurations fetched successfully.');
+    logger.outro('Configurations :');
 
     terminal.table(
       [
@@ -40,6 +41,6 @@ export async function configCommand() {
       }
     );
   } catch (error) {
-    logger.error('Failed to fetch configurations:');
+    Logger.error('Failed to fetch configurations:');
   }
 }

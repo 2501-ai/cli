@@ -22,7 +22,7 @@ import {
 } from '../helpers/streams';
 
 import { getActionTaskList } from '../tasks/actions';
-import { getInitTaskList } from './init';
+// import { getInitTaskList } from './init';
 
 marked.use(markedTerminal() as MarkedExtension);
 const isDebug = process.env.DEBUG === 'true';
@@ -55,9 +55,9 @@ const initWorkspaceTask: ListrTask<TaskCtx> = {
     if (!ctx.eligible && !ctx.skipWarmup) {
       task.title = 'Initializing workspace..';
       ctx.init = true;
-      return task.newListr(getInitTaskList({ workspace: ctx.workspace }), {
-        exitOnError: true,
-      });
+      // return task.newListr(getInitTaskList({ workspace: ctx.workspace }), {
+      //   exitOnError: true,
+      // });
     }
   },
 };

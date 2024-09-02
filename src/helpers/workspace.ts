@@ -208,13 +208,15 @@ export async function getWorkspaceFiles(params: {
   };
 }
 
-export async function syncWorkspaceFiles(
-  workspace: string
-): Promise<{ data: FormData | null; files: { id: string; name: string }[] }> {
+export async function syncWorkspaceFiles(workspace: string): Promise<{
+  files: { path: string; data: Buffer }[];
+  vectorStoredFiles: { id: string; name: string }[];
+}> {
   const files = await generatePDFs(workspace);
   if (!files.length) {
-    return { data: null, files: [] };
+    return { files: [], vectorStoredFiles: [] };
   }
+
   const data = new FormData();
   for (let i = 0; i < files.length; i++) {
     const name = files[i].path.split('/').pop();
@@ -239,15 +241,21 @@ export async function syncWorkspaceFiles(
     Logger.debug('Agent : Workspace PDF deleted:', files[0].path);
   }
 
-  return { data, files: response.data };
+  return { files, vectorStoredFiles: response.data };
 }
 
 export async function indexWorkspaceFiles(
   agentId: string,
-  data: FormData,
+  files: { path: string; data: Buffer }[],
   filesIds: { id: string; name: string }[]
 ) {
   const config = readConfig();
+
+  const data = new FormData();
+  for (let i = 0; i < files.length; i++) {
+    const name = files[i].path.split('/').pop();
+    data.set('file' + i, new Blob([files[i].data]), name);
+  }
 
   data.set('fileIds', JSON.stringify(filesIds.map((file) => file.id)));
 
@@ -390,11 +398,14 @@ export async function synchroniseWorkspaceChanges(
     await syncWorkspaceState(workspace);
     // TODO: improve and send only changed files ?
     const workspaceResponse = await syncWorkspaceFiles(workspace);
-    if (workspaceResponse?.data && workspaceResponse?.files.length) {
+    if (
+      workspaceResponse?.vectorStoredFiles &&
+      workspaceResponse?.vectorStoredFiles.length
+    ) {
       await indexWorkspaceFiles(
         agentId,
-        workspaceResponse.data,
-        workspaceResponse.files
+        workspaceResponse.files,
+        workspaceResponse.vectorStoredFiles
       );
     }
   } else {
