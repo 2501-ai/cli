@@ -4,10 +4,9 @@ import { ListrTask } from 'listr2';
 import axios, { AxiosError } from 'axios';
 
 import { TaskManager } from '../managers/taskManager';
+import { AgentManager } from '../managers/agentManager';
 import { AgentConfig, getEligibleAgents } from '../utils/conf';
 
-import { getInitTaskList } from './init';
-import { AgentManager } from '../managers/agentManager';
 import { Logger } from '../utils/logger';
 import { synchroniseWorkspaceChanges } from '../helpers/workspace';
 import {
@@ -17,11 +16,13 @@ import {
   queryAgent,
   submitToolOutputs,
 } from '../helpers/api';
-import { getActionTaskList } from '../tasks/actions';
 import {
   isStreamingContext,
   processStreamedResponse,
 } from '../helpers/streams';
+
+import { getActionTaskList } from '../tasks/actions';
+import { getInitTaskList } from './init';
 
 marked.use(markedTerminal() as MarkedExtension);
 const isDebug = process.env.DEBUG === 'true';

@@ -1,5 +1,6 @@
 import { jsonrepair } from 'jsonrepair';
 import { ListrTask, ListrTaskWrapper } from 'listr2';
+
 import { convertFormToJSON } from '../utils/json';
 import { Logger } from '../utils/logger';
 import { TaskCtx } from '../commands/query';

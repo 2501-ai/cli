@@ -1,4 +1,5 @@
 import { ListrTaskWrapper } from 'listr2';
+
 import { FunctionAction } from './api';
 import { StreamEvent } from '../utils/openaiThreads';
 import { TaskCtx } from '../commands/query';

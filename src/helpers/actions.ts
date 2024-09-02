@@ -6,7 +6,6 @@ import * as cheerio from 'cheerio';
 
 import { Logger } from '../utils/logger';
 import { UpdateInstruction } from '../utils/types';
-
 import { FileUpdater } from '../utils/fileUpdater';
 
 import { getIgnoredFiles } from './workspace';

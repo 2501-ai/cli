@@ -1,6 +1,7 @@
 import fs from 'fs';
 import os from 'os';
 import * as path from 'path';
+
 import { Logger } from './logger';
 
 export interface AgentConfig {

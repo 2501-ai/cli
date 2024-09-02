@@ -1,9 +1,10 @@
+import { terminal } from 'terminal-kit';
+
 import {
   listAgents,
   listAgentsFromWorkspace,
   flushAgents,
 } from '../utils/conf';
-import { terminal } from 'terminal-kit';
 
 export async function agentsCommand(options: {
   all?: boolean;

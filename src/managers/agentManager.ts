@@ -1,5 +1,7 @@
 import axios from 'axios';
-// import { terminal } from 'terminal-kit';
+import fs from 'fs';
+import { OPENAI_TERMINAL_STATUSES, QueryStatus } from '../constants';
+
 import {
   browse_url,
   read_file,
@@ -9,10 +11,8 @@ import {
 } from '../helpers/actions';
 import { readConfig } from '../utils/conf';
 
-import { OPENAI_TERMINAL_STATUSES, QueryStatus } from '../constants';
 import { Logger } from '../utils/logger';
 import { FunctionAction, getAgentStatus } from '../helpers/api';
-import fs from 'fs';
 
 const MAX_RETRY = 3;
 

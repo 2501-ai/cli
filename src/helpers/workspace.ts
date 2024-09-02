@@ -7,8 +7,9 @@ import { isText } from 'istextorbinary';
 import os from 'os';
 import crypto from 'crypto';
 
-import { readConfig } from '../utils/conf';
 import { API_HOST, API_VERSION, IGNORED_FILE_PATTERNS } from '../constants';
+
+import { readConfig } from '../utils/conf';
 import {
   computeFileMetadataHash,
   getDirectoryMd5Hash,

@@ -1,5 +1,7 @@
 import axios from 'axios';
 import fs from 'fs';
+import { FormData } from 'formdata-node';
+import { ListrTask } from 'listr2';
 
 import {
   indexWorkspaceFiles,
@@ -11,8 +13,6 @@ import { TaskManager } from '../managers/taskManager';
 
 import { API_HOST, API_VERSION } from '../constants';
 import { Logger } from '../utils/logger';
-import { FormData } from 'formdata-node';
-import { ListrTask } from 'listr2';
 
 axios.defaults.baseURL = `${API_HOST}${API_VERSION}`;
 axios.defaults.timeout = 8000;

@@ -1,6 +1,7 @@
 import axios from 'axios';
 
-import { listAgentsFromWorkspace, readConfig } from '../utils/conf';
+import { API_HOST, API_VERSION } from '../constants';
+
 import {
   ERRORFILE_PATH,
   hasError,
@@ -10,7 +11,7 @@ import {
 
 import { queryCommand } from './query';
 
-import { API_HOST, API_VERSION } from '../constants';
+import { listAgentsFromWorkspace, readConfig } from '../utils/conf';
 import { unixSourceCommand } from '../utils/shellCommands';
 import { Logger } from '../utils/logger';
 
