@@ -1,7 +1,7 @@
 import crypto from 'crypto';
 import fs from 'fs';
 
-import { Logger } from './logger';
+import Logger from '../utils/logger';
 import { getIgnoredFiles, getWorkspaceFiles } from '../helpers/workspace';
 
 /**

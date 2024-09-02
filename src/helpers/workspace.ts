@@ -9,13 +9,14 @@ import crypto from 'crypto';
 
 import { API_HOST, API_VERSION, IGNORED_FILE_PATTERNS } from '../constants';
 
+import Logger from '../utils/logger';
 import { readConfig } from '../utils/conf';
 import {
   computeFileMetadataHash,
   getDirectoryMd5Hash,
   toReadableSize,
 } from '../utils/files';
-import { Logger } from '../utils/logger';
+
 import { WorkspaceDiff, WorkspaceState } from '../utils/types';
 
 axios.defaults.baseURL = `${API_HOST}${API_VERSION}`;
@@ -154,7 +155,7 @@ export async function getWorkspaceFiles(params: {
 }): Promise<{ totalSize: number; fileHashes: Map<string, string> }> {
   // Limit the depth of directory traversal to avoid excessive resource usage
   if (params.currentDepth > params.maxDepth) {
-    Logger.warn('Directory depth exceeds the maximum allowed depth.');
+    Logger.error('Directory depth exceeds the maximum allowed depth.');
     return {
       totalSize: 0,
       fileHashes: new Map<string, string>(),

@@ -1,4 +1,4 @@
-import { Logger } from '../utils/logger';
+import Logger from '../utils/logger';
 import { readConfig } from '../utils/conf';
 
 export function authMiddleware() {

@@ -9,9 +9,10 @@ import {
   update_file,
   write_file,
 } from '../helpers/actions';
+
+import Logger from '../utils/logger';
 import { readConfig } from '../utils/conf';
 
-import { Logger } from '../utils/logger';
 import { FunctionAction, getAgentStatus } from '../helpers/api';
 
 const MAX_RETRY = 3;
@@ -73,7 +74,7 @@ export class AgentManager {
       if (OPENAI_TERMINAL_STATUSES.includes(data.status)) {
         Logger.debug('Unhandled status', data.status);
         Logger.debug('Data', data);
-        Logger.warn('TODO: Implement action required');
+        Logger.log('TODO: Implement action required');
         return process.exit(1);
       }
 

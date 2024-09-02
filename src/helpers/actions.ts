@@ -4,7 +4,7 @@ import TurndownService from 'turndown';
 import execa from 'execa';
 import * as cheerio from 'cheerio';
 
-import { Logger } from '../utils/logger';
+import Logger from '../utils/logger';
 import { UpdateInstruction } from '../utils/types';
 import { FileUpdater } from '../utils/fileUpdater';
 

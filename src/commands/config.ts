@@ -3,7 +3,7 @@ import { terminal } from 'terminal-kit';
 
 import { API_HOST, API_VERSION } from '../constants';
 import { readConfig } from '../utils/conf';
-import Logger from '../utils/loggerV2';
+import Logger from '../utils/logger';
 
 export async function configCommand() {
   const logger = new Logger();

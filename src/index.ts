@@ -9,7 +9,6 @@ import { setCommand } from './commands/set';
 import { jobSubscriptionCommand } from './commands/jobs';
 
 import { authMiddleware } from './middleware/auth';
-import { Logger } from './utils/logger';
 
 const program = new Command();
 
@@ -33,7 +32,6 @@ program
   .on('command:*', async (args, options) => {
     const query = args?.join(' ');
     if (!query) {
-      Logger.log('No query provided');
       return;
     }
     // @TODO : implement options support.

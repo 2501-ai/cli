@@ -5,7 +5,7 @@ import { FormData } from 'formdata-node';
 import { syncWorkspaceFiles, indexWorkspaceFiles } from '../helpers/workspace';
 import { addAgent, readConfig } from '../utils/conf';
 
-import Logger from '../utils/loggerV2';
+import Logger from '../utils/logger';
 
 import { API_HOST, API_VERSION } from '../constants';
 

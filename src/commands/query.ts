@@ -1,14 +1,14 @@
 import { marked, MarkedExtension } from 'marked';
 import { markedTerminal } from 'marked-terminal';
-import { ListrTask } from 'listr2';
 import axios, { AxiosError } from 'axios';
+import { jsonrepair } from 'jsonrepair';
 
-import { TaskManager } from '../managers/taskManager';
 import { AgentManager } from '../managers/agentManager';
-import { AgentConfig, getEligibleAgents } from '../utils/conf';
 
-import { Logger } from '../utils/logger';
-import { synchroniseWorkspaceChanges } from '../helpers/workspace';
+import { getEligibleAgents } from '../utils/conf';
+import { convertFormToJSON } from '../utils/json';
+import Logger from '../utils/logger';
+
 import {
   cancelQuery,
   FunctionAction,
@@ -17,199 +17,15 @@ import {
   submitToolOutputs,
 } from '../helpers/api';
 import {
-  isStreamingContext,
   processStreamedResponse,
+  isStreamingContext,
 } from '../helpers/streams';
+import { synchroniseWorkspaceChanges } from '../helpers/workspace';
 
-import { getActionTaskList } from '../tasks/actions';
-// import { getInitTaskList } from './init';
+import { initCommand } from './init';
 
 marked.use(markedTerminal() as MarkedExtension);
 const isDebug = process.env.DEBUG === 'true';
-
-export type TaskCtx = {
-  init: boolean;
-  actions: FunctionAction[];
-  asynchronous: boolean;
-  workspace: string;
-  query: string;
-  stream: boolean;
-
-  // Optional properties
-  skipWarmup: boolean;
-  agentId?: string;
-  agentManager?: AgentManager;
-  changed: boolean;
-  eligible?: AgentConfig | null;
-  toolOutputs?: any[];
-};
-
-const initWorkspaceTask: ListrTask<TaskCtx> = {
-  rendererOptions: {
-    collapseSubtasks: true,
-  },
-  task: async (ctx, task) => {
-    // subtask.title = 'Syncing..';
-    ctx.eligible = getEligibleAgents(ctx.agentId, ctx.workspace);
-    // initialize agent if not found
-    if (!ctx.eligible && !ctx.skipWarmup) {
-      task.title = 'Initializing workspace..';
-      ctx.init = true;
-      // return task.newListr(getInitTaskList({ workspace: ctx.workspace }), {
-      //   exitOnError: true,
-      // });
-    }
-  },
-};
-
-const initAgentTask: ListrTask<TaskCtx> = {
-  task: async (ctx, task) => {
-    ctx.eligible = getEligibleAgents(ctx.agentId, ctx.workspace);
-    if (!ctx.eligible) {
-      throw new Error('No agent found');
-    }
-
-    if (!task.task.parent) {
-      task.title = 'Synchronising workspace..';
-    }
-    task.output = `Using agent: (${ctx.eligible.id})`;
-
-    const agentManager = new AgentManager({
-      id: ctx.eligible.id,
-      name: ctx.eligible.name,
-      engine: ctx.eligible.engine,
-      workspace: ctx.workspace,
-    });
-    ctx.agentManager = agentManager;
-    if (!ctx.init) {
-      ctx.changed = await synchroniseWorkspaceChanges(
-        agentManager.id,
-        ctx.workspace
-      );
-    }
-    if (ctx.changed) {
-      task.title = `Workspace synchronised`;
-    }
-  },
-};
-
-const queryAgentTask: ListrTask<TaskCtx> = {
-  task: async (ctx, task) => {
-    if (ctx.changed === undefined) {
-      throw new Error('Workspace not synchronized');
-    }
-    if (!ctx.agentManager) {
-      throw new Error('AgentManager not initialized');
-    }
-
-    // Pre-check agent status
-    const statusReponse = await getAgentStatus(ctx.agentManager.id);
-    if (
-      statusReponse.status === 'in_progress' ||
-      statusReponse.status === 'requires_action'
-    ) {
-      Logger.debug('Agent status:', statusReponse.status);
-      task.title = 'Cancelling previous task..';
-      await cancelQuery(ctx.agentManager.id);
-      return task.newListr([queryAgentTask], {
-        exitOnError: true,
-      });
-    }
-
-    task.title = 'Working...';
-    Logger.debug('Querying agent..', ctx.agentManager.id);
-    const agentResponse = await queryAgent(
-      ctx.agentManager.id,
-      ctx.changed,
-      ctx.query,
-      ctx.stream
-    );
-
-    if (isStreamingContext(ctx, agentResponse)) {
-      ctx.actions = await processStreamedResponse(agentResponse, task);
-      // Check the status of the agent to get the answer
-      const status = await getAgentStatus(ctx.agentManager.id);
-      if (status?.answer) {
-        Logger.agent(status.answer);
-      }
-      return;
-    }
-
-    task.title = agentResponse.response || task.title;
-
-    Logger.debug('Agent response:', agentResponse);
-    if (agentResponse.asynchronous) {
-      ctx.asynchronous = true;
-      const status = await ctx.agentManager.checkStatus();
-      if (status?.actions) {
-        ctx.actions = status.actions;
-      }
-    }
-
-    if (agentResponse.response) {
-      Logger.agent(agentResponse.response);
-      task.title = agentResponse.response;
-    }
-  },
-};
-
-const finalReviewTask: ListrTask<TaskCtx> = {
-  title: 'Waiting for previous command to finish..',
-  task: async (ctx: TaskCtx, task) => {
-    if (!ctx.agentManager) {
-      throw new Error('Context not initialized');
-    }
-
-    task.title = 'Reviewing..';
-    if (!ctx.asynchronous && !ctx.stream && ctx.toolOutputs?.length) {
-      ctx.query = `
-          Find below the output of the actions in the task context, if you're done on the main task and its related subtasks, you can stop and wait for my next instructions.
-          Output :
-          ${ctx.toolOutputs?.map((o: { output: string }) => o.output).join('\n')}`;
-      return task.newListr([queryAgentTask], {
-        exitOnError: true,
-      });
-    }
-
-    try {
-      let submitReponse;
-      if (ctx.toolOutputs?.length) {
-        submitReponse = await submitToolOutputs(
-          ctx.agentManager.id,
-          ctx.toolOutputs,
-          ctx.stream
-        );
-      }
-
-      // Reset toolOutputs after submition to OpenAI
-      ctx.toolOutputs = [];
-
-      // Streaming mode
-      if (submitReponse && isStreamingContext(ctx, submitReponse)) {
-        ctx.actions = await processStreamedResponse(submitReponse, task);
-      } else if (submitReponse) {
-        // Standard status polling mode
-        const statusResponse = await ctx.agentManager.checkStatus();
-        if (!statusResponse?.actions?.length) {
-          Logger.debug('No additional steps found');
-          return;
-        }
-
-        ctx.actions = statusResponse.actions;
-      }
-
-      const tasks = getActionTaskList(ctx, task);
-      if (tasks.length) {
-        return task.newListr(tasks.concat([finalReviewTask]), {
-          exitOnError: true,
-        });
-      }
-      task.title = 'No additional steps to make.';
-    } catch (e) {
-      Logger.error('Submition Error', e);
-    }
-  },
-};
 
 // Function to execute the query command
 export async function queryCommand(
@@ -229,42 +45,145 @@ export async function queryCommand(
     const skipWarmup = !!options.skipWarmup;
     const stream = !!options.stream;
 
-    await TaskManager.run<TaskCtx>(
-      [
-        initWorkspaceTask,
-        initAgentTask,
-        queryAgentTask,
-        {
-          task: async (ctx, task) => {
-            const tasks = getActionTaskList(ctx, task);
-            // if (tasks.length) {
-            return task.newListr(tasks.concat([finalReviewTask]), {
-              exitOnError: true,
-            });
-            // }
-          },
-        },
-      ],
-      {
-        ctx: {
-          ...options,
-          workspace,
-          query,
-          stream,
-          skipWarmup,
-          actions: [],
-          changed: false,
-          asynchronous: false,
-          init: false,
-        },
-        concurrent: false,
-        exitOnError: true,
-        rendererOptions: {
-          indentation: 0,
-          collapseSubtasks: false,
-        },
-      }
+    const logger = new Logger();
+
+    let eligible = getEligibleAgents(workspace);
+    if (!eligible && !skipWarmup) {
+      logger.start('Initializing workspace');
+      await initCommand({ workspace });
+    }
+
+    eligible = getEligibleAgents(workspace);
+    if (!eligible) {
+      throw new Error('No eligible agents found after init');
+    }
+
+    const agentManager = new AgentManager({
+      id: eligible.id,
+      name: eligible.name,
+      engine: eligible.engine,
+      workspace,
+    });
+
+    let changedWorkspace = false;
+    if (eligible && !skipWarmup) {
+      changedWorkspace = await synchroniseWorkspaceChanges(
+        eligible.id,
+        workspace
+      );
+    }
+
+    logger.stop('Workspace initialized');
+
+    // Pre-check agent status
+    const statusReponse = await getAgentStatus(agentManager.id);
+    if (
+      statusReponse.status === 'in_progress' ||
+      statusReponse.status === 'requires_action'
+    ) {
+      Logger.debug('Agent status:', statusReponse.status);
+      logger.start('Cancelling previous task');
+      await cancelQuery(agentManager.id);
+      logger.stop('Previous task cancelled');
+    }
+
+    logger.start('Thinking');
+    Logger.debug('Querying agent..', agentManager.id);
+    const agentResponse = await queryAgent(
+      agentManager.id,
+      changedWorkspace,
+      query,
+      stream
     );
+
+    let actions: FunctionAction[] = [];
+    if (isStreamingContext(stream, agentResponse)) {
+      actions = await processStreamedResponse(agentResponse);
+      // Check the status of the agent to get the answer
+      const status = await getAgentStatus(agentManager.id);
+      if (status?.answer) {
+        Logger.agent(status.answer);
+      }
+      return;
+    }
+
+    logger.message(agentResponse.response || query);
+    Logger.debug('Agent response:', agentResponse);
+
+    if (agentResponse.asynchronous) {
+      const status = await agentManager.checkStatus();
+      if (status?.actions) {
+        actions = status.actions;
+      }
+    }
+
+    if (agentResponse.response) {
+      Logger.agent(agentResponse.response);
+      logger.message(agentResponse.response);
+    }
+
+    const toolOutputs: any[] = [];
+    actions.map(async (action: any) => {
+      let args: any;
+
+      if (action.function.arguments) {
+        args = action.function.arguments;
+        if (typeof args === 'string') {
+          const fixed_args = jsonrepair(args);
+          args = JSON.parse(convertFormToJSON(fixed_args));
+        }
+      } else {
+        args = action.args;
+      }
+
+      let taskTitle: string = args.answer || args.command || '';
+      if (args.url) {
+        taskTitle = 'Browsing: ' + args.url;
+      }
+
+      logger.start(taskTitle);
+      // subtask.output = taskTitle || action.function.arguments;
+      const toolOutput = await agentManager.executeAction(action, args);
+      Logger.debug('Tool output:', toolOutput);
+      toolOutputs.push(toolOutput);
+      logger.stop(taskTitle);
+    });
+
+    logger.start('Reviewing the job');
+    if (!agentResponse.asynchronous && !stream && toolOutputs?.length) {
+      const query = `
+          Find below the output of the actions in the task context, if you're done on the main task and its related subtasks, you can stop and wait for my next instructions.
+          Output :
+          ${toolOutputs?.map((o: { output: string }) => o.output).join('\n')}`;
+
+      await queryCommand(query, options);
+    }
+
+    let submitReponse;
+    if (toolOutputs?.length) {
+      submitReponse = await submitToolOutputs(
+        agentManager.id,
+        toolOutputs,
+        stream
+      );
+    }
+
+    // Reset toolOutputs after submition
+    toolOutputs.splice(0, toolOutputs.length);
+
+    // Streaming mode
+    if (submitReponse && stream) {
+      actions = await processStreamedResponse(submitReponse);
+    } else if (submitReponse) {
+      // Standard status polling mode
+      const statusResponse = await agentManager.checkStatus();
+      if (!statusResponse?.actions?.length) {
+        Logger.debug('No additional steps found');
+        return;
+      }
+
+      actions = statusResponse.actions;
+    }
   } catch (e) {
     if (isDebug) {
       if (axios.isAxiosError(e)) {

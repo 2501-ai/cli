@@ -1,8 +1,10 @@
+import * as p from '@clack/prompts';
 import { AxiosError } from 'axios';
-import { terminal } from 'terminal-kit';
 import { marked } from 'marked';
 
-// TODO: use a better logger ? Winston, Pino ? etc..
+import { terminal } from 'terminal-kit';
+
+const isDebug = process.env.DEBUG === 'true';
 
 enum Colors {
   RED = 'red',
@@ -14,9 +16,43 @@ enum Colors {
   WHITE = 'white',
 }
 
-const isDebug = process.env.DEBUG === 'true';
+export default class Logger {
+  spin: any;
 
-export class Logger {
+  intro(message: string) {
+    p.intro(message);
+  }
+
+  outro(message: string) {
+    p.outro(message);
+  }
+
+  start(message?: string) {
+    this.spin = p.spinner();
+    this.spin.start(message);
+  }
+
+  message(message: string) {
+    this.spin.message(message);
+  }
+
+  stop(message?: string) {
+    this.spin.stop(message);
+  }
+
+  static agent(data: any) {
+    terminal.bold('\nAGENT:\n');
+    terminal(marked.parse(data) + '\n');
+  }
+
+  static log(...args: unknown[]) {
+    terminal.defaultColor(
+      ...args.map(
+        (a) => (typeof a === 'object' ? JSON.stringify(a, null, 2) : a) + '\n'
+      )
+    );
+  }
+
   static error(...args: (Error | AxiosError | string | unknown)[]) {
     terminal[Colors.RED]('\n[ERROR] ').defaultColor(
       ...args.map((a) => {
@@ -27,32 +63,6 @@ export class Logger {
           `${typeof a === 'object' ? JSON.stringify(a, null, 2) : a}` + '\n'
         );
       })
-    );
-  }
-
-  static agent(data: any) {
-    terminal.bold('\nAGENT:\n');
-    terminal(marked.parse(data) + '\n');
-  }
-
-  static warn(...args: unknown[]) {
-    terminal[Colors.YELLOW]('[WARN] ').defaultColor(
-      ...args.map(
-        (a) => (typeof a === 'object' ? JSON.stringify(a, null, 2) : a) + '\n'
-      )
-    );
-  }
-
-  static success(content: string) {
-    terminal[Colors.GREEN]('SUCCESS] ').defaultColor(content + '\n');
-  }
-
-  static log(...args: unknown[]) {
-    terminal[Colors.BLUE]('[INFO] ').defaultColor(
-      ...args.map(
-        (a) => (typeof a === 'object' ? JSON.stringify(a, null, 2) : a) + '\n'
-      ),
-      '\n'
     );
   }
 

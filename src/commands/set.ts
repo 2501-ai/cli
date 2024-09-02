@@ -1,5 +1,5 @@
 import { Config, readConfig, setValue } from '../utils/conf';
-import { Logger } from '../utils/logger';
+import Logger from '../utils/logger';
 
 export function setCommand() {
   const config = readConfig();
@@ -19,5 +19,5 @@ export function setCommand() {
   }
 
   setValue(key as keyof Config, value);
-  Logger.success(`${key} set successfully.`);
+  Logger.log(`${key} set successfully.`);
 }
