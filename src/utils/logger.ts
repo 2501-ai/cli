@@ -16,6 +16,15 @@ enum Colors {
   WHITE = 'white',
 }
 
+const stringify = (args: any[]) => {
+  return args.map((a) => {
+    if (a instanceof Error) {
+      return `${a.message}\n${a.stack}\n`;
+    }
+    return `${typeof a === 'object' ? JSON.stringify(a, null, 2) : a}` + '\n';
+  });
+};
+
 export default class Logger {
   constructor(public spin = p.spinner()) {}
 
@@ -53,25 +62,12 @@ export default class Logger {
   }
 
   static error(...args: (Error | AxiosError | string | unknown)[]) {
-    terminal[Colors.RED]('\n[ERROR] ').defaultColor(
-      ...args.map((a) => {
-        if (a instanceof Error) {
-          return `${a.message}\n${a.stack}\n`;
-        }
-        return (
-          `${typeof a === 'object' ? JSON.stringify(a, null, 2) : a}` + '\n'
-        );
-      })
-    );
+    terminal[Colors.RED]('\n[ERROR] ').defaultColor(...stringify(args));
   }
 
   static debug(...args: unknown[]) {
     if (isDebug) {
-      terminal[Colors.MAGENTA]('[DEBUG] ').defaultColor(
-        ...args.map(
-          (a) => (typeof a === 'object' ? JSON.stringify(a, null, 2) : a) + '\n'
-        )
-      );
+      terminal[Colors.MAGENTA]('[DEBUG] ').defaultColor(...stringify(args));
     }
   }
 }

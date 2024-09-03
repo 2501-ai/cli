@@ -65,7 +65,7 @@ export function update_file({
   const updater = new FileUpdater(fileContent, updates);
   fileContent = updater.execute();
 
-  if (write === false) {
+  if (!write) {
     return fileContent;
   }
 

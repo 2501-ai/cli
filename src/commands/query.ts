@@ -99,11 +99,13 @@ export async function queryCommand(
     let actions: FunctionAction[] = [];
     const isStream = isStreamingContext(stream, agentResponse);
     if (isStream) {
-      actions = await processStreamedResponse(agentResponse);
-      // Check the status of the agent to get the answer
-      const status = await getAgentStatus(agentManager.id);
-      if (status?.answer) {
-        Logger.agent(status.answer);
+      const res = await processStreamedResponse(agentResponse, logger);
+      logger.stop('Done processing');
+      if (res.actions.length) {
+        actions = res.actions;
+      }
+      if (res.message) {
+        Logger.agent(res.message);
       }
     } else {
       logger.message(agentResponse.response || query);
@@ -120,8 +122,8 @@ export async function queryCommand(
         Logger.agent(agentResponse.response);
         logger.message(agentResponse.response);
       }
+      logger.stop('Done processing');
     }
-    logger.stop('Done thinking');
 
     // WHILE
     while (actions?.length) {
@@ -176,15 +178,14 @@ export async function queryCommand(
       toolOutputs.splice(0, toolOutputs.length);
 
       // Streaming mode
-      if (submitReponse && isStreamingContext(stream, submitReponse)) {
-        Logger.debug('Streaming mode');
-        actions = await processStreamedResponse(submitReponse);
-        if (!actions?.length) {
-          // Get final answer
-          const status = await getAgentStatus(agentManager.id);
-          if (status?.answer) {
-            Logger.agent(status.answer);
-          }
+      if (isStreamingContext(stream, submitReponse)) {
+        const res = await processStreamedResponse(submitReponse, logger);
+        if (res.actions.length) {
+          actions = res.actions;
+        }
+        logger.stop('Job reviewed');
+        if (res.message) {
+          Logger.agent(res.message);
         }
       } else if (submitReponse) {
         Logger.debug('Standard mode');
@@ -193,9 +194,10 @@ export async function queryCommand(
         if (statusResponse?.actions?.length) {
           actions = statusResponse.actions;
         }
+        logger.stop('Job reviewed');
       }
-      logger.stop('Job reviewed');
     }
+    // WHILE END
   } catch (e) {
     if (isDebug) {
       if (axios.isAxiosError(e)) {
