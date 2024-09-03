@@ -27,6 +27,7 @@ export async function processStreamedResponse(
       chunks = [];
     } catch (e) {
       // Logger.debug('Error parsing stream content:', e);
+      // TODO: test this in staging environment
       // Chunks might come in multiple parts
       chunks.push(chunk);
       Logger.debug(
