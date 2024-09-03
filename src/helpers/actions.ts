@@ -9,6 +9,7 @@ import { UpdateInstruction } from '../utils/types';
 import { FileUpdater } from '../utils/fileUpdater';
 
 import { getIgnoredFiles } from './workspace';
+import { modifyCodeSections } from '../utils/sectionUpdate';
 
 /**
  * Directory to store logs
@@ -77,6 +78,36 @@ export function update_file({
     \`\`\``;
 
   fs.writeFileSync(path, fileContent);
+
+  return `
+    File updated: ${path}
+    ${content}`;
+}
+
+export function update_sections({
+  sectionsDiff,
+  path,
+}: {
+  path: string;
+  answer: string;
+  sectionsDiff: string[];
+}) {
+  Logger.debug('Updating sections:', sectionsDiff);
+  const fileContent = fs.readFileSync(path, 'utf8');
+
+  const newContent = modifyCodeSections({
+    originalContent: fileContent,
+    diffSections: sectionsDiff,
+  });
+
+  const content = isIgnoredFile(path)
+    ? ''
+    : `New file Content :
+    \`\`\`
+    ${newContent}
+    \`\`\``;
+
+  fs.writeFileSync(path, newContent);
 
   return `
     File updated: ${path}

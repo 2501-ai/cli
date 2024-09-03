@@ -7,6 +7,7 @@ import {
   read_file,
   run_shell,
   update_file,
+  update_sections,
   write_file,
 } from '../helpers/actions';
 
@@ -23,6 +24,7 @@ export const ACTION_FNS = {
   run_shell,
   write_file,
   update_file,
+  update_sections,
 };
 
 export type AgentCallbackType = (...args: unknown[]) => Promise<void>;

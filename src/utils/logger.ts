@@ -36,6 +36,10 @@ export default class Logger {
     p.outro(message);
   }
 
+  cancel(message: string) {
+    p.cancel(message);
+  }
+
   start(message?: string) {
     this.spin.start(message);
   }
