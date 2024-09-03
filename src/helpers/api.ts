@@ -25,6 +25,9 @@ export type QueryResponseDTO = {
   prompt?: string;
 };
 
+const FIVE_MINUTES_MILLIS = 5 * 60 * 1000;
+const TEN_MINUTES_MILLIS = 10 * 60 * 1000;
+
 /**
  * Query the agent
  */
@@ -39,7 +42,7 @@ export const queryAgent = async (
     { query, changed, stream },
     {
       responseType: stream ? 'stream' : 'json',
-      timeout: 5 * 60 * 1000,
+      timeout: stream ? TEN_MINUTES_MILLIS : FIVE_MINUTES_MILLIS,
     }
   );
 
@@ -75,6 +78,7 @@ export const submitToolOutputs = async (
       stream,
     },
     {
+      timeout: stream ? TEN_MINUTES_MILLIS : FIVE_MINUTES_MILLIS,
       responseType: stream ? 'stream' : 'json',
     }
   );
