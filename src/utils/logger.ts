@@ -49,8 +49,9 @@ export default class Logger {
   }
 
   static agent(data: any) {
-    terminal.bold('\nAGENT:\n');
-    terminal(marked.parse(data) + '\n');
+    p.outro(marked.parse(data) as string);
+    // terminal.bold('\nAGENT:\n');
+    // terminal(marked.parse(data) + '\n');
   }
 
   static log(...args: unknown[]) {
