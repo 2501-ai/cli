@@ -50,13 +50,17 @@ export const queryAgent = async (
 };
 
 export const getAgentStatus = async (
-  agentId: string
+  agentId: string,
+  engine: string
 ): Promise<{
   status: QueryStatus;
   answer?: string;
   error?: string;
   actions?: FunctionAction[];
-}> => {
+} | null> => {
+  if (!engine.includes('openai')) {
+    return null;
+  }
   const { data } = await axios.get(
     `${API_HOST}${API_VERSION}/agents/${agentId}/status`
   );

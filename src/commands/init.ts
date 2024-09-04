@@ -110,12 +110,12 @@ export async function initCommand(options?: InitCommandOptions) {
   try {
     logger.intro('>>> Initializing Agent');
 
-    logger.start('Syncing workspace');
+    logger.start('Synchronizing workspace');
     const configId = options?.config || 'CODING_AGENT';
     const workspacePath = await createWorkspace(options);
     const workspaceResponse = await syncWorkspaceFiles(workspacePath);
     const selectedConfig = await initConfiguration(configId);
-    logger.stop('Workspace synced');
+    logger.stop('Workspace synchronized');
 
     logger.start('Creating agent');
     const agent = await initAgent(

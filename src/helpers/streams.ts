@@ -2,12 +2,50 @@ import { FunctionAction } from './api';
 import Logger from '../utils/logger';
 import { StreamEvent } from '../utils/types';
 
+/**
+ * Parse the chunks of messages from the agent response,
+ * and return the parsed messages and the remaining content
+ */
+function parseChunkedMessages<T>(input: string): {
+  parsed: T[];
+  remaining: string;
+} {
+  const result: T[] = [];
+  const stack: string[] = [];
+  let startIndex = 0;
+  let lastParsedIndex = 0;
+
+  for (let i = 0; i < input.length; i++) {
+    if (input[i] === '{') {
+      if (stack.length === 0) {
+        startIndex = i;
+      }
+      stack.push('{');
+    } else if (input[i] === '}') {
+      stack.pop();
+      if (stack.length === 0) {
+        const chunk = input.slice(startIndex, i + 1);
+        try {
+          result.push(JSON.parse(chunk));
+          lastParsedIndex = i + 1;
+        } catch {
+          // Handle parsing error if necessary
+        }
+      }
+    }
+  }
+
+  const remaining = input.slice(lastParsedIndex);
+  return { parsed: result, remaining };
+}
+
 export async function processStreamedResponse(
   agentResponse: AsyncIterable<Buffer>,
   logger: Logger
 ) {
   const actions: FunctionAction[] = [];
   let message = '';
+
   let chunks: Buffer[] = [];
 
   for await (const chunk of agentResponse) {
@@ -19,22 +57,24 @@ export async function processStreamedResponse(
       content = Buffer.from(chunk).toString('utf8');
     }
 
-    Logger.debug('Content:', content);
-
-    let streamEvent: StreamEvent;
+    let streamEvents: StreamEvent[];
     try {
-      streamEvent = JSON.parse(content);
+      streamEvents = [JSON.parse(content)];
       chunks = [];
     } catch (e) {
+      // TODO: test this in staging environment !!!!!!!!!!!!!!!!
       // Logger.debug('Error parsing stream content:', e);
-      // TODO: test this in staging environment
       // Chunks might come in multiple parts
-      chunks.push(chunk);
-      Logger.debug(
-        'Total Chunk content:',
-        Buffer.concat(chunks).toString('utf8')
-      );
-      continue;
+      const toParse = chunks.join('') + content;
+      const { parsed, remaining } = parseChunkedMessages<StreamEvent>(toParse);
+
+      if (remaining) {
+        Logger.debug('Remaining:', remaining);
+        chunks = [Buffer.from(remaining)];
+      } else {
+        chunks = [];
+      }
+      streamEvents = parsed;
     }
 
     // @todo maybe reactivate after tests
@@ -70,18 +110,29 @@ export async function processStreamedResponse(
     //   }
     // });
     // }
+    streamEvents.forEach((streamEvent) => {
+      // Logger.debug('StreamEvent', streamEvent);
+      switch (streamEvent.status) {
+        case 'requires_action':
+          message = '';
+          actions.push(...(streamEvent.actions ?? []));
+          logger.message(streamEvent.message);
+          break;
+        case 'message':
+          message = streamEvent.message;
+          break;
+        case 'chunked_message':
+          message += streamEvent.message;
 
-    switch (streamEvent.status) {
-      case 'requires_action':
-        actions.push(...(streamEvent.actions ?? []));
-        logger.message(streamEvent.message);
-        break;
-      case 'message':
-        message = streamEvent.message;
-        break;
-      default:
-        logger.message(streamEvent.message);
-    }
+          // TODO: this displays the live stream but it's broken with clack.. Displaying on multiple lines will break...
+          // if (message) {
+          //   logger.message(message);
+          // }
+          break;
+        default:
+          logger.message(streamEvent.message);
+      }
+    });
   }
 
   // Logger.debug('Actions:', actions);

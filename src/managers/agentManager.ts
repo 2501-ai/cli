@@ -55,7 +55,10 @@ export class AgentManager {
     answer?: string;
   }> {
     try {
-      const data = await getAgentStatus(this.id);
+      const data = await getAgentStatus(this.id, this.engine);
+      if (!data) {
+        return;
+      }
 
       Logger.debug('Check status', data.status);
       if (data.answer) {

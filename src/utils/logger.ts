@@ -37,6 +37,7 @@ export default class Logger {
   }
 
   cancel(message: string) {
+    this.spin.stop();
     p.cancel(message);
   }
 

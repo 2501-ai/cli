@@ -73,13 +73,16 @@ export async function queryCommand(
       );
     }
 
-    logger.stop('Workspace initialized');
+    logger.stop('Workspace synchronised');
 
     // Pre-check agent status
-    const statusReponse = await getAgentStatus(agentManager.id);
+    const statusReponse = await getAgentStatus(
+      agentManager.id,
+      agentManager.engine
+    );
     if (
-      statusReponse.status === 'in_progress' ||
-      statusReponse.status === 'requires_action'
+      statusReponse?.status === 'in_progress' ||
+      statusReponse?.status === 'requires_action'
     ) {
       Logger.debug('Agent status:', statusReponse.status);
       logger.start('Cancelling previous task');
@@ -98,6 +101,7 @@ export async function queryCommand(
 
     let actions: FunctionAction[] = [];
     const isStream = isStreamingContext(stream, agentResponse);
+
     if (isStream) {
       const res = await processStreamedResponse(agentResponse, logger);
       logger.stop('Done processing');
@@ -122,6 +126,7 @@ export async function queryCommand(
         Logger.agent(agentResponse.response);
         logger.message(agentResponse.response);
       }
+
       logger.stop('Done processing');
     }
 

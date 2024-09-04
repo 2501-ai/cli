@@ -38,6 +38,7 @@ export type StreamEventStatus =
   | 'completed'
   | 'in_progress'
   | 'message'
+  | 'chunked_message'
   | 'failed'
   | 'requires_action';
 
