@@ -55,7 +55,7 @@ export class AgentManager {
     answer?: string;
   }> {
     try {
-      const data = await getAgentStatus(this.id, this.engine);
+      const data = await getAgentStatus(this.id);
       if (!data) {
         return;
       }
@@ -199,7 +199,7 @@ export class AgentManager {
       }
       return {
         tool_call_id: call.id,
-        output: `I failed to run ${function_name}, please fix the situation or files. Feel free to explore the files again if necessary.
+        output: `I failed to run ${function_name}, please fix the situation or files. Feel free to explore the files again (excluding ignored files) if necessary.
         Error message :
         \`\`\`
         ${e.message}

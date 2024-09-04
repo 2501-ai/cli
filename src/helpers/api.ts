@@ -18,8 +18,11 @@ export type FunctionAction = {
   args: any;
 };
 
+export type EngineCapability = 'submit_output_stream' | 'asynchronous';
+
 export type QueryResponseDTO = {
   asynchronous: boolean;
+  capabilities: EngineCapability[]; // async, stream, submit_output
   response?: string;
   actions?: FunctionAction[];
   prompt?: string;
@@ -50,17 +53,13 @@ export const queryAgent = async (
 };
 
 export const getAgentStatus = async (
-  agentId: string,
-  engine: string
+  agentId: string
 ): Promise<{
   status: QueryStatus;
   answer?: string;
   error?: string;
   actions?: FunctionAction[];
 } | null> => {
-  if (!engine.includes('openai')) {
-    return null;
-  }
   const { data } = await axios.get(
     `${API_HOST}${API_VERSION}/agents/${agentId}/status`
   );

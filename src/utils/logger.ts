@@ -17,11 +17,33 @@ enum Colors {
 }
 
 const stringify = (args: any[]) => {
+  const seen = new WeakSet();
+
+  // Method to safely stringify objects, avoiding circular references
+  const safeStringify = (obj: any) => {
+    return JSON.stringify(
+      obj,
+      (key, value) => {
+        if (key.startsWith('_')) {
+          return undefined;
+        }
+        if (typeof value === 'object' && value !== null) {
+          if (seen.has(value)) {
+            return '[Circular]';
+          }
+          seen.add(value);
+        }
+        return value;
+      },
+      2
+    );
+  };
+
   return args.map((a) => {
     if (a instanceof Error) {
       return `${a.message}\n${a.stack}\n`;
     }
-    return `${typeof a === 'object' ? JSON.stringify(a, null, 2) : a}` + '\n';
+    return `${typeof a === 'object' ? safeStringify(a) : a}` + '\n';
   });
 };
 

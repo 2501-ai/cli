@@ -141,7 +141,10 @@ export async function run_shell(args: {
 
     return output;
   } catch (error) {
-    return `${ERROR_BOL} I failed to run ${args.command}, please fix the situation, errors below.\n ${(error as Error).message} \n ${error}`;
+    return `${ERROR_BOL} I failed to run ${args.command}, please fix the situation, errors below.\n ${(error as Error).message}
+     \`\`\`
+     ${error}
+     \`\`\``;
   }
 }
 export const ERROR_BOL = `ERROR :`; // beginning of line

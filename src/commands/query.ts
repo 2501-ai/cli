@@ -14,6 +14,7 @@ import {
   FunctionAction,
   getAgentStatus,
   queryAgent,
+  QueryResponseDTO,
   submitToolOutputs,
 } from '../helpers/api';
 import {
@@ -76,18 +77,17 @@ export async function queryCommand(
     logger.stop('Workspace synchronised');
 
     // Pre-check agent status
-    const statusReponse = await getAgentStatus(
-      agentManager.id,
-      agentManager.engine
-    );
-    if (
-      statusReponse?.status === 'in_progress' ||
-      statusReponse?.status === 'requires_action'
-    ) {
-      Logger.debug('Agent status:', statusReponse.status);
-      logger.start('Cancelling previous task');
-      await cancelQuery(agentManager.id);
-      logger.stop('Previous task cancelled');
+    if (agentManager.engine.includes('openai')) {
+      const statusReponse = await getAgentStatus(agentManager.id);
+      if (
+        statusReponse?.status === 'in_progress' ||
+        statusReponse?.status === 'requires_action'
+      ) {
+        Logger.debug('Agent status:', statusReponse.status);
+        logger.start('Cancelling previous task');
+        await cancelQuery(agentManager.id);
+        logger.stop('Previous task cancelled');
+      }
     }
 
     logger.start('Thinking');
@@ -100,9 +100,8 @@ export async function queryCommand(
     );
 
     let actions: FunctionAction[] = [];
-    const isStream = isStreamingContext(stream, agentResponse);
 
-    if (isStream) {
+    if (isStreamingContext(stream, agentResponse)) {
       const res = await processStreamedResponse(agentResponse, logger);
       logger.stop('Done processing');
       if (res.actions.length) {
@@ -158,18 +157,21 @@ export async function queryCommand(
         toolOutputs.push(toolOutput);
         logger.stop(taskTitle);
       }
+
       actions = [];
 
       logger.start('Reviewing the job');
-      if (!isStream && !agentResponse.asynchronous && toolOutputs?.length) {
-        const query = `
-          Find below the output of the actions in the task context, if you're done on the main task and its related subtasks, you can stop and wait for my next instructions.
-          Output :
-          ${toolOutputs?.map((o: { output: string }) => o.output).join('\n')}`;
+      // if (!agentManager.engine.includes('openai') && toolOutputs?.length) {
+      //   const query = `
+      //     Find below the output of the actions in the task context, if you're done on the main task and its related subtasks, you can stop and wait for my next instructions.
+      //     Output :
+      //     ${toolOutputs?.map((o: { output: string }) => o.output).join('\n')}`;
+      //
+      //   await queryCommand(query, options);
+      //   return;
+      // }
 
-        await queryCommand(query, options);
-      }
-
+      // For now only openai engine supports this
       let submitReponse;
       if (toolOutputs?.length) {
         submitReponse = await submitToolOutputs(
@@ -194,10 +196,14 @@ export async function queryCommand(
         }
       } else if (submitReponse) {
         Logger.debug('Standard mode');
-        // Standard status polling mode
-        const statusResponse = await agentManager.checkStatus();
-        if (statusResponse?.actions?.length) {
-          actions = statusResponse.actions;
+
+        if ((agentResponse as QueryResponseDTO).asynchronous) {
+          // Standard status polling mode
+          const statusResponse = await agentManager.checkStatus();
+          if (statusResponse?.actions?.length) {
+            actions = statusResponse.actions;
+          }
+        } else {
         }
         logger.stop('Job reviewed');
       }

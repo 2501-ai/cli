@@ -69,7 +69,7 @@ export async function processStreamedResponse(
       const { parsed, remaining } = parseChunkedMessages<StreamEvent>(toParse);
 
       if (remaining) {
-        Logger.debug('Remaining:', remaining);
+        // Logger.debug('Remaining:', remaining);
         chunks = [Buffer.from(remaining)];
       } else {
         chunks = [];
