@@ -4,7 +4,7 @@ setlocal enabledelayedexpansion
 REM Set Node.js version
 set NODE_VERSION=20.0.0
 
-echo -----2501 AI Autonomous Systems INSTALLER------- 
+echo -----2501 AI Autonomous Systems INSTALLER-------
 
 REM Install fnm (Fast Node Manager)
 echo Installing fnm...
@@ -37,7 +37,7 @@ if %errorlevel% neq 0 (
 
 REM Install @2501-ai/2501-cli globally
 echo Installing @2501-ai/2501-cli...
-call npm install -g @2501-ai/2501-cli
+call npm install -g @2501-ai/cli
 
 REM Verify @2501-ai/2501-cli installation
 echo Verifying @2501-ai/2501-cli installation...
