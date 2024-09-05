@@ -137,6 +137,8 @@ export async function queryCommand(
       logger.stop('Done processing');
     }
 
+    let finalResponse = '';
+
     // WHILE
     while (actions?.length) {
       const toolOutputs: any[] = [];
@@ -201,6 +203,7 @@ export async function queryCommand(
         logger.stop();
         if (res.message) {
           Logger.agent(res.message);
+          finalResponse = res.message;
         }
       } else if (submitReponse) {
         Logger.debug('Standard mode');
@@ -216,6 +219,9 @@ export async function queryCommand(
       }
     }
     // WHILE END
+    if (options.callback) {
+      await options.callback(finalResponse);
+    }
   } catch (e) {
     if (isDebug) {
       if (axios.isAxiosError(e)) {
