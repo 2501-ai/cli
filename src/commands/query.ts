@@ -21,12 +21,29 @@ import {
   processStreamedResponse,
   isStreamingContext,
 } from '../helpers/streams';
-import { synchroniseWorkspaceChanges } from '../helpers/workspace';
+import {
+  getWorkspaceChanges,
+  synchroniseWorkspaceChanges,
+} from '../helpers/workspace';
 
 import { initCommand } from './init';
 
 marked.use(markedTerminal() as MarkedExtension);
 const isDebug = process.env.DEBUG === 'true';
+
+async function initializeAgentConfig(workspace: string, skipWarmup: boolean) {
+  let eligible = getEligibleAgents(workspace);
+  if (!eligible && !skipWarmup) {
+    await initCommand({ workspace });
+  }
+
+  eligible = getEligibleAgents(workspace);
+  if (!eligible) {
+    throw new Error('No eligible agents found after init');
+  }
+
+  return eligible;
+}
 
 // Function to execute the query command
 export async function queryCommand(
@@ -48,16 +65,7 @@ export async function queryCommand(
 
     const logger = new Logger();
 
-    let eligible = getEligibleAgents(workspace);
-    logger.start('Initializing workspace');
-    if (!eligible && !skipWarmup) {
-      await initCommand({ workspace });
-    }
-
-    eligible = getEligibleAgents(workspace);
-    if (!eligible) {
-      throw new Error('No eligible agents found after init');
-    }
+    const eligible = await initializeAgentConfig(workspace, skipWarmup);
 
     const agentManager = new AgentManager({
       id: eligible.id,
@@ -68,14 +76,14 @@ export async function queryCommand(
 
     let changedWorkspace = false;
     if (eligible && !skipWarmup) {
-      changedWorkspace = await synchroniseWorkspaceChanges(
-        eligible.id,
-        workspace
-      );
+      const workspaceDiff = await getWorkspaceChanges(workspace);
+      changedWorkspace = workspaceDiff.hasChanges;
+      if (workspaceDiff.hasChanges) {
+        logger.start('Synchronizing workspace');
+        await synchroniseWorkspaceChanges(eligible.id, workspace);
+        logger.stop('Workspace synchronized');
+      }
     }
-
-    logger.stop('Workspace synchronised');
-
     // Pre-check agent status
     if (agentManager.engine.includes('openai')) {
       const statusReponse = await getAgentStatus(agentManager.id);
@@ -190,7 +198,7 @@ export async function queryCommand(
         if (res.actions.length) {
           actions = res.actions;
         }
-        logger.stop('Job reviewed');
+        logger.stop();
         if (res.message) {
           Logger.agent(res.message);
         }
@@ -203,7 +211,6 @@ export async function queryCommand(
           if (statusResponse?.actions?.length) {
             actions = statusResponse.actions;
           }
-        } else {
         }
         logger.stop('Job reviewed');
       }
@@ -227,7 +234,7 @@ export async function queryCommand(
         Logger.error('Command error', e);
       }
     } else {
-      Logger.error('Something bad happened 🥲');
+      Logger.error("Unexpected error. We're working on it!");
     }
     process.exit(1);
   }

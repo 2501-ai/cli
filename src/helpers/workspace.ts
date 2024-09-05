@@ -393,24 +393,18 @@ export async function synchroniseWorkspaceChanges(
   agentId: string,
   workspace: string
 ) {
-  const workspaceDiff = await getWorkspaceChanges(workspace);
-  if (workspaceDiff.hasChanges) {
-    Logger.debug('Agent : Workspace has changes, synchronizing...');
-    await syncWorkspaceState(workspace);
-    // TODO: improve and send only changed files ?
-    const workspaceResponse = await syncWorkspaceFiles(workspace);
-    if (
-      workspaceResponse?.vectorStoredFiles &&
-      workspaceResponse?.vectorStoredFiles.length
-    ) {
-      await indexWorkspaceFiles(
-        agentId,
-        workspaceResponse.files,
-        workspaceResponse.vectorStoredFiles
-      );
-    }
-  } else {
-    Logger.debug('Agent : Workspace has no changes.');
+  Logger.debug('Agent : Workspace has changes, synchronizing...');
+  await syncWorkspaceState(workspace);
+  // TODO: improve and send only changed files ?
+  const workspaceResponse = await syncWorkspaceFiles(workspace);
+  if (
+    workspaceResponse?.vectorStoredFiles &&
+    workspaceResponse?.vectorStoredFiles.length
+  ) {
+    await indexWorkspaceFiles(
+      agentId,
+      workspaceResponse.files,
+      workspaceResponse.vectorStoredFiles
+    );
   }
-  return workspaceDiff.hasChanges;
 }
