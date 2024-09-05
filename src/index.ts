@@ -36,7 +36,9 @@ program
     }
     // @TODO : implement options support.
     authMiddleware();
-    await queryCommand(query, { stream: !options.includes('--stream=false') });
+    await queryCommand(query, {
+      stream: options.stream,
+    });
   });
 
 // Config command

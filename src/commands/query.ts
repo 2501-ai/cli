@@ -5,7 +5,7 @@ import { jsonrepair } from 'jsonrepair';
 
 import { AgentManager } from '../managers/agentManager';
 
-import { getEligibleAgents } from '../utils/conf';
+import { getEligibleAgents, readConfig } from '../utils/conf';
 import { convertFormToJSON } from '../utils/json';
 import Logger from '../utils/logger';
 
@@ -59,9 +59,10 @@ export async function queryCommand(
 ) {
   Logger.debug('Options:', options);
   try {
+    const config = readConfig();
     const workspace = !options.workspace ? process.cwd() : options.workspace;
     const skipWarmup = !!options.skipWarmup;
-    const stream = !!options.stream;
+    const stream = options.stream ?? config?.stream ?? true;
 
     const logger = new Logger();
 
@@ -213,6 +214,10 @@ export async function queryCommand(
           const statusResponse = await agentManager.checkStatus();
           if (statusResponse?.actions?.length) {
             actions = statusResponse.actions;
+          }
+          if (statusResponse?.answer) {
+            Logger.agent(statusResponse?.answer);
+            finalResponse = statusResponse?.answer;
           }
         }
         logger.stop('Job reviewed');

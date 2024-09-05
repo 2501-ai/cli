@@ -16,6 +16,7 @@ export type Config = {
   workspace_disabled: boolean;
   api_key?: string;
   engine?: string;
+  stream?: boolean;
   agents: AgentConfig[];
 };
 
@@ -35,7 +36,12 @@ export function readConfig(): Config | null {
       fs.mkdirSync(path.dirname(CONFIG_FILE_PATH), { recursive: true });
       fs.writeFileSync(
         CONFIG_FILE_PATH,
-        JSON.stringify({ workspace_disabled: false, agents: [] }, null, 2),
+        // TODO: set the stream to true
+        JSON.stringify(
+          { workspace_disabled: false, agents: [], stream: false },
+          null,
+          2
+        ),
         'utf8'
       );
     }

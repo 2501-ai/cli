@@ -6,7 +6,7 @@ export function setCommand() {
   if (!config) return;
 
   const key = process.argv[3];
-  const value = process.argv[4];
+  let value = process.argv[4];
 
   if (!key) {
     Logger.error('Please provide a key to set.');
@@ -16,6 +16,10 @@ export function setCommand() {
   if (!value) {
     Logger.error('Please provide a value to set.');
     return;
+  }
+
+  if (key === 'stream') {
+    value = JSON.parse(value);
   }
 
   setValue(key as keyof Config, value);
