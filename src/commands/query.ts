@@ -4,11 +4,9 @@ import axios, { AxiosError } from 'axios';
 import { jsonrepair } from 'jsonrepair';
 
 import { AgentManager } from '../managers/agentManager';
-
 import { getEligibleAgents, readConfig } from '../utils/conf';
 import { convertFormToJSON } from '../utils/json';
 import Logger from '../utils/logger';
-
 import {
   cancelQuery,
   FunctionAction,
@@ -109,18 +107,17 @@ export async function queryCommand(
     );
 
     let actions: FunctionAction[] = [];
-
+    let queryResponse = '';
     if (isStreamingContext(stream, agentResponse)) {
       const res = await processStreamedResponse(agentResponse, logger);
-      logger.stop('Done processing');
+
       if (res.actions.length) {
         actions = res.actions;
       }
       if (res.message) {
-        Logger.agent(res.message);
+        queryResponse = res.message;
       }
     } else {
-      logger.message(agentResponse.response || query);
       Logger.debug('Agent response:', agentResponse);
 
       if (agentResponse.asynchronous) {
@@ -131,12 +128,11 @@ export async function queryCommand(
       }
 
       if (agentResponse.response) {
-        Logger.agent(agentResponse.response);
-        logger.message(agentResponse.response);
+        queryResponse = agentResponse.response;
       }
-
-      logger.stop('Done processing');
     }
+
+    logger.stop(queryResponse || 'Done processing');
 
     let finalResponse = '';
 
@@ -201,9 +197,7 @@ export async function queryCommand(
         if (res.actions.length) {
           actions = res.actions;
         }
-        logger.stop();
         if (res.message) {
-          Logger.agent(res.message);
           finalResponse = res.message;
         }
       } else if (submitReponse) {
@@ -220,8 +214,8 @@ export async function queryCommand(
             finalResponse = statusResponse?.answer;
           }
         }
-        logger.stop('Job reviewed');
       }
+      logger.stop(finalResponse);
     }
     // WHILE END
     if (options.callback) {

@@ -112,7 +112,7 @@ export async function processStreamedResponse(
     // });
     // }
     streamEvents.forEach((streamEvent) => {
-      // Logger.debug('StreamEvent', streamEvent);
+      Logger.debug('StreamEvent', streamEvent);
       switch (streamEvent.status) {
         case 'requires_action':
           message = '';
