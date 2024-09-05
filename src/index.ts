@@ -29,14 +29,14 @@ program
   )
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   .version(require('../package.json').version)
-  .on('command:*', async (args) => {
+  .on('command:*', async (args, options) => {
     const query = args?.join(' ');
     if (!query) {
       return;
     }
     // @TODO : implement options support.
     authMiddleware();
-    await queryCommand(query, { stream: false });
+    await queryCommand(query, { stream: !options.includes('--stream=false') });
   });
 
 // Config command
