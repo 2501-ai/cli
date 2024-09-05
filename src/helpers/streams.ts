@@ -1,6 +1,7 @@
 import { FunctionAction } from './api';
 import Logger from '../utils/logger';
 import { StreamEvent } from '../utils/types';
+import { CHUNK_MESSAGE_CLEAR } from '../utils/messaging';
 
 /**
  * Parse the chunks of messages from the agent response,
@@ -122,7 +123,12 @@ export async function processStreamedResponse(
           message = streamEvent.message;
           break;
         case 'chunked_message':
-          message += streamEvent.message;
+          // Clearing the buffer in case the Agent sends noise...
+          if (streamEvent.message.includes(CHUNK_MESSAGE_CLEAR)) {
+            message = streamEvent.message.replace(CHUNK_MESSAGE_CLEAR, '');
+          } else {
+            message += streamEvent.message;
+          }
 
           // TODO: this displays the live stream but it's broken with clack.. Displaying on multiple lines will break...
           // if (message) {
