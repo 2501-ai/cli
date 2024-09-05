@@ -35,15 +35,15 @@ if %errorlevel% neq 0 (
     goto :error
 )
 
-REM Install @2501-ai/2501-cli globally
-echo Installing @2501-ai/2501-cli...
+REM Install @2501-ai/cli globally
+echo Installing @2501-ai/cli...
 call npm install -g @2501-ai/cli
 
-REM Verify @2501-ai/2501-cli installation
-echo Verifying @2501-ai/2501-cli installation...
+REM Verify @2501-ai/cli installation
+echo Verifying @2501-ai/cli installation...
 call @2501 --version
 if %errorlevel% neq 0 (
-    echo @2501-ai/2501-cli installation failed.
+    echo @2501-ai/cli installation failed.
     goto :error
 )
 
