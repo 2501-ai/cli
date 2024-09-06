@@ -3,10 +3,15 @@ import axios from 'axios';
 import { API_HOST, API_VERSION, QueryStatus } from '../constants';
 import { readConfig } from '../utils/conf';
 
+// const ONE_MINUTES_MILLIS = 60 * 1000;
+const FIVE_MINUTES_MILLIS = 5 * 60 * 1000;
+const TEN_MINUTES_MILLIS = 10 * 60 * 1000;
+
 const config = readConfig();
 
 axios.defaults.headers.common['Authorization'] = `Bearer ${config?.api_key}`;
 axios.defaults.baseURL = `${API_HOST}${API_VERSION}`;
+axios.defaults.timeout = FIVE_MINUTES_MILLIS;
 
 export type FunctionAction = {
   id: string; // ex: "call_fPPBsOHeRJGmpcZQeT3wRVTK",
@@ -27,9 +32,6 @@ export type QueryResponseDTO = {
   actions?: FunctionAction[];
   prompt?: string;
 };
-
-const FIVE_MINUTES_MILLIS = 5 * 60 * 1000;
-const TEN_MINUTES_MILLIS = 10 * 60 * 1000;
 
 /**
  * Query the agent

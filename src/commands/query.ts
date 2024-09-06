@@ -219,7 +219,9 @@ export async function queryCommand(
           }
         }
       }
-      logger.stop(finalResponse);
+      if (finalResponse) {
+        logger.stop(finalResponse);
+      }
     }
     // WHILE END
     if (options.callback) {

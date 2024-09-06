@@ -48,6 +48,7 @@ const stringify = (args: any[]) => {
 };
 
 export default class Logger {
+  #spinnerStarted = false;
   constructor(public spin = p.spinner()) {}
 
   intro(message: string) {
@@ -64,7 +65,12 @@ export default class Logger {
   }
 
   start(message?: string) {
+    if (this.#spinnerStarted) {
+      this.spin.message(message);
+      return;
+    }
     this.spin.start(message);
+    this.#spinnerStarted = true;
   }
 
   message(message: string) {
@@ -72,7 +78,12 @@ export default class Logger {
   }
 
   stop(message?: string) {
+    if (!this.#spinnerStarted) {
+      this.spin.message(message);
+      return;
+    }
     this.spin.stop(message);
+    this.#spinnerStarted = false;
   }
 
   static agent(data: any) {
