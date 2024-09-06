@@ -7,7 +7,7 @@ export const API_VERSION = '/api/v1';
 export enum QueryStatus {
   // Engine Statuses:
   Idle = 'idle',
-  // openAI Statuses:
+  // Async Statuses:
   Queued = 'queued',
   InProgress = 'in_progress',
   RequiresAction = 'requires_action',
@@ -19,7 +19,7 @@ export enum QueryStatus {
   Expired = 'expired',
 }
 
-export const OPENAI_TERMINAL_STATUSES: QueryStatus[] = [
+export const ASYNC_TERMINAL_STATUSES: QueryStatus[] = [
   QueryStatus.Completed,
   QueryStatus.Failed,
   QueryStatus.Expired,

@@ -1,3 +1,5 @@
+import { EngineCapability } from '../helpers/api';
+
 /**
  * @property {string} path - workspace path
  * @property {string} state_hash - hash of the workspace state
@@ -46,4 +48,23 @@ export type StreamEvent = {
   status: StreamEventStatus | null;
   message: string;
   actions?: any[];
+};
+
+export type EngineType = 'rhino' | 'rabbit';
+
+export interface AgentConfig {
+  id: string;
+  name: string;
+  workspace: string;
+  engine: EngineType;
+  configuration: string;
+  capabilities: EngineCapability[];
+}
+
+export type Config = {
+  workspace_disabled: boolean;
+  api_key?: string;
+  engine?: EngineType;
+  stream?: boolean;
+  agents: AgentConfig[];
 };

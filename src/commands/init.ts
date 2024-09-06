@@ -49,7 +49,7 @@ async function initAgent(
   }
 ) {
   const config = readConfig();
-  const { data: agent } = await axios.post(
+  const { data: createResponse } = await axios.post(
     '/agents',
     {
       workspace,
@@ -64,16 +64,18 @@ async function initAgent(
       },
     }
   );
+  Logger.debug('Agent created:', createResponse);
 
   // Add agent to config.
   addAgent({
-    id: agent.id,
-    name: agent.name,
+    id: createResponse.id,
+    name: createResponse.name,
+    capabilities: createResponse.capabilities,
     workspace,
     configuration: selected_config.id,
     engine: config?.engine || DEFAULT_ENGINE,
   });
-  return agent;
+  return createResponse;
 }
 
 async function createWorkspace(options?: InitCommandOptions): Promise<string> {

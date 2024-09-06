@@ -23,7 +23,7 @@ export type FunctionAction = {
   args: any;
 };
 
-export type EngineCapability = 'submit_output_stream' | 'asynchronous';
+export type EngineCapability = 'stream' | 'async';
 
 export type QueryResponseDTO = {
   asynchronous: boolean;

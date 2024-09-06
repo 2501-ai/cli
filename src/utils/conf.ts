@@ -3,22 +3,7 @@ import os from 'os';
 import * as path from 'path';
 
 import Logger from '../utils/logger';
-
-export interface AgentConfig {
-  id: string;
-  name: string;
-  workspace: string;
-  engine: string;
-  configuration: string;
-}
-
-export type Config = {
-  workspace_disabled: boolean;
-  api_key?: string;
-  engine?: string;
-  stream?: boolean;
-  agents: AgentConfig[];
-};
+import { AgentConfig, Config } from './types';
 
 const CONFIG_FILE_PATH = path.join(
   path.join(os.homedir(), '.2501'),

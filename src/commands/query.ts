@@ -25,11 +25,15 @@ import {
 } from '../helpers/workspace';
 
 import { initCommand } from './init';
+import { AgentConfig } from '../utils/types';
 
 marked.use(markedTerminal() as MarkedExtension);
 const isDebug = process.env.DEBUG === 'true';
 
-async function initializeAgentConfig(workspace: string, skipWarmup: boolean) {
+async function initializeAgentConfig(
+  workspace: string,
+  skipWarmup: boolean
+): Promise<AgentConfig> {
   let eligible = getEligibleAgents(workspace);
   if (!eligible && !skipWarmup) {
     await initCommand({ workspace });
@@ -64,33 +68,34 @@ export async function queryCommand(
 
     const logger = new Logger();
 
-    const eligible = await initializeAgentConfig(workspace, skipWarmup);
+    const agentConfig = await initializeAgentConfig(workspace, skipWarmup);
 
     const agentManager = new AgentManager({
-      id: eligible.id,
-      name: eligible.name,
-      engine: eligible.engine,
+      id: agentConfig.id,
+      name: agentConfig.name,
+      engine: agentConfig.engine,
+      capabilities: agentConfig.capabilities,
       workspace,
     });
 
     let changedWorkspace = false;
-    if (eligible && !skipWarmup) {
+    if (agentConfig && !skipWarmup) {
       const workspaceDiff = await getWorkspaceChanges(workspace);
       changedWorkspace = workspaceDiff.hasChanges;
       if (workspaceDiff.hasChanges) {
         logger.start('Synchronizing workspace');
-        await synchroniseWorkspaceChanges(eligible.id, workspace);
+        await synchroniseWorkspaceChanges(agentConfig.id, workspace);
         logger.stop('Workspace synchronized');
       }
     }
     // Pre-check agent status
-    if (agentManager.engine.includes('openai')) {
+    if (agentManager.capabilities.includes('async')) {
       const statusReponse = await getAgentStatus(agentManager.id);
+      Logger.debug('Agent status:', statusReponse?.status);
       if (
         statusReponse?.status === 'in_progress' ||
         statusReponse?.status === 'requires_action'
       ) {
-        Logger.debug('Agent status:', statusReponse.status);
         logger.start('Cancelling previous task');
         await cancelQuery(agentManager.id);
         logger.stop('Previous task cancelled');
@@ -123,12 +128,17 @@ export async function queryCommand(
 
       if (agentResponse.asynchronous) {
         const status = await agentManager.checkStatus();
-        if (status?.actions) {
+        if (status?.actions.length) {
           actions = status.actions;
           queryResponse = 'Executing action plan';
         }
 
         queryResponse = queryResponse || status?.answer || '';
+      } else {
+        if (agentResponse.actions) {
+          actions = agentResponse.actions;
+          queryResponse = 'Executing action plan';
+        }
       }
 
       if (agentResponse.response) {
@@ -172,17 +182,7 @@ export async function queryCommand(
       actions = [];
 
       logger.start('Reviewing the job');
-      // if (!agentManager.engine.includes('openai') && toolOutputs?.length) {
-      //   const query = `
-      //     Find below the output of the actions in the task context, if you're done on the main task and its related subtasks, you can stop and wait for my next instructions.
-      //     Output :
-      //     ${toolOutputs?.map((o: { output: string }) => o.output).join('\n')}`;
-      //
-      //   await queryCommand(query, options);
-      //   return;
-      // }
 
-      // For now only openai engine supports this
       let submitReponse;
       if (toolOutputs?.length) {
         submitReponse = await submitToolOutputs(

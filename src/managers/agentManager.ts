@@ -1,6 +1,6 @@
 import axios from 'axios';
 import fs from 'fs';
-import { OPENAI_TERMINAL_STATUSES, QueryStatus } from '../constants';
+import { ASYNC_TERMINAL_STATUSES, QueryStatus } from '../constants';
 
 import {
   browse_url,
@@ -14,7 +14,12 @@ import {
 import Logger from '../utils/logger';
 import { readConfig } from '../utils/conf';
 
-import { FunctionAction, getAgentStatus } from '../helpers/api';
+import {
+  EngineCapability,
+  FunctionAction,
+  getAgentStatus,
+} from '../helpers/api';
+import { EngineType } from '../utils/types';
 
 const MAX_RETRY = 3;
 
@@ -32,22 +37,24 @@ export type AgentCallbackType = (...args: unknown[]) => Promise<void>;
 export class AgentManager {
   id: string;
   name: string;
-  engine: string;
+  engine: EngineType;
   workspace: string;
-
   errorRetries = 0;
+  capabilities: EngineCapability[];
 
   constructor(options: {
     id: string;
     name: string;
-    engine: string;
+    engine: EngineType;
     workspace: string;
     callback?: AgentCallbackType;
+    capabilities: EngineCapability[];
   }) {
     this.id = options.id;
     this.name = options.name;
     this.engine = options.engine;
     this.workspace = options.workspace;
+    this.capabilities = options.capabilities;
   }
 
   async checkStatus(): Promise<void | {
@@ -60,8 +67,6 @@ export class AgentManager {
         return;
       }
 
-      Logger.debug('Check status', data.status);
-
       if (data.status === QueryStatus.Completed) {
         return {
           answer: data.answer,
@@ -73,7 +78,7 @@ export class AgentManager {
         Logger.error('Query failed:', data.error);
       }
 
-      if (OPENAI_TERMINAL_STATUSES.includes(data.status)) {
+      if (ASYNC_TERMINAL_STATUSES.includes(data.status)) {
         Logger.debug('Unhandled status', data.status);
         Logger.debug('Data', data);
         Logger.log('TODO: Implement action required');

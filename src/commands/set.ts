@@ -1,5 +1,6 @@
-import { Config, readConfig, setValue } from '../utils/conf';
+import { readConfig, setValue } from '../utils/conf';
 import Logger from '../utils/logger';
+import { Config } from '../utils/types';
 
 export function setCommand() {
   const config = readConfig();
