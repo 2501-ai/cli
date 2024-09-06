@@ -113,6 +113,7 @@ export async function queryCommand(
 
       if (res.actions.length) {
         actions = res.actions;
+        queryResponse = 'Executing action plan';
       }
       if (res.message) {
         queryResponse = res.message;
@@ -124,7 +125,10 @@ export async function queryCommand(
         const status = await agentManager.checkStatus();
         if (status?.actions) {
           actions = status.actions;
+          queryResponse = 'Executing action plan';
         }
+
+        queryResponse = queryResponse || status?.answer || '';
       }
 
       if (agentResponse.response) {

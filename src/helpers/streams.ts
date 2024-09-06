@@ -50,13 +50,14 @@ export async function processStreamedResponse(
   let chunks: Buffer[] = [];
 
   for await (const chunk of agentResponse) {
-    let content: string;
+    let content = '';
     if (chunks.length > 0) {
       chunks.push(chunk);
       content = Buffer.concat(chunks).toString('utf8');
     } else {
       content = Buffer.from(chunk).toString('utf8');
     }
+    Logger.debug('Streamed data:', content);
 
     let streamEvents: StreamEvent[];
     try {
@@ -66,7 +67,7 @@ export async function processStreamedResponse(
       // TODO: test this in staging environment !!!!!!!!!!!!!!!!
       // Logger.debug('Error parsing stream content:', e);
       // Chunks might come in multiple parts
-      const toParse = chunks.join('') + content;
+      const toParse = chunks.map((b) => b.toString('utf-8')).join('') + content;
       const { parsed, remaining } = parseChunkedMessages<StreamEvent>(toParse);
 
       if (remaining) {
@@ -112,7 +113,7 @@ export async function processStreamedResponse(
     // });
     // }
     streamEvents.forEach((streamEvent) => {
-      Logger.debug('StreamEvent', streamEvent);
+      // Logger.debug('StreamEvent', streamEvent);
       switch (streamEvent.status) {
         case 'requires_action':
           message = '';
