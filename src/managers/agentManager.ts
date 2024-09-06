@@ -61,9 +61,6 @@ export class AgentManager {
       }
 
       Logger.debug('Check status', data.status);
-      if (data.answer) {
-        Logger.agent(data.answer);
-      }
 
       if (data.status === QueryStatus.Completed) {
         return {

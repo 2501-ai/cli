@@ -16,8 +16,8 @@ import {
   submitToolOutputs,
 } from '../helpers/api';
 import {
-  processStreamedResponse,
   isStreamingContext,
+  processStreamedResponse,
 } from '../helpers/streams';
 import {
   getWorkspaceChanges,
@@ -214,14 +214,16 @@ export async function queryCommand(
             actions = statusResponse.actions;
           }
           if (statusResponse?.answer) {
-            Logger.agent(statusResponse?.answer);
+            // Logger.agent(statusResponse?.answer);
             finalResponse = statusResponse?.answer;
           }
         }
       }
-      if (finalResponse) {
-        logger.stop(finalResponse);
-      }
+    }
+
+    if (finalResponse) {
+      logger.stop('Execution completed');
+      Logger.agent(finalResponse);
     }
     // WHILE END
     if (options.callback) {
