@@ -17,7 +17,7 @@ export type FunctionAction = {
   id: string; // ex: "call_fPPBsOHeRJGmpcZQeT3wRVTK",
   type: string; // ex: 'function'
   function: {
-    name: string; // ex: 'update_file_content';
+    name: string; // ex: 'update_file';
     arguments: any;
   };
   args: any;

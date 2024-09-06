@@ -5,8 +5,6 @@ import execa from 'execa';
 import * as cheerio from 'cheerio';
 
 import Logger from '../utils/logger';
-import { UpdateInstruction } from '../utils/types';
-import { FileUpdater } from '../utils/fileUpdater';
 
 import { getIgnoredFiles } from './workspace';
 import { modifyCodeSections } from '../utils/sectionUpdate';
@@ -50,41 +48,6 @@ export async function write_file(args: { path: string; content: string }) {
 }
 
 export function update_file({
-  path,
-  updates,
-  write = true,
-}: {
-  path: string;
-  updates: UpdateInstruction[];
-  write?: boolean;
-}): string {
-  Logger.debug(`Updating file at "${path}"`);
-  Logger.debug('Updates:', updates);
-
-  let fileContent = fs.readFileSync(path, 'utf8');
-
-  const updater = new FileUpdater(fileContent, updates);
-  fileContent = updater.execute();
-
-  if (!write) {
-    return fileContent;
-  }
-
-  const content = isIgnoredFile(path)
-    ? ''
-    : `New Content :
-    \`\`\`
-    ${fileContent}
-    \`\`\``;
-
-  fs.writeFileSync(path, fileContent);
-
-  return `
-    File updated: ${path}
-    ${content}`;
-}
-
-export function update_sections({
   sectionsDiff,
   path,
 }: {
