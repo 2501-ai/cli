@@ -47,6 +47,43 @@ async function initializeAgentConfig(
   return eligible;
 }
 
+async function executeActions(
+  actions: FunctionAction[],
+  logger: Logger,
+  agentManager: AgentManager,
+  toolOutputs: any[]
+) {
+  for (const action of actions) {
+    let args: any;
+
+    if (action.function.arguments) {
+      args = action.function.arguments;
+      if (typeof args === 'string') {
+        const standardArgs = args.replace(/`([\s\S]*?)`/g, (_, content) => {
+          const processedContent = content.replace(/\n/g, '\\n');
+          return `"${processedContent.replace(/"/g, '\\"')}"`;
+        });
+        const fixed_args = jsonrepair(standardArgs);
+        args = JSON.parse(convertFormToJSON(fixed_args));
+      }
+    } else {
+      args = action.args;
+    }
+
+    let taskTitle: string = args.answer || args.command || '';
+    if (args.url) {
+      taskTitle = 'Browsing: ' + args.url;
+    }
+
+    logger.start(taskTitle);
+    // subtask.output = taskTitle || action.function.arguments;
+    const toolOutput = await agentManager.executeAction(action, args);
+    Logger.debug('Tool output:', toolOutput);
+    toolOutputs.push(toolOutput);
+    logger.stop(taskTitle);
+  }
+}
+
 // Function to execute the query command
 export async function queryCommand(
   query: string,
@@ -153,36 +190,7 @@ export async function queryCommand(
     // WHILE
     while (actions?.length) {
       const toolOutputs: any[] = [];
-      for (const action of actions) {
-        let args: any;
-
-        if (action.function.arguments) {
-          args = action.function.arguments;
-          if (typeof args === 'string') {
-            const standardArgs = args.replace(/`([\s\S]*?)`/g, (_, content) => {
-              const processedContent = content.replace(/\n/g, '\\n');
-              return `"${processedContent.replace(/"/g, '\\"')}"`;
-            });
-            const fixed_args = jsonrepair(standardArgs);
-            args = JSON.parse(convertFormToJSON(fixed_args));
-          }
-        } else {
-          args = action.args;
-        }
-
-        let taskTitle: string = args.answer || args.command || '';
-        if (args.url) {
-          taskTitle = 'Browsing: ' + args.url;
-        }
-
-        logger.start(taskTitle);
-        // subtask.output = taskTitle || action.function.arguments;
-        const toolOutput = await agentManager.executeAction(action, args);
-        Logger.debug('Tool output:', toolOutput);
-        toolOutputs.push(toolOutput);
-        logger.stop(taskTitle);
-      }
-
+      await executeActions(actions, logger, agentManager, toolOutputs);
       actions = [];
 
       logger.start('Reviewing the job');
@@ -201,6 +209,7 @@ export async function queryCommand(
 
       // Streaming mode
       if (isStreamingContext(stream, submitReponse)) {
+        Logger.debug('Stream mode');
         const res = await processStreamedResponse(submitReponse, logger);
         if (res.actions.length) {
           actions = res.actions;
@@ -210,8 +219,12 @@ export async function queryCommand(
         }
       } else if (submitReponse) {
         Logger.debug('Standard mode');
-
-        if ((agentResponse as QueryResponseDTO).asynchronous) {
+        const {
+          actions: responseActions,
+          asynchronous,
+          response: responseAnswer,
+        } = submitReponse as QueryResponseDTO;
+        if (asynchronous) {
           // Standard status polling mode
           const statusResponse = await agentManager.checkStatus();
           if (statusResponse?.actions?.length) {
@@ -220,6 +233,15 @@ export async function queryCommand(
           if (statusResponse?.answer) {
             // Logger.agent(statusResponse?.answer);
             finalResponse = statusResponse?.answer;
+          }
+        } else {
+          Logger.debug('Sync mode submitReponse', submitReponse);
+          if (responseActions?.length) {
+            responseAnswer && logger.message(responseAnswer);
+            actions = responseActions;
+          }
+          if (responseAnswer) {
+            finalResponse = responseAnswer;
           }
         }
       }

@@ -57,6 +57,8 @@ export function update_file({
 }) {
   Logger.debug('Updating sections:', sectionsDiff);
   const fileContent = fs.readFileSync(path, 'utf8');
+  // const fileContent = rawFileContent.replace(/\r\n/g, '\n');
+  // Logger.debug('Raw file content identical: ' + rawFileContent === fileContent);
 
   const newContent = modifyCodeSections({
     originalContent: fileContent.replace(/\n/g, '\n'),
@@ -91,7 +93,7 @@ export async function run_shell(args: {
       env: args.env,
 
       preferLocal: true,
-      timeout: 1000 * 60 * 5,
+      timeout: 1000 * 60,
     });
 
     if (stdout) output += stdout;
