@@ -59,8 +59,8 @@ export function update_file({
   const fileContent = fs.readFileSync(path, 'utf8');
 
   const newContent = modifyCodeSections({
-    originalContent: fileContent,
-    diffSections: sectionsDiff,
+    originalContent: fileContent.replace(/\n/g, '\n'),
+    diffSections: sectionsDiff.map((diff) => diff.replace(/\n/g, '\n')),
   });
 
   const content = isIgnoredFile(path)

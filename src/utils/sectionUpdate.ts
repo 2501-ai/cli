@@ -10,7 +10,7 @@ export function modifyCodeSections({
   let modifiedContent = originalContent;
 
   diffSections.forEach((diffSection) => {
-    const [previousContent, , newContent] = diffSection
+    const [previousContent, newContent] = diffSection
       .split(/<<<<<|=====|>>>>>/)
       .map((part) => part.trim());
 

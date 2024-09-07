@@ -159,7 +159,11 @@ export async function queryCommand(
         if (action.function.arguments) {
           args = action.function.arguments;
           if (typeof args === 'string') {
-            const fixed_args = jsonrepair(args);
+            const standardArgs = args.replace(/`([\s\S]*?)`/g, (_, content) => {
+              const processedContent = content.replace(/\n/g, '\\n');
+              return `"${processedContent.replace(/"/g, '\\"')}"`;
+            });
+            const fixed_args = jsonrepair(standardArgs);
             args = JSON.parse(convertFormToJSON(fixed_args));
           }
         } else {
