@@ -56,7 +56,7 @@ function createPDFFromFiles(
           underline: true,
         })
         .moveDown(0.5);
-      if (isText(file)) {
+      if (isText(file) && fs.statSync(file).size < 1024 * 1024) {
         const fileContent = fs.readFileSync(
           path.join(targetFolder, file),
           'utf8'
@@ -69,7 +69,10 @@ function createPDFFromFiles(
             .moveDown(0.2);
         });
       } else {
-        doc.fontSize(10).text('Content omitted (not text file)').moveDown(0.5);
+        doc
+          .fontSize(10)
+          .text('Content omitted (not text file or too big)')
+          .moveDown(0.5);
       }
     });
 
