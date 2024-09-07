@@ -58,13 +58,17 @@ async function executeActions(
 
     if (action.function.arguments) {
       args = action.function.arguments;
+
+      // Logger.debug('Previous args: %s', args);
       if (typeof args === 'string') {
         const standardArgs = args.replace(/`([\s\S]*?)`/g, (_, content) => {
-          const processedContent = content.replace(/\n/g, '\\n');
+          const processedContent: string = content.replace(/\n/g, '\\n');
           return `"${processedContent.replace(/"/g, '\\"')}"`;
         });
+        // Logger.debug('Standard args:', standardArgs);
         const fixed_args = jsonrepair(standardArgs);
         args = JSON.parse(convertFormToJSON(fixed_args));
+        // Logger.debug('New args: %s', args);
       }
     } else {
       args = action.args;

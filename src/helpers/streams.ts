@@ -57,7 +57,7 @@ export async function processStreamedResponse(
     } else {
       content = Buffer.from(chunk).toString('utf8');
     }
-    Logger.debug('Streamed data:', content);
+    // Logger.debug('Streamed data:', content);
 
     let streamEvents: StreamEvent[];
     try {
