@@ -67,7 +67,7 @@ export async function processStreamedResponse(
       // TODO: test this in staging environment !!!!!!!!!!!!!!!!
       // Logger.debug('Error parsing stream content:', e);
       // Chunks might come in multiple parts
-      const toParse = chunks.map((b) => b.toString('utf-8')).join('') + content;
+      const toParse = chunks.map((b) => b.toString('utf-8')).join('');
       const { parsed, remaining } = parseChunkedMessages<StreamEvent>(toParse);
 
       if (remaining) {
