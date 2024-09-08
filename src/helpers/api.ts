@@ -16,10 +16,12 @@ axios.defaults.timeout = FIVE_MINUTES_MILLIS;
 export type FunctionAction = {
   id: string; // ex: "call_fPPBsOHeRJGmpcZQeT3wRVTK",
   type: string; // ex: 'function'
-  function: {
-    name: string; // ex: 'update_file';
-    arguments: any;
-  };
+  function:
+    | {
+        name: string; // ex: 'update_file';
+        arguments: any;
+      }
+    | string; // ex: 'update_file';
   args: any;
 };
 

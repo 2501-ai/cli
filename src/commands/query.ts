@@ -16,6 +16,7 @@ import {
   submitToolOutputs,
 } from '../helpers/api';
 import {
+  getSubActionMessage,
   isStreamingContext,
   processStreamedResponse,
 } from '../helpers/streams';
@@ -55,8 +56,10 @@ async function executeActions(
 ) {
   for (const action of actions) {
     let args: any;
+    Logger.debug('Action:', action);
 
-    if (action.function.arguments) {
+    // TODO: The action arguments needs a cleaner way to be parsed.
+    if (typeof action.function !== 'string') {
       args = action.function.arguments;
 
       // Logger.debug('Previous args: %s', args);
@@ -71,6 +74,7 @@ async function executeActions(
         // Logger.debug('New args: %s', args);
       }
     } else {
+      // This is usually for the run_shell command.
       args = action.args;
     }
 
@@ -84,7 +88,7 @@ async function executeActions(
     const toolOutput = await agentManager.executeAction(action, args);
     Logger.debug('Tool output:', toolOutput);
     toolOutputs.push(toolOutput);
-    logger.stop(taskTitle);
+    logger.stop(getSubActionMessage(taskTitle, action));
   }
 }
 

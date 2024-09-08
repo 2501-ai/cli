@@ -2,6 +2,7 @@ import { FunctionAction } from './api';
 import Logger from '../utils/logger';
 import { StreamEvent } from '../utils/types';
 import { CHUNK_MESSAGE_CLEAR } from '../utils/messaging';
+import chalk from 'chalk';
 
 /**
  * Parse the chunks of messages from the agent response,
@@ -11,6 +12,7 @@ function parseChunkedMessages<T>(input: string): {
   parsed: T[];
   remaining: string;
 } {
+  Logger.debug('Parsing chunked messages:', input);
   const result: T[] = [];
   const stack: string[] = [];
   let startIndex = 0;
@@ -40,6 +42,43 @@ function parseChunkedMessages<T>(input: string): {
   return { parsed: result, remaining };
 }
 
+function toItalic(text: string): string {
+  return chalk.italic.gray(text.trim());
+}
+
+export function getSubActionMessage(
+  message: string,
+  action: FunctionAction
+): string {
+  // @todo maybe reactivate after tests
+  let actionMsg = `${message} : \n   `;
+
+  switch (action.function) {
+    case 'read_file':
+      actionMsg += toItalic(`- Reading file: ${action.args.path}`);
+      break;
+    case 'write_file':
+      actionMsg += toItalic(`- Writing to file: ${action.args.path}`);
+      break;
+    case 'update_file':
+      actionMsg += toItalic(`- Updating file: ${action.args.path}`);
+      break;
+    case 'run_shell':
+      actionMsg += toItalic(`- Executing command: ${action.args.command}`);
+      break;
+    case 'browse_url':
+      actionMsg += toItalic(`- Browsing URL: ${action.args.url}`);
+      break;
+    default:
+      // TODO: find a better way to display the action. Right now it just adds the message indefinitely.
+      // actionMsg += toItalic(`  - ${JSON.stringify(action.function)}`);
+      actionMsg = message;
+  }
+
+  Logger.debug('SubActionMessage:', actionMsg);
+  return actionMsg.trim();
+}
+
 export async function processStreamedResponse(
   agentResponse: AsyncIterable<Buffer>,
   logger: Logger
@@ -47,17 +86,19 @@ export async function processStreamedResponse(
   const actions: FunctionAction[] = [];
   let message = '';
 
-  let chunks: Buffer[] = [];
+  let chunks: string[] = [];
 
   for await (const chunk of agentResponse) {
     let content = '';
+    //If there were previous chunks, we need to join them
+    chunks.push(chunk.toString('utf-8'));
+
     if (chunks.length > 0) {
-      chunks.push(chunk);
-      content = Buffer.concat(chunks).toString('utf8');
+      content = chunks.join('');
     } else {
       content = Buffer.from(chunk).toString('utf8');
     }
-    Logger.debug('Streamed data:', content);
+    // Logger.debug(`Streamed data [Chunks: ${chunks.length}]:`, content);
 
     let streamEvents: StreamEvent[];
     try {
@@ -67,51 +108,19 @@ export async function processStreamedResponse(
       // TODO: test this in staging environment !!!!!!!!!!!!!!!!
       // Logger.debug('Error parsing stream content:', e);
       // Chunks might come in multiple parts
-      const toParse = chunks.map((b) => b.toString('utf-8')).join('');
-      const { parsed, remaining } = parseChunkedMessages<StreamEvent>(toParse);
+      const { parsed, remaining } = parseChunkedMessages<StreamEvent>(content);
+
+      // Logger.debug('Parsed:', parsed);
 
       if (remaining) {
         Logger.debug('Remaining:', remaining);
-        chunks = [Buffer.from(remaining)];
+        chunks = [remaining];
       } else {
         chunks = [];
       }
       streamEvents = parsed;
     }
 
-    // @todo maybe reactivate after tests
-    // let actionMsg = 'Taking action(s) :';
-
-    // The action event can come in multiple chunks
-    // if (content.includes('thread.run.requires_action')) {
-    //   actionEventRaw += content;
-    // streamEvent.data.required_action.submit_tool_outputs.tool_calls;
-
-    // actions.forEach((action) => {
-    //   switch (action.function.name as keyof typeof ACTION_FNS) {
-    //     case 'read_file':
-    //       actionMsg += `\n  - Reading file: ${JSON.parse(action.function.arguments).path}`;
-    //       break;
-    //     case 'write_file':
-    //       actionMsg += `\n  - Writing to file: ${JSON.parse(action.function.arguments).path}`;
-    //       break;
-    //     // case 'apply_diff':
-    //     //   actionMsg += `\n  - Applying diff to file: ${JSON.parse(action.function.arguments).path}`;
-    //     //   break;
-    //     case 'update_file':
-    //       actionMsg += `\n  - Updating file: ${JSON.parse(action.function.arguments).path}`;
-    //       break;
-    //     case 'run_shell':
-    //       actionMsg += `\n  - Running shell command: ${JSON.parse(action.function.arguments).command}`;
-    //       break;
-    //     case 'browse_url':
-    //       actionMsg += `\n  - Browsing URL: ${action.args.url}`;
-    //       break;
-    //     default:
-    //       actionMsg += `\n- ${action.function.name}`;
-    //   }
-    // });
-    // }
     streamEvents.forEach((streamEvent) => {
       // Logger.debug('StreamEvent', streamEvent);
       switch (streamEvent.status) {
@@ -121,9 +130,11 @@ export async function processStreamedResponse(
           logger.message(streamEvent.message);
           break;
         case 'message':
+          message = streamEvent.message;
+          break;
         case 'completed':
         case 'failed':
-          message = streamEvent.message;
+          message = streamEvent.message || `Task ${streamEvent.status}`;
           break;
         case 'chunked_message':
           // Clearing the buffer in case the Agent sends noise...

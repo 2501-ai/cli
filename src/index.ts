@@ -9,6 +9,7 @@ import { setCommand } from './commands/set';
 import { jobSubscriptionCommand } from './commands/jobs';
 
 import { authMiddleware } from './middleware/auth';
+import Logger from './utils/logger';
 
 const program = new Command();
 
@@ -34,6 +35,7 @@ program
     if (!query) {
       return;
     }
+    Logger.debug('Options', options);
     // @TODO : implement options support.
     authMiddleware();
     await queryCommand(query, {

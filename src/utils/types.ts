@@ -1,4 +1,4 @@
-import { EngineCapability } from '../helpers/api';
+import { EngineCapability, FunctionAction } from '../helpers/api';
 
 /**
  * @property {string} path - workspace path
@@ -47,7 +47,7 @@ export type StreamEventStatus =
 export type StreamEvent = {
   status: StreamEventStatus | null;
   message: string;
-  actions?: any[];
+  actions?: FunctionAction[];
 };
 
 export type EngineType = 'rhino' | 'rabbit';
