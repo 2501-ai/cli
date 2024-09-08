@@ -250,12 +250,12 @@ export async function queryCommand(
         }
       }
     }
+    // WHILE END
 
     if (finalResponse) {
       logger.stop('Execution completed');
       Logger.agent(finalResponse);
     }
-    // WHILE END
     if (options.callback) {
       await options.callback(finalResponse);
     }

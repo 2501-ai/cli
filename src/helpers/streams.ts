@@ -57,7 +57,7 @@ export async function processStreamedResponse(
     } else {
       content = Buffer.from(chunk).toString('utf8');
     }
-    // Logger.debug('Streamed data:', content);
+    Logger.debug('Streamed data:', content);
 
     let streamEvents: StreamEvent[];
     try {
@@ -71,7 +71,7 @@ export async function processStreamedResponse(
       const { parsed, remaining } = parseChunkedMessages<StreamEvent>(toParse);
 
       if (remaining) {
-        // Logger.debug('Remaining:', remaining);
+        Logger.debug('Remaining:', remaining);
         chunks = [Buffer.from(remaining)];
       } else {
         chunks = [];
@@ -121,6 +121,8 @@ export async function processStreamedResponse(
           logger.message(streamEvent.message);
           break;
         case 'message':
+        case 'completed':
+        case 'failed':
           message = streamEvent.message;
           break;
         case 'chunked_message':
