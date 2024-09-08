@@ -117,7 +117,7 @@ export async function initCommand(options?: InitCommandOptions) {
     const workspacePath = await createWorkspace(options);
     const workspaceResponse = await syncWorkspaceFiles(workspacePath);
     const selectedConfig = await initConfiguration(configId);
-    logger.stop('Workspace synchronized');
+    logger.stop('Workspace created');
 
     logger.start('Creating agent');
     const agent = await initAgent(
