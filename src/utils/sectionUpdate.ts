@@ -10,10 +10,13 @@ export function modifyCodeSections({
   let modifiedContent = originalContent;
 
   diffSections.forEach((diffSection) => {
-    const [previousContent, newContent] = diffSection
-      .split(/<<<<<|=====|>>>>>/)
-      .map((part) => part.trim());
+    const [previousSection, newSection] = diffSection
+      .split(/=====/)
+      // .map((part) => part.trim())
+      .filter((c) => !!c);
 
+    const previousContent = previousSection.replace('<<<<<', '');
+    const newContent = newSection.replace('>>>>>', '');
     const startIdx = modifiedContent.indexOf(previousContent);
     if (startIdx === -1) {
       throw new Error('Previous content not found in the original content.');

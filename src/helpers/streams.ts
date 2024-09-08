@@ -3,6 +3,7 @@ import Logger from '../utils/logger';
 import { StreamEvent } from '../utils/types';
 import { CHUNK_MESSAGE_CLEAR } from '../utils/messaging';
 import chalk from 'chalk';
+import { getFunctionArgs, getFunctionName } from '../utils/actions';
 
 /**
  * Parse the chunks of messages from the agent response,
@@ -52,22 +53,26 @@ export function getSubActionMessage(
 ): string {
   // @todo maybe reactivate after tests
   let actionMsg = `${message} : \n   `;
+  const functionName = getFunctionName(action);
+  const args = getFunctionArgs(action);
 
-  switch (action.function) {
+  Logger.debug('Args', args);
+
+  switch (functionName) {
     case 'read_file':
-      actionMsg += toItalic(`- Reading file: ${action.args.path}`);
+      actionMsg += toItalic(`└ Reading file: ${args.path}`);
       break;
     case 'write_file':
-      actionMsg += toItalic(`- Writing to file: ${action.args.path}`);
+      actionMsg += toItalic(`└ Writing to file: ${args.path}`);
       break;
     case 'update_file':
-      actionMsg += toItalic(`- Updating file: ${action.args.path}`);
+      actionMsg += toItalic(`└ Updating file: ${args.path}`);
       break;
     case 'run_shell':
-      actionMsg += toItalic(`- Executing command: ${action.args.command}`);
+      actionMsg += toItalic(`└ Executing command: ${args.command}`);
       break;
     case 'browse_url':
-      actionMsg += toItalic(`- Browsing URL: ${action.args.url}`);
+      actionMsg += toItalic(`└ Browsing URL: ${args.url}`);
       break;
     default:
       // TODO: find a better way to display the action. Right now it just adds the message indefinitely.
@@ -75,7 +80,7 @@ export function getSubActionMessage(
       actionMsg = message;
   }
 
-  Logger.debug('SubActionMessage:', actionMsg);
+  // Logger.debug('SubActionMessage:', actionMsg);
   return actionMsg.trim();
 }
 

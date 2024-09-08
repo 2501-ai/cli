@@ -59,9 +59,10 @@ export default class Logger {
     p.outro(message);
   }
 
-  cancel(message: string) {
-    this.spin.stop();
+  cancel(message: string, stopMessage?: string) {
+    this.spin.stop(stopMessage);
     p.cancel(message);
+    this.#spinnerStarted = false;
   }
 
   start(message?: string) {

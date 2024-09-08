@@ -1,11 +1,9 @@
 import { marked, MarkedExtension } from 'marked';
 import { markedTerminal } from 'marked-terminal';
 import axios, { AxiosError } from 'axios';
-import { jsonrepair } from 'jsonrepair';
 
 import { AgentManager } from '../managers/agentManager';
 import { getEligibleAgents, readConfig } from '../utils/conf';
-import { convertFormToJSON } from '../utils/json';
 import Logger from '../utils/logger';
 import {
   cancelQuery,
@@ -27,6 +25,7 @@ import {
 
 import { initCommand } from './init';
 import { AgentConfig } from '../utils/types';
+import { getFunctionArgs } from '../utils/actions';
 
 marked.use(markedTerminal() as MarkedExtension);
 const isDebug = process.env.DEBUG === 'true';
@@ -55,28 +54,8 @@ async function executeActions(
   toolOutputs: any[]
 ) {
   for (const action of actions) {
-    let args: any;
     Logger.debug('Action:', action);
-
-    // TODO: The action arguments needs a cleaner way to be parsed.
-    if (typeof action.function !== 'string') {
-      args = action.function.arguments;
-
-      // Logger.debug('Previous args: %s', args);
-      if (typeof args === 'string') {
-        const standardArgs = args.replace(/`([\s\S]*?)`/g, (_, content) => {
-          const processedContent: string = content.replace(/\n/g, '\\n');
-          return `"${processedContent.replace(/"/g, '\\"')}"`;
-        });
-        // Logger.debug('Standard args:', standardArgs);
-        const fixed_args = jsonrepair(standardArgs);
-        args = JSON.parse(convertFormToJSON(fixed_args));
-        // Logger.debug('New args: %s', args);
-      }
-    } else {
-      // This is usually for the run_shell command.
-      args = action.args;
-    }
+    const args = getFunctionArgs(action);
 
     let taskTitle: string = args.answer || args.command || '';
     if (args.url) {
@@ -88,7 +67,12 @@ async function executeActions(
     const toolOutput = await agentManager.executeAction(action, args);
     Logger.debug('Tool output:', toolOutput);
     toolOutputs.push(toolOutput);
-    logger.stop(getSubActionMessage(taskTitle, action));
+    const msg = getSubActionMessage(taskTitle, action);
+    if (toolOutput.success) {
+      logger.stop(msg);
+    } else {
+      logger.cancel(msg, 'Execution failed');
+    }
   }
 }
 

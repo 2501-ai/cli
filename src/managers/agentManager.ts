@@ -19,6 +19,7 @@ import {
   getAgentStatus,
 } from '../helpers/api';
 import { EngineType } from '../utils/types';
+import { getFunctionName } from '../utils/actions';
 
 const MAX_RETRY = 3;
 
@@ -106,22 +107,20 @@ export class AgentManager {
   }
 
   async executeAction(
-    call: any,
+    action: FunctionAction,
     args: any
-  ): Promise<
-    | {
-        output: string;
-        tool_call_id: any;
-      }
-    | undefined
-  > {
-    const function_name: keyof typeof ACTION_FNS =
-      call.function.name || call.function;
+  ): Promise<{
+    output: string;
+    tool_call_id: string;
+    success: boolean;
+  }> {
+    const functionName = getFunctionName(action);
 
-    if (!ACTION_FNS[function_name]) {
+    if (!ACTION_FNS[functionName]) {
       return {
-        tool_call_id: call.id,
-        output: `Function '${function_name}' not found. Please verify the function name and try again.`,
+        tool_call_id: action.id,
+        output: `Function '${functionName}' not found. Please verify the function name and try again.`,
+        success: false,
       };
     }
 
@@ -169,19 +168,20 @@ export class AgentManager {
       }
     }
     Logger.debug(
-      `   Processing action: ${taskTitle} | On function ${function_name}`
+      `   Processing action: ${taskTitle} | On function ${functionName}`
     );
 
     try {
-      let output = (await ACTION_FNS[function_name](args)) as string;
+      let output = (await ACTION_FNS[functionName](args)) as string;
 
       if (corrected) {
         output += `\n\n NOTE: your original content for ${args.path} was corrected with the new version below before running the function: \n\n${args.content}`;
       }
 
       return {
-        tool_call_id: call.id,
+        tool_call_id: action.id,
         output,
+        success: true,
       };
     } catch (e: any) {
       Logger.debug('Error processing action:', e);
@@ -198,12 +198,13 @@ export class AgentManager {
         } catch (e) {}
       }
       return {
-        tool_call_id: call.id,
-        output: `I failed to run ${function_name}, please fix the situation or files. Feel free to explore the files again (excluding ignored files) if necessary.
+        tool_call_id: action.id,
+        output: `I failed to run ${functionName}, please fix the situation or files. Feel free to explore the files again (excluding ignored files) if necessary.
         Error message :
         \`\`\`
         ${e.message}
         \`\`\`${content}`,
+        success: false,
       };
     }
   }
