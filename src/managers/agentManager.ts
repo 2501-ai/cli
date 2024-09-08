@@ -18,7 +18,11 @@ import {
   FunctionAction,
   getAgentStatus,
 } from '../helpers/api';
-import { EngineType } from '../utils/types';
+import {
+  AgentCallbackType,
+  EngineType,
+  FunctionExecutionResult,
+} from '../utils/types';
 import { getFunctionName } from '../utils/actions';
 
 const MAX_RETRY = 3;
@@ -30,8 +34,6 @@ export const ACTION_FNS = {
   write_file,
   update_file,
 };
-
-export type AgentCallbackType = (...args: unknown[]) => Promise<void>;
 
 export class AgentManager {
   id: string;
@@ -109,11 +111,7 @@ export class AgentManager {
   async executeAction(
     action: FunctionAction,
     args: any
-  ): Promise<{
-    output: string;
-    tool_call_id: string;
-    success: boolean;
-  }> {
+  ): Promise<FunctionExecutionResult> {
     const functionName = getFunctionName(action);
 
     if (!ACTION_FNS[functionName]) {

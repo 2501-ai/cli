@@ -24,7 +24,7 @@ import {
 } from '../helpers/workspace';
 
 import { initCommand } from './init';
-import { AgentConfig } from '../utils/types';
+import { AgentConfig, FunctionExecutionResult } from '../utils/types';
 import { getFunctionArgs } from '../utils/actions';
 
 marked.use(markedTerminal() as MarkedExtension);
@@ -50,9 +50,9 @@ async function initializeAgentConfig(
 async function executeActions(
   actions: FunctionAction[],
   logger: Logger,
-  agentManager: AgentManager,
-  toolOutputs: any[]
+  agentManager: AgentManager
 ) {
+  const toolOutputs: FunctionExecutionResult[] = [];
   for (const action of actions) {
     Logger.debug('Action:', action);
     const args = getFunctionArgs(action);
@@ -74,6 +74,8 @@ async function executeActions(
       logger.cancel(msg, 'Execution failed');
     }
   }
+
+  return toolOutputs;
 }
 
 // Function to execute the query command
@@ -181,14 +183,13 @@ export async function queryCommand(
 
     // WHILE
     while (actions?.length) {
-      const toolOutputs: any[] = [];
-      await executeActions(actions, logger, agentManager, toolOutputs);
+      const toolOutputs = await executeActions(actions, logger, agentManager);
       actions = [];
 
       logger.start('Reviewing the job');
 
       let submitReponse;
-      if (toolOutputs?.length) {
+      if (toolOutputs.length) {
         submitReponse = await submitToolOutputs(
           agentManager.id,
           toolOutputs,

@@ -68,3 +68,11 @@ export type Config = {
   stream?: boolean;
   agents: AgentConfig[];
 };
+
+export type AgentCallbackType = (...args: unknown[]) => Promise<void>;
+
+export interface FunctionExecutionResult {
+  output: string;
+  tool_call_id: string;
+  success: boolean;
+}
