@@ -25,13 +25,14 @@ export const getFunctionArgs = (action: FunctionAction) => {
 
     // Logger.debug('Previous args: %s', args);
     if (typeof args === 'string') {
-      const standardArgs = args.replace(/`([\s\S]*?)`/g, (_, content) => {
-        const processedContent: string = content.replace(/\n/g, '\\n');
-        return `"${processedContent.replace(/"/g, '\\"')}"`;
-      });
-      // Logger.debug('Standard args:', standardArgs);
-      const fixed_args = jsonrepair(standardArgs);
-      args = JSON.parse(convertFormToJSON(fixed_args));
+      console.log('Args:', JSON.stringify(args));
+      try {
+        args = JSON.parse(args);
+      } catch (e) {
+        console.log('Error parsing JSON: %s', JSON.stringify(args));
+        const fixed_args = jsonrepair(args);
+        args = JSON.parse(convertFormToJSON(fixed_args));
+      }
       // Logger.debug('New args: %s', args);
     }
   } else {
