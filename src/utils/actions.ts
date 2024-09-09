@@ -30,8 +30,12 @@ export const getFunctionArgs = (action: FunctionAction) => {
         return `"${processedContent.replace(/"/g, '\\"')}"`;
       });
       // Logger.debug('Standard args:', standardArgs);
-      const fixed_args = jsonrepair(standardArgs);
-      args = JSON.parse(convertFormToJSON(fixed_args));
+      try {
+        args = JSON.parse(standardArgs);
+      } catch (e) {
+        const fixed_args = jsonrepair(standardArgs);
+        args = JSON.parse(convertFormToJSON(fixed_args));
+      }
       // Logger.debug('New args: %s', args);
     }
   } else {
