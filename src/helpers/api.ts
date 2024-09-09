@@ -3,23 +3,33 @@ import axios from 'axios';
 import { API_HOST, API_VERSION, QueryStatus } from '../constants';
 import { readConfig } from '../utils/conf';
 
+// const ONE_MINUTES_MILLIS = 60 * 1000;
+const FIVE_MINUTES_MILLIS = 5 * 60 * 1000;
+const TEN_MINUTES_MILLIS = 10 * 60 * 1000;
+
 const config = readConfig();
 
 axios.defaults.headers.common['Authorization'] = `Bearer ${config?.api_key}`;
 axios.defaults.baseURL = `${API_HOST}${API_VERSION}`;
+axios.defaults.timeout = FIVE_MINUTES_MILLIS;
 
 export type FunctionAction = {
   id: string; // ex: "call_fPPBsOHeRJGmpcZQeT3wRVTK",
   type: string; // ex: 'function'
-  function: {
-    name: string; // ex: 'update_file_content';
-    arguments: any;
-  };
+  function:
+    | {
+        name: string; // ex: 'update_file';
+        arguments: any;
+      }
+    | string; // ex: 'update_file';
   args: any;
 };
 
+export type EngineCapability = 'stream' | 'async';
+
 export type QueryResponseDTO = {
   asynchronous: boolean;
+  capabilities: EngineCapability[]; // async, stream, submit_output
   response?: string;
   actions?: FunctionAction[];
   prompt?: string;
@@ -39,7 +49,7 @@ export const queryAgent = async (
     { query, changed, stream },
     {
       responseType: stream ? 'stream' : 'json',
-      timeout: 5 * 60 * 1000,
+      timeout: stream ? TEN_MINUTES_MILLIS : FIVE_MINUTES_MILLIS,
     }
   );
 
@@ -53,7 +63,7 @@ export const getAgentStatus = async (
   answer?: string;
   error?: string;
   actions?: FunctionAction[];
-}> => {
+} | null> => {
   const { data } = await axios.get(
     `${API_HOST}${API_VERSION}/agents/${agentId}/status`
   );
@@ -75,6 +85,7 @@ export const submitToolOutputs = async (
       stream,
     },
     {
+      timeout: stream ? TEN_MINUTES_MILLIS : FIVE_MINUTES_MILLIS,
       responseType: stream ? 'stream' : 'json',
     }
   );

@@ -1,31 +1,82 @@
 import { marked, MarkedExtension } from 'marked';
 import { markedTerminal } from 'marked-terminal';
 import axios, { AxiosError } from 'axios';
-import { jsonrepair } from 'jsonrepair';
 
 import { AgentManager } from '../managers/agentManager';
-
-import { getEligibleAgents } from '../utils/conf';
-import { convertFormToJSON } from '../utils/json';
+import { getEligibleAgents, readConfig } from '../utils/conf';
 import Logger from '../utils/logger';
-
 import {
   cancelQuery,
   FunctionAction,
   getAgentStatus,
   queryAgent,
+  QueryResponseDTO,
   submitToolOutputs,
 } from '../helpers/api';
 import {
-  processStreamedResponse,
+  getSubActionMessage,
   isStreamingContext,
+  processStreamedResponse,
 } from '../helpers/streams';
-import { synchroniseWorkspaceChanges } from '../helpers/workspace';
+import {
+  getWorkspaceChanges,
+  synchroniseWorkspaceChanges,
+} from '../helpers/workspace';
 
 import { initCommand } from './init';
+import { AgentConfig, FunctionExecutionResult } from '../utils/types';
+import { getFunctionArgs } from '../utils/actions';
 
 marked.use(markedTerminal() as MarkedExtension);
 const isDebug = process.env.DEBUG === 'true';
+
+async function initializeAgentConfig(
+  workspace: string,
+  skipWarmup: boolean
+): Promise<AgentConfig> {
+  let eligible = getEligibleAgents(workspace);
+  if (!eligible && !skipWarmup) {
+    await initCommand({ workspace });
+  }
+
+  eligible = getEligibleAgents(workspace);
+  if (!eligible) {
+    throw new Error('No eligible agents found after init');
+  }
+
+  return eligible;
+}
+
+async function executeActions(
+  actions: FunctionAction[],
+  logger: Logger,
+  agentManager: AgentManager
+) {
+  const toolOutputs: FunctionExecutionResult[] = [];
+  for (const action of actions) {
+    Logger.debug('Action:', action);
+    const args = getFunctionArgs(action);
+
+    let taskTitle: string = args.answer || args.command || '';
+    if (args.url) {
+      taskTitle = 'Browsing: ' + args.url;
+    }
+
+    logger.start(taskTitle);
+    // subtask.output = taskTitle || action.function.arguments;
+    const toolOutput = await agentManager.executeAction(action, args);
+    Logger.debug('Tool output:', toolOutput);
+    toolOutputs.push(toolOutput);
+    const msg = getSubActionMessage(taskTitle, action);
+    if (toolOutput.success) {
+      logger.stop(msg);
+    } else {
+      logger.cancel(msg, 'Execution failed');
+    }
+  }
+
+  return toolOutputs;
+}
 
 // Function to execute the query command
 export async function queryCommand(
@@ -41,50 +92,45 @@ export async function queryCommand(
 ) {
   Logger.debug('Options:', options);
   try {
+    const config = readConfig();
     const workspace = !options.workspace ? process.cwd() : options.workspace;
     const skipWarmup = !!options.skipWarmup;
-    const stream = !!options.stream;
+    const stream = options.stream ?? config?.stream ?? true;
 
     const logger = new Logger();
 
-    let eligible = getEligibleAgents(workspace);
-    logger.start('Initializing workspace');
-    if (!eligible && !skipWarmup) {
-      await initCommand({ workspace });
-    }
-
-    eligible = getEligibleAgents(workspace);
-    if (!eligible) {
-      throw new Error('No eligible agents found after init');
-    }
+    const agentConfig = await initializeAgentConfig(workspace, skipWarmup);
 
     const agentManager = new AgentManager({
-      id: eligible.id,
-      name: eligible.name,
-      engine: eligible.engine,
+      id: agentConfig.id,
+      name: agentConfig.name,
+      engine: agentConfig.engine,
+      capabilities: agentConfig.capabilities,
       workspace,
     });
 
     let changedWorkspace = false;
-    if (eligible && !skipWarmup) {
-      changedWorkspace = await synchroniseWorkspaceChanges(
-        eligible.id,
-        workspace
-      );
+    if (agentConfig && !skipWarmup) {
+      const workspaceDiff = await getWorkspaceChanges(workspace);
+      changedWorkspace = workspaceDiff.hasChanges;
+      if (workspaceDiff.hasChanges) {
+        logger.start('Synchronizing workspace');
+        await synchroniseWorkspaceChanges(agentConfig.id, workspace);
+        logger.stop('Workspace synchronized');
+      }
     }
-
-    logger.stop('Workspace initialized');
-
     // Pre-check agent status
-    const statusReponse = await getAgentStatus(agentManager.id);
-    if (
-      statusReponse.status === 'in_progress' ||
-      statusReponse.status === 'requires_action'
-    ) {
-      Logger.debug('Agent status:', statusReponse.status);
-      logger.start('Cancelling previous task');
-      await cancelQuery(agentManager.id);
-      logger.stop('Previous task cancelled');
+    if (agentManager.capabilities.includes('async')) {
+      const statusReponse = await getAgentStatus(agentManager.id);
+      Logger.debug('Agent status:', statusReponse?.status);
+      if (
+        statusReponse?.status === 'in_progress' ||
+        statusReponse?.status === 'requires_action'
+      ) {
+        logger.start('Cancelling previous task');
+        await cancelQuery(agentManager.id);
+        logger.stop('Previous task cancelled');
+      }
     }
 
     logger.start('Thinking');
@@ -97,74 +143,53 @@ export async function queryCommand(
     );
 
     let actions: FunctionAction[] = [];
-    const isStream = isStreamingContext(stream, agentResponse);
-    if (isStream) {
-      actions = await processStreamedResponse(agentResponse);
-      // Check the status of the agent to get the answer
-      const status = await getAgentStatus(agentManager.id);
-      if (status?.answer) {
-        Logger.agent(status.answer);
+    let queryResponse = '';
+    if (isStreamingContext(stream, agentResponse)) {
+      const res = await processStreamedResponse(agentResponse, logger);
+
+      if (res.actions.length) {
+        actions = res.actions;
+        queryResponse = 'Executing action plan';
+      }
+      if (res.message) {
+        queryResponse = res.message;
       }
     } else {
-      logger.message(agentResponse.response || query);
       Logger.debug('Agent response:', agentResponse);
 
       if (agentResponse.asynchronous) {
         const status = await agentManager.checkStatus();
-        if (status?.actions) {
+        if (status?.actions.length) {
           actions = status.actions;
+          queryResponse = 'Executing action plan';
+        }
+
+        queryResponse = queryResponse || status?.answer || '';
+      } else {
+        if (agentResponse.actions) {
+          actions = agentResponse.actions;
+          queryResponse = 'Executing action plan';
         }
       }
 
       if (agentResponse.response) {
-        Logger.agent(agentResponse.response);
-        logger.message(agentResponse.response);
+        queryResponse = agentResponse.response;
       }
     }
-    logger.stop('Done thinking');
+
+    logger.stop(queryResponse || 'Done processing');
+
+    let finalResponse = '';
 
     // WHILE
     while (actions?.length) {
-      const toolOutputs: any[] = [];
-      for (const action of actions) {
-        let args: any;
-
-        if (action.function.arguments) {
-          args = action.function.arguments;
-          if (typeof args === 'string') {
-            const fixed_args = jsonrepair(args);
-            args = JSON.parse(convertFormToJSON(fixed_args));
-          }
-        } else {
-          args = action.args;
-        }
-
-        let taskTitle: string = args.answer || args.command || '';
-        if (args.url) {
-          taskTitle = 'Browsing: ' + args.url;
-        }
-
-        logger.start(taskTitle);
-        // subtask.output = taskTitle || action.function.arguments;
-        const toolOutput = await agentManager.executeAction(action, args);
-        Logger.debug('Tool output:', toolOutput);
-        toolOutputs.push(toolOutput);
-        logger.stop(taskTitle);
-      }
+      const toolOutputs = await executeActions(actions, logger, agentManager);
       actions = [];
 
       logger.start('Reviewing the job');
-      if (!isStream && !agentResponse.asynchronous && toolOutputs?.length) {
-        const query = `
-          Find below the output of the actions in the task context, if you're done on the main task and its related subtasks, you can stop and wait for my next instructions.
-          Output :
-          ${toolOutputs?.map((o: { output: string }) => o.output).join('\n')}`;
-
-        await queryCommand(query, options);
-      }
 
       let submitReponse;
-      if (toolOutputs?.length) {
+      if (toolOutputs.length) {
         submitReponse = await submitToolOutputs(
           agentManager.id,
           toolOutputs,
@@ -176,25 +201,52 @@ export async function queryCommand(
       toolOutputs.splice(0, toolOutputs.length);
 
       // Streaming mode
-      if (submitReponse && isStreamingContext(stream, submitReponse)) {
-        Logger.debug('Streaming mode');
-        actions = await processStreamedResponse(submitReponse);
-        if (!actions?.length) {
-          // Get final answer
-          const status = await getAgentStatus(agentManager.id);
-          if (status?.answer) {
-            Logger.agent(status.answer);
-          }
+      if (isStreamingContext(stream, submitReponse)) {
+        Logger.debug('Stream mode');
+        const res = await processStreamedResponse(submitReponse, logger);
+        if (res.actions.length) {
+          actions = res.actions;
+        }
+        if (res.message) {
+          finalResponse = res.message;
         }
       } else if (submitReponse) {
         Logger.debug('Standard mode');
-        // Standard status polling mode
-        const statusResponse = await agentManager.checkStatus();
-        if (statusResponse?.actions?.length) {
-          actions = statusResponse.actions;
+        const {
+          actions: responseActions,
+          asynchronous,
+          response: responseAnswer,
+        } = submitReponse as QueryResponseDTO;
+        if (asynchronous) {
+          // Standard status polling mode
+          const statusResponse = await agentManager.checkStatus();
+          if (statusResponse?.actions?.length) {
+            actions = statusResponse.actions;
+          }
+          if (statusResponse?.answer) {
+            // Logger.agent(statusResponse?.answer);
+            finalResponse = statusResponse?.answer;
+          }
+        } else {
+          Logger.debug('Sync mode submitReponse', submitReponse);
+          if (responseActions?.length) {
+            responseAnswer && logger.message(responseAnswer);
+            actions = responseActions;
+          }
+          if (responseAnswer) {
+            finalResponse = responseAnswer;
+          }
         }
       }
-      logger.stop('Job reviewed');
+    }
+    // WHILE END
+
+    if (finalResponse) {
+      logger.stop('Execution completed');
+      Logger.agent(finalResponse);
+    }
+    if (options.callback) {
+      await options.callback(finalResponse);
     }
   } catch (e) {
     if (isDebug) {
@@ -214,7 +266,7 @@ export async function queryCommand(
         Logger.error('Command error', e);
       }
     } else {
-      Logger.error('Something bad happened 🥲');
+      Logger.error("Unexpected error. We're working on it!");
     }
     process.exit(1);
   }

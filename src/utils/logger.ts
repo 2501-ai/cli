@@ -16,7 +16,39 @@ enum Colors {
   WHITE = 'white',
 }
 
+const stringify = (args: any[]) => {
+  const seen = new WeakSet();
+
+  // Method to safely stringify objects, avoiding circular references
+  const safeStringify = (obj: any) => {
+    return JSON.stringify(
+      obj,
+      (key, value) => {
+        if (key.startsWith('_')) {
+          return undefined;
+        }
+        if (typeof value === 'object' && value !== null) {
+          if (seen.has(value)) {
+            return '[Circular]';
+          }
+          seen.add(value);
+        }
+        return value;
+      },
+      2
+    );
+  };
+
+  return args.map((a) => {
+    if (a instanceof Error) {
+      return `${a.message}\n${a.stack}\n`;
+    }
+    return `${typeof a === 'object' ? safeStringify(a) : a}` + '\n';
+  });
+};
+
 export default class Logger {
+  #spinnerStarted = false;
   constructor(public spin = p.spinner()) {}
 
   intro(message: string) {
@@ -27,8 +59,19 @@ export default class Logger {
     p.outro(message);
   }
 
+  cancel(message: string, stopMessage?: string) {
+    this.spin.stop(stopMessage);
+    p.cancel(message);
+    this.#spinnerStarted = false;
+  }
+
   start(message?: string) {
+    if (this.#spinnerStarted) {
+      this.spin.message(message);
+      return;
+    }
     this.spin.start(message);
+    this.#spinnerStarted = true;
   }
 
   message(message: string) {
@@ -36,12 +79,18 @@ export default class Logger {
   }
 
   stop(message?: string) {
+    if (!this.#spinnerStarted) {
+      this.spin.message(message);
+      return;
+    }
     this.spin.stop(message);
+    this.#spinnerStarted = false;
   }
 
   static agent(data: any) {
-    terminal.bold('\nAGENT:\n');
-    terminal(marked.parse(data) + '\n');
+    p.outro(marked.parse(data) as string);
+    // terminal.bold('\nAGENT:\n');
+    // terminal(marked.parse(data) + '\n');
   }
 
   static log(...args: unknown[]) {
@@ -53,25 +102,12 @@ export default class Logger {
   }
 
   static error(...args: (Error | AxiosError | string | unknown)[]) {
-    terminal[Colors.RED]('\n[ERROR] ').defaultColor(
-      ...args.map((a) => {
-        if (a instanceof Error) {
-          return `${a.message}\n${a.stack}\n`;
-        }
-        return (
-          `${typeof a === 'object' ? JSON.stringify(a, null, 2) : a}` + '\n'
-        );
-      })
-    );
+    terminal[Colors.RED]('\n[ERROR] ').defaultColor(...stringify(args));
   }
 
   static debug(...args: unknown[]) {
     if (isDebug) {
-      terminal[Colors.MAGENTA]('[DEBUG] ').defaultColor(
-        ...args.map(
-          (a) => (typeof a === 'object' ? JSON.stringify(a, null, 2) : a) + '\n'
-        )
-      );
+      terminal[Colors.MAGENTA]('[DEBUG] ').defaultColor(...stringify(args));
     }
   }
 }

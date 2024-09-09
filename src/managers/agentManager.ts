@@ -1,6 +1,6 @@
 import axios from 'axios';
 import fs from 'fs';
-import { OPENAI_TERMINAL_STATUSES, QueryStatus } from '../constants';
+import { ASYNC_TERMINAL_STATUSES, QueryStatus } from '../constants';
 
 import {
   browse_url,
@@ -13,7 +13,17 @@ import {
 import Logger from '../utils/logger';
 import { readConfig } from '../utils/conf';
 
-import { FunctionAction, getAgentStatus } from '../helpers/api';
+import {
+  EngineCapability,
+  FunctionAction,
+  getAgentStatus,
+} from '../helpers/api';
+import {
+  AgentCallbackType,
+  EngineType,
+  FunctionExecutionResult,
+} from '../utils/types';
+import { getFunctionName } from '../utils/actions';
 
 const MAX_RETRY = 3;
 
@@ -25,27 +35,27 @@ export const ACTION_FNS = {
   update_file,
 };
 
-export type AgentCallbackType = (...args: unknown[]) => Promise<void>;
-
 export class AgentManager {
   id: string;
   name: string;
-  engine: string;
+  engine: EngineType;
   workspace: string;
-
   errorRetries = 0;
+  capabilities: EngineCapability[];
 
   constructor(options: {
     id: string;
     name: string;
-    engine: string;
+    engine: EngineType;
     workspace: string;
     callback?: AgentCallbackType;
+    capabilities: EngineCapability[];
   }) {
     this.id = options.id;
     this.name = options.name;
     this.engine = options.engine;
     this.workspace = options.workspace;
+    this.capabilities = options.capabilities;
   }
 
   async checkStatus(): Promise<void | {
@@ -54,10 +64,8 @@ export class AgentManager {
   }> {
     try {
       const data = await getAgentStatus(this.id);
-
-      Logger.debug('Check status', data.status);
-      if (data.answer) {
-        Logger.agent(data.answer);
+      if (!data) {
+        return;
       }
 
       if (data.status === QueryStatus.Completed) {
@@ -71,7 +79,7 @@ export class AgentManager {
         Logger.error('Query failed:', data.error);
       }
 
-      if (OPENAI_TERMINAL_STATUSES.includes(data.status)) {
+      if (ASYNC_TERMINAL_STATUSES.includes(data.status)) {
         Logger.debug('Unhandled status', data.status);
         Logger.debug('Data', data);
         Logger.log('TODO: Implement action required');
@@ -101,22 +109,16 @@ export class AgentManager {
   }
 
   async executeAction(
-    call: any,
+    action: FunctionAction,
     args: any
-  ): Promise<
-    | {
-        output: string;
-        tool_call_id: any;
-      }
-    | undefined
-  > {
-    const function_name: keyof typeof ACTION_FNS =
-      call.function.name || call.function;
+  ): Promise<FunctionExecutionResult> {
+    const functionName = getFunctionName(action);
 
-    if (!ACTION_FNS[function_name]) {
+    if (!ACTION_FNS[functionName]) {
       return {
-        tool_call_id: call.id,
-        output: `Function '${function_name}' not found. Please verify the function name and try again.`,
+        tool_call_id: action.id,
+        output: `Function '${functionName}' not found. Please verify the function name and try again.`,
+        success: false,
       };
     }
 
@@ -164,19 +166,20 @@ export class AgentManager {
       }
     }
     Logger.debug(
-      `   Processing action: ${taskTitle} | On function ${function_name}`
+      `   Processing action: ${taskTitle} | On function ${functionName}`
     );
 
     try {
-      let output = (await ACTION_FNS[function_name](args)) as string;
+      let output = (await ACTION_FNS[functionName](args)) as string;
 
       if (corrected) {
         output += `\n\n NOTE: your original content for ${args.path} was corrected with the new version below before running the function: \n\n${args.content}`;
       }
 
       return {
-        tool_call_id: call.id,
+        tool_call_id: action.id,
         output,
+        success: true,
       };
     } catch (e: any) {
       Logger.debug('Error processing action:', e);
@@ -193,12 +196,13 @@ export class AgentManager {
         } catch (e) {}
       }
       return {
-        tool_call_id: call.id,
-        output: `I failed to run ${function_name}, please fix the situation or files. Feel free to explore the files again if necessary.
+        tool_call_id: action.id,
+        output: `I failed to run ${functionName}, please fix the situation or files. Feel free to explore the files again (excluding ignored files) if necessary.
         Error message :
         \`\`\`
         ${e.message}
         \`\`\`${content}`,
+        success: false,
       };
     }
   }

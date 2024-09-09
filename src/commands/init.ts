@@ -49,7 +49,7 @@ async function initAgent(
   }
 ) {
   const config = readConfig();
-  const { data: agent } = await axios.post(
+  const { data: createResponse } = await axios.post(
     '/agents',
     {
       workspace,
@@ -64,16 +64,18 @@ async function initAgent(
       },
     }
   );
+  Logger.debug('Agent created:', createResponse);
 
   // Add agent to config.
   addAgent({
-    id: agent.id,
-    name: agent.name,
+    id: createResponse.id,
+    name: createResponse.name,
+    capabilities: createResponse.capabilities,
     workspace,
     configuration: selected_config.id,
     engine: config?.engine || DEFAULT_ENGINE,
   });
-  return agent;
+  return createResponse;
 }
 
 async function createWorkspace(options?: InitCommandOptions): Promise<string> {
@@ -110,12 +112,12 @@ export async function initCommand(options?: InitCommandOptions) {
   try {
     logger.intro('>>> Initializing Agent');
 
-    logger.start('Syncing workspace');
+    logger.start('Synchronizing workspace');
     const configId = options?.config || 'CODING_AGENT';
     const workspacePath = await createWorkspace(options);
     const workspaceResponse = await syncWorkspaceFiles(workspacePath);
     const selectedConfig = await initConfiguration(configId);
-    logger.stop('Workspace synced');
+    logger.stop('Workspace created');
 
     logger.start('Creating agent');
     const agent = await initAgent(
@@ -132,5 +134,6 @@ export async function initCommand(options?: InitCommandOptions) {
     logger.stop(`Agent ${agent.id} created`);
   } catch (e) {
     Logger.error('Initialization error:', e);
+    logger.cancel('Initialization failed');
   }
 }

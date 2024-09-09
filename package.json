@@ -1,12 +1,12 @@
 {
-  "name": "@2501-ai/2501-cli",
-  "version": "0.0.19",
+  "name": "@2501-ai/cli",
+  "version": "0.0.28",
   "description": "",
   "main": "dist/index.js",
   "scripts": {
     "build": "rm -rf dist && tsc",
     "build:link": "npm run build && npm link",
-    "unlink": "npm unlink @2501-ai/2501-cli",
+    "unlink": "npm unlink @2501-ai/cli",
     "start": "node .",
     "lint:fix": "eslint . --ext .ts,.tsx --fix",
     "prepare": "husky",
@@ -31,6 +31,7 @@
     "@clack/prompts": "^0.7.0",
     "@types/node": "^16.18.105",
     "axios": "^1.7.4",
+    "chalk": "^4.1.2",
     "cheerio": "^1.0.0",
     "commander": "^12.1.0",
     "consola": "^3.2.3",

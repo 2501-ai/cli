@@ -93,12 +93,11 @@ export async function jobSubscriptionCommand(options: {
         return;
       }
 
-      logger.message(`Found ${jobs.length} jobs to execute`);
       const shell_user = await run_shell({ command: `whoami` });
       const localIP = await run_shell({ command: `hostname -I` });
 
+      logger.stop(`Found ${jobs.length} jobs to execute`);
       for (const idx in jobs) {
-        logger.start(`Executing job ${idx} : "${jobs[idx].brief}"`);
         await axios.put(
           `${API_HOST}${API_VERSION}/jobs/${jobs[idx].id}`,
           {

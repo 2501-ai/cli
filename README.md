@@ -7,7 +7,7 @@ The 2501 CLI is a command line tool designed to wrap an API, offering a convenie
 This tool is available as an npm package. To install, run the following command:
 
 ```
-npm install -g @2501-ai/2501-cli
+npm install -g @2501-ai/cli
 ```
 
 ![2501.ai](https://www.2501.ai/img/2501-cli.png)
