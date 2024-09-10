@@ -25,11 +25,11 @@ export const getFunctionArgs = (action: FunctionAction) => {
 
     // Logger.debug('Previous args: %s', args);
     if (typeof args === 'string') {
-      console.log('Args:', JSON.stringify(args));
+      // console.log('Args:', JSON.stringify(args));
       try {
         args = JSON.parse(args);
       } catch (e) {
-        console.log('Error parsing JSON: %s', JSON.stringify(args));
+        // console.log('Error parsing JSON: %s', JSON.stringify(args));
         const fixed_args = jsonrepair(args);
         args = JSON.parse(convertFormToJSON(fixed_args));
       }
