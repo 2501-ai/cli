@@ -20,7 +20,7 @@ import {
 import { WorkspaceDiff, WorkspaceState } from '../utils/types';
 
 axios.defaults.baseURL = `${API_HOST}${API_VERSION}`;
-axios.defaults.timeout = 8000;
+axios.defaults.timeout = 120 * 1000;
 
 /**
  * Create a PDF document from a list of files in a directory.
