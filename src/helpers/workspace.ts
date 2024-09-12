@@ -268,7 +268,6 @@ export async function indexWorkspaceFiles(
       'Content-Type': 'multipart/form-data',
       Authorization: `Bearer ${config?.api_key}`,
     },
-    timeout: 20000,
   });
 }
 
