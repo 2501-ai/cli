@@ -10,7 +10,7 @@ import Logger from '../utils/logger';
 import { API_HOST, API_VERSION } from '../constants';
 
 axios.defaults.baseURL = `${API_HOST}${API_VERSION}`;
-axios.defaults.timeout = 8000;
+axios.defaults.timeout = 120 * 1000;
 
 export const DEFAULT_ENGINE = 'rhino';
 
