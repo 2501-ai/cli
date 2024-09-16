@@ -39,6 +39,7 @@ export interface WorkspaceDiff {
 export type StreamEventStatus =
   | 'completed'
   | 'in_progress'
+  | 'usage'
   | 'message'
   | 'chunked_message'
   | 'failed'
@@ -48,8 +49,23 @@ export type StreamEvent = {
   status: StreamEventStatus | null;
   message: string;
   actions?: FunctionAction[];
+  usage?: UsageData;
 };
 
+export type UsageData = {
+  /**
+   * Number of completion tokens used over the course of the run step.
+   */
+  completion_tokens: number;
+  /**
+   * Number of prompt tokens used over the course of the run step.
+   */
+  prompt_tokens: number;
+  /**
+   * Total number of tokens used (prompt + completion).
+   */
+  total_tokens: number;
+};
 export type EngineType = 'rhino' | 'rabbit';
 
 export interface AgentConfig {
