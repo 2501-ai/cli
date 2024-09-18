@@ -83,6 +83,8 @@ export function getSubActionMessage(
   // Logger.debug('SubActionMessage:', actionMsg);
   return actionMsg.trim();
 }
+// Variable will be availble as long as the process is running
+let totalTokens = 0;
 
 export async function processStreamedResponse(
   agentResponse: AsyncIterable<Buffer>,
@@ -153,6 +155,12 @@ export async function processStreamedResponse(
           // if (message) {
           //   logger.message(message);
           // }
+          break;
+        case 'usage':
+          if (process.env.SHOW_USAGE) {
+            totalTokens += streamEvent.usage?.total_tokens || 0;
+            message = `[${totalTokens} tokens used] ${message || streamEvent.message}`;
+          }
           break;
         default:
           logger.message(streamEvent.message);

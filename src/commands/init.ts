@@ -22,7 +22,7 @@ interface InitCommandOptions {
 
 const logger = new Logger();
 
-async function initConfiguration(configId: string) {
+async function initConfiguration(configKey: string) {
   const config = readConfig();
   const { data: configurations } = await axios.get(`/configurations`, {
     headers: {
@@ -31,10 +31,10 @@ async function initConfiguration(configId: string) {
   });
 
   const selectedConfig = configurations.find(
-    (config: { key: string; prompt: string }) => config.key === configId
+    (config: { key: string; prompt: string }) => config.key === configKey
   );
   if (!selectedConfig) {
-    Logger.error('Invalid configuration ID');
+    Logger.error(`Configuration not found: ${configKey}`);
     process.exit(1);
   }
   return selectedConfig;
@@ -113,10 +113,10 @@ export async function initCommand(options?: InitCommandOptions) {
     logger.intro('>>> Initializing Agent');
 
     logger.start('Synchronizing workspace');
-    const configId = options?.config || 'CODING_AGENT';
+    const configKey = options?.config || 'CODING_AGENT';
     const workspacePath = await createWorkspace(options);
     const workspaceResponse = await syncWorkspaceFiles(workspacePath);
-    const selectedConfig = await initConfiguration(configId);
+    const selectedConfig = await initConfiguration(configKey);
     logger.stop('Workspace created');
 
     logger.start('Creating agent');
@@ -132,8 +132,7 @@ export async function initCommand(options?: InitCommandOptions) {
     );
 
     logger.stop(`Agent ${agent.id} created`);
-  } catch (e) {
-    Logger.error('Initialization error:', e);
-    logger.cancel('Initialization failed');
+  } catch (e: unknown) {
+    logger.handleError(e as Error);
   }
 }

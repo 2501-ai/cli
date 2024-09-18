@@ -1,6 +1,5 @@
 import { marked, MarkedExtension } from 'marked';
 import { markedTerminal } from 'marked-terminal';
-import axios, { AxiosError } from 'axios';
 
 import { AgentManager } from '../managers/agentManager';
 import { getEligibleAgents, readConfig } from '../utils/conf';
@@ -28,7 +27,6 @@ import { AgentConfig, FunctionExecutionResult } from '../utils/types';
 import { getFunctionArgs } from '../utils/actions';
 
 marked.use(markedTerminal() as MarkedExtension);
-const isDebug = process.env.DEBUG === 'true';
 
 async function initializeAgentConfig(
   workspace: string,
@@ -78,6 +76,8 @@ async function executeActions(
   return toolOutputs;
 }
 
+const logger = new Logger();
+
 // Function to execute the query command
 export async function queryCommand(
   query: string,
@@ -91,13 +91,12 @@ export async function queryCommand(
   }
 ) {
   Logger.debug('Options:', options);
+  logger.start('Querying agent');
   try {
     const config = readConfig();
     const workspace = !options.workspace ? process.cwd() : options.workspace;
     const skipWarmup = !!options.skipWarmup;
     const stream = options.stream ?? config?.stream ?? true;
-
-    const logger = new Logger();
 
     const agentConfig = await initializeAgentConfig(workspace, skipWarmup);
 
@@ -248,26 +247,8 @@ export async function queryCommand(
     if (options.callback) {
       await options.callback(finalResponse);
     }
-  } catch (e) {
-    if (isDebug) {
-      if (axios.isAxiosError(e)) {
-        const axiosError = e as AxiosError;
-        Logger.error('Command error - Axios error', {
-          data: axiosError.response?.data ?? '(no data)',
-          config: axiosError.config,
-          status:
-            axiosError.status ?? axiosError.response?.status ?? '(no status)',
-          statusText:
-            axiosError.response?.statusText ??
-            axiosError.response?.statusText ??
-            '(no statusText)',
-        });
-      } else {
-        Logger.error('Command error', e);
-      }
-    } else {
-      Logger.error("Unexpected error. We're working on it!");
-    }
-    process.exit(1);
+  } catch (e: unknown) {
+    logger.handleError(e as Error);
+    // Logger.error('Command error', e);
   }
 }

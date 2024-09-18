@@ -1,5 +1,5 @@
 import * as p from '@clack/prompts';
-import { AxiosError } from 'axios';
+import axios, { AxiosError } from 'axios';
 import { marked } from 'marked';
 
 import { terminal } from 'terminal-kit';
@@ -51,7 +51,7 @@ export default class Logger {
   #spinnerStarted = false;
   constructor(public spin = p.spinner()) {}
 
-  intro(message: string) {
+  intro(message?: string) {
     p.intro(message);
   }
 
@@ -59,7 +59,7 @@ export default class Logger {
     p.outro(message);
   }
 
-  cancel(message: string, stopMessage?: string) {
+  cancel(message?: string, stopMessage?: string) {
     this.spin.stop(stopMessage);
     p.cancel(message);
     this.#spinnerStarted = false;
@@ -85,6 +85,49 @@ export default class Logger {
     }
     this.spin.stop(message);
     this.#spinnerStarted = false;
+  }
+
+  handleError(
+    e: Error | AxiosError,
+    defaultMsg = 'The server has returned an error. Please try again'
+  ) {
+    if (isDebug) {
+      if (axios.isAxiosError(e)) {
+        const axiosError = e as AxiosError;
+        Logger.error('Command error - Axios error', {
+          code: axiosError.code,
+          message: axiosError.message,
+          name: axiosError.name,
+          responseData: axiosError.response?.data || 'no error',
+          data: axiosError.toJSON(),
+        });
+        // Logger.error('Command error - Axios error', axiosError.toJSON());
+      } else {
+        Logger.error('Command error', e);
+      }
+      return;
+    }
+
+    if (axios.isAxiosError(e)) {
+      const axiosError = e as AxiosError;
+      const errorData = axiosError.response?.data as { code?: string };
+      if (axiosError.response?.status === 401) {
+        this.cancel('Unauthorized. Please login again');
+        return;
+      }
+
+      if (axiosError.response?.status === 403) {
+        if (errorData?.code === 'TOKEN_LIMIT') {
+          this.cancel(
+            'Monthly token usage limit reached. Please upgrade your plan or contact us !'
+          );
+          return;
+        }
+      }
+    }
+    this.cancel(defaultMsg);
+    // this.cancel(defaultMsg)
+    // Logger.error("Unexpected error. We're working on it!");
   }
 
   static agent(data: any) {
