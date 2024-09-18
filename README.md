@@ -1,6 +1,6 @@
 # 2501 CLI
 
-The 2501 CLI is a command line tool designed to wrap an API, offering a convenient way for users to interact with configuration data and query information about their current workspace.
+Welcome in 2501 Command Line ! Use 2501 autonomous agents in your shell in a few commmand lines.
 
 ## Installation
 
@@ -10,11 +10,13 @@ This tool is available as an npm package. To install, run the following command:
 npm install -g @2501-ai/cli
 ```
 
-![2501.ai](https://www.2501.ai/img/2501-cli.png)
+![2501.ai](https://cdn.prod.website-files.com/66d85488f50fa8bc7faa2cfd/66eaa71b01bd176d8e1de4d1_cli%20install.png)
 
 This will install the 2501 CLI globally on your system, making it available from anywhere in your terminal.
 
-Next, set your API key retrieved from the 2501 desktop app:
+Next, set your API key retrieved from the 2501 accounts.
+
+If you're not yet a 2501 user, register here and get your API key : https://accounts.2501.ai/pay
 
 ```
 @2501 set api_key YOUR_API_KEY
@@ -32,7 +34,7 @@ Examples
 @2501 find the location apache config in this machine
 ```
 
-![2501.ai](https://www.2501.ai/img/2501-cli.gif)
+![2501.ai](https://cdn.prod.website-files.com/66d85488f50fa8bc7faa2cfd/66eabbe4bb94bd481b3d44b0_cli%20use%20case.gif)
 
 ## Commands
 
