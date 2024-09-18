@@ -1,7 +1,8 @@
 import { ACTION_FNS } from '../managers/agentManager';
 import { FunctionAction } from '../helpers/api';
 import { jsonrepair } from 'jsonrepair';
-import { convertFormToJSON } from './json';
+import { cleanupBackticks } from './json';
+import Logger from './logger';
 
 /**
  * TODO: This function should be removed in the future, and we should have a standardised way to get the function name
@@ -30,8 +31,13 @@ export const getFunctionArgs = (action: FunctionAction) => {
         args = JSON.parse(args);
       } catch (e) {
         // console.log('Error parsing JSON: %s', JSON.stringify(args));
-        const fixed_args = jsonrepair(args);
-        args = JSON.parse(convertFormToJSON(fixed_args));
+        if (args.indexOf('`') !== -1) {
+          Logger.debug('Cleaning up backticks for args:', args);
+          args = JSON.parse(cleanupBackticks(args));
+        } else {
+          const fixed_args = jsonrepair(args);
+          args = JSON.parse(fixed_args);
+        }
       }
       // Logger.debug('New args: %s', args);
     }

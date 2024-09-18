@@ -91,13 +91,12 @@ export async function queryCommand(
   }
 ) {
   Logger.debug('Options:', options);
+  const logger = new Logger();
   try {
     const config = readConfig();
     const workspace = !options.workspace ? process.cwd() : options.workspace;
     const skipWarmup = !!options.skipWarmup;
     const stream = options.stream ?? config?.stream ?? true;
-
-    const logger = new Logger();
 
     const agentConfig = await initializeAgentConfig(workspace, skipWarmup);
 
@@ -253,21 +252,33 @@ export async function queryCommand(
       if (axios.isAxiosError(e)) {
         const axiosError = e as AxiosError;
         Logger.error('Command error - Axios error', {
-          data: axiosError.response?.data ?? '(no data)',
-          config: axiosError.config,
-          status:
-            axiosError.status ?? axiosError.response?.status ?? '(no status)',
-          statusText:
-            axiosError.response?.statusText ??
-            axiosError.response?.statusText ??
-            '(no statusText)',
+          code: axiosError.code,
+          message: axiosError.message,
+          name: axiosError.name,
+          responseData: axiosError.response?.data || 'no error',
+          data: axiosError.toJSON(),
         });
+        // Logger.error('Command error - Axios error', axiosError.toJSON());
       } else {
         Logger.error('Command error', e);
       }
     } else {
+      if (axios.isAxiosError(e)) {
+        const axiosError = e as AxiosError;
+        if (axiosError.response?.status === 403) {
+          const errorData = axiosError.response.data as { code?: string };
+          if (errorData?.code === 'TOKEN_LIMIT') {
+            logger.stop(
+              'Monthly token usage limit reached. Please upgrade your plan or contact us !'
+            );
+            return;
+          }
+        }
+        logger.stop('The server has returned an error. Please try again');
+        return;
+      }
+      logger.stop();
       Logger.error("Unexpected error. We're working on it!");
     }
-    process.exit(1);
   }
 }
