@@ -9,6 +9,7 @@ import { setCommand } from './commands/set';
 import { jobSubscriptionCommand } from './commands/jobs';
 
 import { authMiddleware } from './middleware/auth';
+import { isLatestVersion } from './utils/versioning';
 import Logger from './utils/logger';
 
 const program = new Command();
@@ -109,4 +110,13 @@ program
   .argument('<value>', 'The value to set')
   .action(setCommand);
 
-program.parse(process.argv);
+(async () => {
+  const isLatest = await isLatestVersion();
+  if (!isLatest) {
+    Logger.log(
+      'UPDATE AVAILABLE : A new version of 2501 CLI is available. Run `npm i -g @2501-ai/cli` to update'
+    );
+  }
+
+  program.parse(process.argv);
+})();
