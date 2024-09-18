@@ -1,7 +1,17 @@
+import axios from 'axios';
+
+if (process.env.AUTH_JWT) {
+  axios.defaults.headers.common['Cookie'] =
+    `_vercel_jwt=${process.env.AUTH_JWT}`;
+}
+
 export const API_HOST =
   process.env.NODE_ENV === 'dev'
     ? 'http://localhost:1337'
-    : 'https://engine.2501.ai';
+    : process.env.NODE_ENV === 'staging'
+      ? 'https://staging.engine.2501.ai'
+      : 'https://engine.2501.ai';
+
 export const API_VERSION = '/api/v1';
 
 export enum QueryStatus {

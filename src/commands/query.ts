@@ -1,6 +1,5 @@
 import { marked, MarkedExtension } from 'marked';
 import { markedTerminal } from 'marked-terminal';
-import axios, { AxiosError } from 'axios';
 
 import { AgentManager } from '../managers/agentManager';
 import { getEligibleAgents, readConfig } from '../utils/conf';
@@ -28,7 +27,6 @@ import { AgentConfig, FunctionExecutionResult } from '../utils/types';
 import { getFunctionArgs } from '../utils/actions';
 
 marked.use(markedTerminal() as MarkedExtension);
-const isDebug = process.env.DEBUG === 'true';
 
 async function initializeAgentConfig(
   workspace: string,
@@ -78,6 +76,8 @@ async function executeActions(
   return toolOutputs;
 }
 
+const logger = new Logger();
+
 // Function to execute the query command
 export async function queryCommand(
   query: string,
@@ -91,7 +91,7 @@ export async function queryCommand(
   }
 ) {
   Logger.debug('Options:', options);
-  const logger = new Logger();
+  logger.start('Querying agent');
   try {
     const config = readConfig();
     const workspace = !options.workspace ? process.cwd() : options.workspace;
@@ -247,38 +247,8 @@ export async function queryCommand(
     if (options.callback) {
       await options.callback(finalResponse);
     }
-  } catch (e) {
-    if (isDebug) {
-      if (axios.isAxiosError(e)) {
-        const axiosError = e as AxiosError;
-        Logger.error('Command error - Axios error', {
-          code: axiosError.code,
-          message: axiosError.message,
-          name: axiosError.name,
-          responseData: axiosError.response?.data || 'no error',
-          data: axiosError.toJSON(),
-        });
-        // Logger.error('Command error - Axios error', axiosError.toJSON());
-      } else {
-        Logger.error('Command error', e);
-      }
-    } else {
-      if (axios.isAxiosError(e)) {
-        const axiosError = e as AxiosError;
-        if (axiosError.response?.status === 403) {
-          const errorData = axiosError.response.data as { code?: string };
-          if (errorData?.code === 'TOKEN_LIMIT') {
-            logger.stop(
-              'Monthly token usage limit reached. Please upgrade your plan or contact us !'
-            );
-            return;
-          }
-        }
-        logger.stop('The server has returned an error. Please try again');
-        return;
-      }
-      logger.stop();
-      Logger.error("Unexpected error. We're working on it!");
-    }
+  } catch (e: unknown) {
+    logger.handleError(e as Error);
+    // Logger.error('Command error', e);
   }
 }
