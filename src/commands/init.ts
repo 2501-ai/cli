@@ -132,8 +132,7 @@ export async function initCommand(options?: InitCommandOptions) {
     );
 
     logger.stop(`Agent ${agent.id} created`);
-  } catch (e) {
-    Logger.error('Initialization error:', e);
-    logger.cancel('Initialization failed');
+  } catch (e: unknown) {
+    logger.handleError(e as Error);
   }
 }
