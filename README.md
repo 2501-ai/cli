@@ -1,6 +1,22 @@
 # 2501 CLI
 
-Welcome in 2501 Command Line ! Use 2501 autonomous agents in your shell in a few commmand lines.
+Welcome in 2501 Command Line ! Use 2501's autonomous agents in your shell to get instant answers to your coding questions,
+take action on your machine(s), and more !
+
+![2501.ai](https://cdn.prod.website-files.com/66d85488f50fa8bc7faa2cfd/66eabbe4bb94bd481b3d44b0_cli%20use%20case.gif)
+
+### Our approach
+
+At the heart of 2501 is an orchestration of multiple of the top-performing models on the market today. Our approach, referenced as MoM (or Mixture of Models) going forward, is designed to maximize the successful execution of coding projects derived from natural language instructions.
+
+With no one-size-fits-all model available, output quality is highly task-dependent. Our approach is to decompose any complex software development requirements into bite-sized tasks that can then be assigned to the most suitable model for resolution.
+
+That’s precisely why the MoM approach shines and 2501’s autonomy does not stop here. On top of that, we continually evaluate the resolution of each task with a second model to improve or fix potential hallucinations.
+
+### Performance
+
+2501’s performance on the full HumanEval, has scored 96.951 after the most recent core updates.
+Check out our [benchmark](https://2501-ai.webflow.io/blog/full-humaneval-benchmark) for more details.
 
 ## Installation
 
@@ -27,14 +43,6 @@ Now you can use the 2501 CLI commands:
 ```
 @2501 <query>
 ```
-
-Examples
-
-```
-@2501 find the location apache config in this machine
-```
-
-![2501.ai](https://cdn.prod.website-files.com/66d85488f50fa8bc7faa2cfd/66eabbe4bb94bd481b3d44b0_cli%20use%20case.gif)
 
 ## Commands
 

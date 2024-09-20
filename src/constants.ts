@@ -54,6 +54,7 @@ export const IGNORED_FILE_PATTERNS = [
   '.DS_Store',
   'Thumbs.db',
   '.cache',
+  '.Trash',
   '*.tmp',
   '*.temp',
   '.svn',
@@ -74,3 +75,6 @@ export const IGNORED_FILE_PATTERNS = [
   'credentials.xml',
   '(?:^|/).[^/]*$', // Ignore directories starting with .
 ];
+
+export const DEFAULT_MAX_DEPTH = 5;
+export const DEFAULT_MAX_DIR_SIZE = 50 * 1024 * 1024; // 50 MB

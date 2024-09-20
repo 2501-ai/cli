@@ -6,8 +6,8 @@ import * as cheerio from 'cheerio';
 
 import Logger from '../utils/logger';
 
-import { getIgnoredFiles } from './workspace';
 import { modifyCodeSections } from '../utils/sectionUpdate';
+import { getIgnoredFiles } from '../utils/files';
 
 /**
  * Directory to store logs
