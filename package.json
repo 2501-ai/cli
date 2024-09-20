@@ -3,9 +3,13 @@
   "version": "0.0.36",
   "description": "",
   "main": "dist/index.js",
+  "bin": {
+    "@2501": "./dist/index.js"
+  },
   "scripts": {
-    "build": "rm -rf dist && tsc",
-    "build:link": "npm run build && npm link",
+    "build": "tsc",
+    "build:clean": "rm -rf dist && tsc",
+    "build:link": "npm run build && npm link @2501-ai/cli",
     "unlink": "npm unlink @2501-ai/cli",
     "start": "node .",
     "lint": "eslint . --ext .ts,.tsx --fix",
@@ -44,9 +48,6 @@
     "pdfkit": "^0.15.0",
     "terminal-kit": "^3.1.1",
     "turndown": "^7.2.0"
-  },
-  "bin": {
-    "@2501": "./dist/index.js"
   },
   "devDependencies": {
     "@types/jest": "^29.5.12",

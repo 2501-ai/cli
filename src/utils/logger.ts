@@ -55,6 +55,10 @@ export default class Logger {
     p.intro(message);
   }
 
+  log(message: string) {
+    p.log.message(message);
+  }
+
   outro(message: string) {
     p.outro(message);
   }
@@ -87,6 +91,37 @@ export default class Logger {
     this.#spinnerStarted = false;
   }
 
+  prompt(
+    message: string,
+    promptType: 'string' | 'boolean' = 'boolean'
+  ): Promise<any> {
+    if (promptType === 'string') {
+      return p.password({
+        message,
+        validate: (value) => {
+          if (!value) return 'Please enter an Api Key.';
+          if (!value.startsWith('2501_ak_'))
+            return 'Please enter a valid Api Key.';
+        },
+      });
+    }
+
+    return p.select<any, boolean>({
+      message,
+      options: [
+        {
+          value: true,
+          label: 'Yes',
+        },
+        {
+          value: false,
+          label: 'No',
+        },
+      ],
+      initialValue: false,
+    });
+  }
+
   handleError(
     e: Error | AxiosError,
     defaultMsg = 'The server has returned an error. Please try again'
@@ -105,6 +140,7 @@ export default class Logger {
       } else {
         Logger.error('Command error', e);
       }
+      this.cancel(defaultMsg);
       return;
     }
 
@@ -112,7 +148,7 @@ export default class Logger {
       const axiosError = e as AxiosError;
       const errorData = axiosError.response?.data as { code?: string };
       if (axiosError.response?.status === 401) {
-        this.cancel('Unauthorized. Please login again');
+        this.cancel('Unauthorized. Please verify your API key.');
         return;
       }
 

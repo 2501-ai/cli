@@ -2,12 +2,13 @@ import axios from 'axios';
 import fs from 'fs';
 import { FormData } from 'formdata-node';
 
-import { syncWorkspaceFiles, indexWorkspaceFiles } from '../helpers/workspace';
+import { indexWorkspaceFiles, uploadWorkspaceFile } from '../helpers/workspace';
 import { addAgent, readConfig } from '../utils/conf';
 
 import Logger from '../utils/logger';
 
 import { API_HOST, API_VERSION } from '../constants';
+import { isDirUnsafe } from '../helpers/security';
 
 axios.defaults.baseURL = `${API_HOST}${API_VERSION}`;
 axios.defaults.timeout = 120 * 1000;
@@ -78,8 +79,8 @@ async function initAgent(
   return createResponse;
 }
 
-async function createWorkspace(options?: InitCommandOptions): Promise<string> {
-  if (options && options.workspace === false) {
+async function getWorkspacePath(options?: InitCommandOptions): Promise<string> {
+  if (options?.workspace === false) {
     const path = `/tmp/2501/${Date.now()}`;
     fs.mkdirSync(path, { recursive: true });
     logger.message(`Using workspace at ${path}`);
@@ -93,7 +94,21 @@ async function createWorkspace(options?: InitCommandOptions): Promise<string> {
     finalPath = process.cwd();
   }
 
-  logger.message(`Using workspace at ${finalPath}`);
+  if (isDirUnsafe(finalPath)) {
+    logger.stop(
+      `Files in the workspace "${finalPath}" are considered sensitive`
+    );
+    const res = await logger.prompt(
+      `Are you sure you want to continue the synchronization ? (y/n)`
+    );
+    if (res === false) {
+      logger.cancel('Operation cancelled');
+      process.exit(0);
+    }
+    logger.start(`Using workspace at ${finalPath}`);
+  } else {
+    logger.message(`Using workspace at ${finalPath}`);
+  }
   return finalPath;
 }
 
@@ -113,9 +128,10 @@ export async function initCommand(options?: InitCommandOptions) {
     logger.intro('>>> Initializing Agent');
 
     logger.start('Synchronizing workspace');
+    const workspacePath = await getWorkspacePath(options);
+    logger.message('Scanning workspace files');
+    const workspaceResponse = await uploadWorkspaceFile(workspacePath);
     const configKey = options?.config || 'CODING_AGENT';
-    const workspacePath = await createWorkspace(options);
-    const workspaceResponse = await syncWorkspaceFiles(workspacePath);
     const selectedConfig = await initConfiguration(configKey);
     logger.stop('Workspace created');
 
@@ -133,6 +149,6 @@ export async function initCommand(options?: InitCommandOptions) {
 
     logger.stop(`Agent ${agent.id} created`);
   } catch (e: unknown) {
-    logger.handleError(e as Error);
+    logger.handleError(e as Error, (e as Error).message);
   }
 }
