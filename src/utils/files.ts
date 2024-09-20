@@ -1,6 +1,7 @@
 import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
+import { Dirent } from 'node:fs';
 
 import Logger from '../utils/logger';
 import {
@@ -8,7 +9,6 @@ import {
   DEFAULT_MAX_DIR_SIZE,
   IGNORED_FILE_PATTERNS,
 } from '../constants';
-import { Dirent } from 'node:fs';
 
 /**
  * Options for computing the MD5 hash of a directory and its contents.
