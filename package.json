@@ -9,7 +9,7 @@
   "scripts": {
     "build": "tsc",
     "build:clean": "rm -rf dist && tsc",
-    "build:link": "npm run build && npm link @2501-ai/cli",
+    "build:link": "npm run build && npm link",
     "unlink": "npm unlink @2501-ai/cli",
     "start": "node .",
     "lint": "eslint . --ext .ts,.tsx --fix",
