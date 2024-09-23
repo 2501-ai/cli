@@ -2,7 +2,7 @@ import { marked, MarkedExtension } from 'marked';
 import { markedTerminal } from 'marked-terminal';
 
 import { AgentManager } from '../managers/agentManager';
-import { getEligibleAgents, readConfig } from '../utils/conf';
+import { getEligibleAgent, readConfig } from '../utils/conf';
 import Logger from '../utils/logger';
 import {
   cancelQuery,
@@ -32,14 +32,14 @@ async function initializeAgentConfig(
   workspace: string,
   skipWarmup: boolean
 ): Promise<AgentConfig> {
-  let eligible = getEligibleAgents(workspace);
+  let eligible = getEligibleAgent(workspace);
   if (!eligible && !skipWarmup) {
     await initCommand({ workspace });
   }
 
-  eligible = getEligibleAgents(workspace);
+  eligible = getEligibleAgent(workspace);
   if (!eligible) {
-    throw new Error('No eligible agents found after init');
+    throw new Error('No eligible agent found after init');
   }
 
   return eligible;

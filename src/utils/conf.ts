@@ -136,7 +136,7 @@ export async function flushAgents(): Promise<void> {
   }
 }
 
-export function getEligibleAgents(workspace: string): AgentConfig | null {
-  const agents = workspace ? listAgents() : listAgentsFromWorkspace(workspace);
+export function getEligibleAgent(workspace?: string): AgentConfig | null {
+  const agents = workspace ? listAgentsFromWorkspace(workspace) : listAgents();
   return agents[agents.length - 1];
 }

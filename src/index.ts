@@ -39,7 +39,7 @@ program
     }
     Logger.debug('Options', options);
     // @TODO : implement options support.
-    authMiddleware();
+    await authMiddleware();
     await queryCommand(query, {
       stream: options.stream,
     });
