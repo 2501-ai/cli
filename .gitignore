@@ -9,6 +9,7 @@ lerna-debug.log*
 .vscode
 pnpm-lock.yaml
 .idea
+.DS_Store
 
 #Jetbrains IDE
 .idea/

@@ -91,7 +91,6 @@ export async function run_shell(args: {
     const { stderr, stdout } = await execa(args.command, {
       shell: args.shell ?? true,
       env: args.env,
-
       preferLocal: true,
       timeout: 1000 * 60,
     });
