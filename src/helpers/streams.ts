@@ -13,7 +13,7 @@ function parseChunkedMessages<T>(input: string): {
   parsed: T[];
   remaining: string;
 } {
-  Logger.debug('Parsing chunked messages:', input);
+  // Logger.debug('Parsing chunked messages:', input);
   const result: T[] = [];
   const stack: string[] = [];
   let startIndex = 0;
