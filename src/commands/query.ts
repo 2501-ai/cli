@@ -91,7 +91,7 @@ export async function queryCommand(
   }
 ) {
   Logger.debug('Options:', options);
-  logger.start('Querying agent');
+
   try {
     const config = readConfig();
     const workspace = !options.workspace ? process.cwd() : options.workspace;
