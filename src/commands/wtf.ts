@@ -73,24 +73,30 @@ export async function wtfCommand() {
 
   try {
     const json = JSON.parse(match[1]);
-    const selected = await select({
-      message: 'Pick a solution.',
-      options: json.potential_issues.map((issue: any) => {
-        return {
-          value: issue.solution,
-          label: `${issue.command_issue} >> ${issue.solution} - ${issue.comment}`,
-        };
-      }),
-    });
 
-    console.log(selected);
+    try {
+      const selected = await select({
+        message: 'Pick and execute a solution ↴',
+        options: json.potential_issues.map((issue: any) => {
+          return {
+            value: issue.solution,
+            label: `\x1b[31m${issue.command_issue}\x1b[0m >> \x1b[32m${issue.solution}\x1b[0m - \x1b[90m\x1b[3m${issue.comment}\x1b[0m`,
+          };
+        }),
+      });
 
-    const result = await run_shell({
-      command: selected as string,
-      shell: true,
-    });
+      console.log(' ');
+      console.log(selected);
 
-    console.log(result);
+      const result = await run_shell({
+        command: selected as string,
+        shell: true,
+      });
+
+      console.log(result);
+    } catch (e) {
+      process.exit(0);
+    }
   } catch (e) {
     console.log('Invalid JSON', match);
   }
