@@ -23,7 +23,7 @@ export function readConfig(): Config | null {
         CONFIG_FILE_PATH,
         // TODO: set the stream to true when the feature i stable
         JSON.stringify(
-          { workspace_disabled: false, agents: [], stream: false },
+          { workspace_disabled: false, agents: [], stream: true },
           null,
           2
         ),
