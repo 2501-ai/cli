@@ -4,6 +4,7 @@ import { StreamEvent } from '../utils/types';
 import { CHUNK_MESSAGE_CLEAR } from '../utils/messaging';
 import chalk from 'chalk';
 import { getFunctionArgs, getFunctionName } from '../utils/actions';
+import path from 'path';
 
 /**
  * Parse the chunks of messages from the agent response,
@@ -47,6 +48,36 @@ function toItalic(text: string): string {
   return chalk.italic.gray(text.trim());
 }
 
+/*
+ * Get the italic postfix for the action. Ex: `${taskTitle} : (Updating file: ...)`
+ */
+export function getActionPostfix(action: FunctionAction): string {
+  const functionName = getFunctionName(action);
+  const args = getFunctionArgs(action);
+
+  switch (functionName) {
+    case 'read_file':
+      return toItalic(`(Reading file: ${path.basename(args.path)})`);
+    case 'write_file':
+      return toItalic(`(Writing to file: ${path.basename(args.path)})`);
+    case 'update_file':
+      return toItalic(`(Updating file: ${path.basename(args.path)})`);
+    case 'run_shell':
+      // avoid displaying the full cd command.
+      const formatted =
+        args.command.startsWith('cd') && args.command.indexOf('&&') > 0
+          ? (args.command as string)
+              .split('&&')
+              .slice(args.command.indexOf('&&') + 1)
+          : args.command;
+      return toItalic(`(Executing command: ${formatted})`);
+    case 'browse_url':
+      return toItalic(`(Browsing URL: ${args.url})`);
+    default:
+      return '';
+  }
+}
+
 export function getSubActionMessage(
   message: string,
   action: FunctionAction
@@ -83,12 +114,12 @@ export function getSubActionMessage(
   // Logger.debug('SubActionMessage:', actionMsg);
   return actionMsg.trim();
 }
+
 // Variable will be availble as long as the process is running
 let totalTokens = 0;
 
 export async function processStreamedResponse(
-  agentResponse: AsyncIterable<Buffer>,
-  logger: Logger
+  agentResponse: AsyncIterable<Buffer>
 ) {
   const actions: FunctionAction[] = [];
   let message = '';
@@ -132,9 +163,15 @@ export async function processStreamedResponse(
       // Logger.debug('StreamEvent', streamEvent);
       switch (streamEvent.status) {
         case 'requires_action':
+          // The default message is too verbose..
+          // if (streamEvent.message !== DEFAULT_ACTIONS_REPONSE.message) {
+          //   message = streamEvent.message;
+          // } else {
+          //   message = '';
+          // }
           message = '';
           actions.push(...(streamEvent.actions ?? []));
-          logger.message(streamEvent.message);
+          // logger.message(streamEvent.message);
           break;
         case 'message':
           message = streamEvent.message;
@@ -163,7 +200,7 @@ export async function processStreamedResponse(
           }
           break;
         default:
-          logger.message(streamEvent.message);
+        // logger.message(streamEvent.message);
       }
     });
   }
