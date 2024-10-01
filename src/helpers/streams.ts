@@ -173,6 +173,8 @@ export async function processStreamedResponse(
         UPDATE_FILE_DELIMITERS
       );
 
+      // Logger.debug('Parsed:', parsed);
+
       if (remaining) {
         // Logger.debug('Remaining:', remaining);
         chunks = [remaining];
