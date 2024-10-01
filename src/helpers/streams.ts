@@ -8,8 +8,14 @@ import { getFunctionArgs, getFunctionName } from '../utils/actions';
 /**
  * Parse the chunks of messages from the agent response,
  * and return the parsed messages and the remaining content
+ *
+ * @param input
+ * @param skipDelimiters - Skip parsing between delimiters. Ex: ['<<<<<', '>>>>>']
  */
-function parseChunkedMessages<T>(input: string): {
+export function parseChunkedMessages<T>(
+  input: string,
+  skipDelimiters: [string, string]
+): {
   parsed: T[];
   remaining: string;
 } {
@@ -17,29 +23,45 @@ function parseChunkedMessages<T>(input: string): {
   const result: T[] = [];
   const stack: string[] = [];
   let startIndex = 0;
-  let lastParsedIndex = 0;
+  let nextParseIndex = 0;
+  let skip = false;
+  let skipStart = '';
+  let skipEnd = '';
 
   for (let i = 0; i < input.length; i++) {
-    if (input[i] === '{') {
+    if (input[i] === '{' && !skip) {
       if (stack.length === 0) {
         startIndex = i;
       }
       stack.push('{');
-    } else if (input[i] === '}') {
+    } else if (input[i] === '}' && !skip) {
       stack.pop();
       if (stack.length === 0) {
         const chunk = input.slice(startIndex, i + 1);
         try {
           result.push(JSON.parse(chunk));
-          lastParsedIndex = i + 1;
+          nextParseIndex = i + 1;
         } catch {
           // Handle parsing error if necessary
+          throw new Error('Error parsing chunked messages');
         }
+      }
+    } else if (input[i] === skipDelimiters[0][skipStart.length]) {
+      skipStart += input[i];
+      if (skipStart === skipDelimiters[0]) {
+        skip = true;
+        skipStart = '';
+      }
+    } else if (input[i] === skipDelimiters[1][skipEnd.length]) {
+      skipEnd += input[i];
+      if (skipEnd === skipDelimiters[1]) {
+        skip = false;
+        skipEnd = '';
       }
     }
   }
 
-  const remaining = input.slice(lastParsedIndex);
+  const remaining = input.slice(nextParseIndex);
   return { parsed: result, remaining };
 }
 
@@ -86,6 +108,8 @@ export function getSubActionMessage(
 // Variable will be availble as long as the process is running
 let totalTokens = 0;
 
+export const UPDATE_FILE_DELIMITERS: [string, string] = ['<<<<<', '>>>>>'];
+
 export async function processStreamedResponse(
   agentResponse: AsyncIterable<Buffer>,
   logger: Logger
@@ -115,7 +139,10 @@ export async function processStreamedResponse(
       // TODO: test this in staging environment !!!!!!!!!!!!!!!!
       // Logger.debug('Error parsing stream content:', e);
       // Chunks might come in multiple parts
-      const { parsed, remaining } = parseChunkedMessages<StreamEvent>(content);
+      const { parsed, remaining } = parseChunkedMessages<StreamEvent>(
+        content,
+        UPDATE_FILE_DELIMITERS
+      );
 
       // Logger.debug('Parsed:', parsed);
 
