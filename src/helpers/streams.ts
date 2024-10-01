@@ -9,8 +9,14 @@ import path from 'path';
 /**
  * Parse the chunks of messages from the agent response,
  * and return the parsed messages and the remaining content
+ *
+ * @param input
+ * @param skipDelimiters - Skip parsing between delimiters. Ex: ['<<<<<', '>>>>>']
  */
-function parseChunkedMessages<T>(input: string): {
+export function parseChunkedMessages<T>(
+  input: string,
+  skipDelimiters: [string, string]
+): {
   parsed: T[];
   remaining: string;
 } {
@@ -18,29 +24,45 @@ function parseChunkedMessages<T>(input: string): {
   const result: T[] = [];
   const stack: string[] = [];
   let startIndex = 0;
-  let lastParsedIndex = 0;
+  let nextParseIndex = 0;
+  let skip = false;
+  let skipStart = '';
+  let skipEnd = '';
 
   for (let i = 0; i < input.length; i++) {
-    if (input[i] === '{') {
+    if (input[i] === '{' && !skip) {
       if (stack.length === 0) {
         startIndex = i;
       }
       stack.push('{');
-    } else if (input[i] === '}') {
+    } else if (input[i] === '}' && !skip) {
       stack.pop();
       if (stack.length === 0) {
         const chunk = input.slice(startIndex, i + 1);
         try {
           result.push(JSON.parse(chunk));
-          lastParsedIndex = i + 1;
+          nextParseIndex = i + 1;
         } catch {
           // Handle parsing error if necessary
+          throw new Error('Error parsing chunked messages');
         }
+      }
+    } else if (input[i] === skipDelimiters[0][skipStart.length]) {
+      skipStart += input[i];
+      if (skipStart === skipDelimiters[0]) {
+        skip = true;
+        skipStart = '';
+      }
+    } else if (input[i] === skipDelimiters[1][skipEnd.length]) {
+      skipEnd += input[i];
+      if (skipEnd === skipDelimiters[1]) {
+        skip = false;
+        skipEnd = '';
       }
     }
   }
 
-  const remaining = input.slice(lastParsedIndex);
+  const remaining = input.slice(nextParseIndex);
   return { parsed: result, remaining };
 }
 
@@ -118,6 +140,9 @@ export function getSubActionMessage(
 // Variable will be availble as long as the process is running
 let totalTokens = 0;
 
+// Skip the stream chunk parsing when the following delimiters are found in the content (which can break the parsing)
+export const UPDATE_FILE_DELIMITERS: [string, string] = ['<<<<<', '>>>>>'];
+
 export async function processStreamedResponse(
   agentResponse: AsyncIterable<Buffer>
 ) {
@@ -128,7 +153,9 @@ export async function processStreamedResponse(
 
   for await (const chunk of agentResponse) {
     let content = '';
-    //If there were previous chunks, we need to join them
+    let streamEvents: StreamEvent[];
+
+    //If there were previous chunks, we need to add them
     chunks.push(chunk.toString('utf-8'));
 
     if (chunks.length > 0) {
@@ -136,22 +163,18 @@ export async function processStreamedResponse(
     } else {
       content = Buffer.from(chunk).toString('utf8');
     }
-    // Logger.debug(`Streamed data [Chunks: ${chunks.length}]:`, content);
-
-    let streamEvents: StreamEvent[];
     try {
       streamEvents = [JSON.parse(content)];
       chunks = [];
     } catch (e) {
-      // TODO: test this in staging environment !!!!!!!!!!!!!!!!
-      // Logger.debug('Error parsing stream content:', e);
       // Chunks might come in multiple parts
-      const { parsed, remaining } = parseChunkedMessages<StreamEvent>(content);
-
-      // Logger.debug('Parsed:', parsed);
+      const { parsed, remaining } = parseChunkedMessages<StreamEvent>(
+        content,
+        UPDATE_FILE_DELIMITERS
+      );
 
       if (remaining) {
-        Logger.debug('Remaining:', remaining);
+        // Logger.debug('Remaining:', remaining);
         chunks = [remaining];
       } else {
         chunks = [];
@@ -160,10 +183,10 @@ export async function processStreamedResponse(
     }
 
     streamEvents.forEach((streamEvent) => {
-      // Logger.debug('StreamEvent', streamEvent);
+      Logger.debug('StreamEvent', streamEvent);
       switch (streamEvent.status) {
         case 'requires_action':
-          // The default message is too verbose..
+          // The default message is too verbose, for now we will just display the actions
           // if (streamEvent.message !== DEFAULT_ACTIONS_REPONSE.message) {
           //   message = streamEvent.message;
           // } else {
