@@ -49,6 +49,7 @@ const stringify = (args: any[]) => {
 
 export default class Logger {
   #spinnerStarted = false;
+
   constructor(public spin = p.spinner()) {}
 
   intro(message?: string) {
@@ -64,9 +65,8 @@ export default class Logger {
   }
 
   cancel(message?: string, stopMessage?: string) {
-    this.spin.stop(stopMessage);
+    this.stop(stopMessage);
     p.cancel(message);
-    this.#spinnerStarted = false;
   }
 
   start(message?: string) {
@@ -82,12 +82,12 @@ export default class Logger {
     this.spin.message(message);
   }
 
-  stop(message?: string) {
+  stop(message?: string, code?: number) {
     if (!this.#spinnerStarted) {
       this.spin.message(message);
       return;
     }
-    this.spin.stop(message);
+    this.spin.stop(message, code);
     this.#spinnerStarted = false;
   }
 
@@ -136,6 +136,9 @@ export default class Logger {
           responseData: axiosError.response?.data || 'no error',
           data: axiosError.toJSON(),
         });
+        if (axiosError.code === 'ECONNREFUSED') {
+          defaultMsg = 'Server unreachable. Please try again later.';
+        }
         // Logger.error('Command error - Axios error', axiosError.toJSON());
       } else {
         Logger.error('Command error', e);
@@ -147,6 +150,7 @@ export default class Logger {
     if (axios.isAxiosError(e)) {
       const axiosError = e as AxiosError;
       const errorData = axiosError.response?.data as { code?: string };
+
       if (axiosError.response?.status === 401) {
         this.cancel('Unauthorized. Please verify your API key.');
         return;
@@ -159,6 +163,10 @@ export default class Logger {
           );
           return;
         }
+      }
+
+      if (axiosError.code === 'ECONNREFUSED') {
+        defaultMsg = 'Server unreachable. Please try again later.';
       }
     }
     this.cancel(defaultMsg);

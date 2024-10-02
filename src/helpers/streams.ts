@@ -24,17 +24,14 @@ export function parseChunkedMessages<T>(
   const stack: string[] = [];
   let startIndex = 0;
   let nextParseIndex = 0;
-  let skip = false;
-  let skipStart = '';
-  let skipEnd = '';
 
   for (let i = 0; i < input.length; i++) {
-    if (input[i] === '{' && !skip) {
+    if (input[i] === '{') {
       if (stack.length === 0) {
         startIndex = i;
       }
       stack.push('{');
-    } else if (input[i] === '}' && !skip) {
+    } else if (input[i] === '}') {
       stack.pop();
       if (stack.length === 0) {
         const chunk = input.slice(startIndex, i + 1);
@@ -43,20 +40,19 @@ export function parseChunkedMessages<T>(
           nextParseIndex = i + 1;
         } catch {
           // Handle parsing error if necessary
-          throw new Error('Error parsing chunked messages');
+          throw new Error(`Error parsing chunked message: '${chunk}'`);
         }
       }
-    } else if (input[i] === skipDelimiters[0][skipStart.length]) {
-      skipStart += input[i];
-      if (skipStart === skipDelimiters[0]) {
-        skip = true;
-        skipStart = '';
-      }
-    } else if (input[i] === skipDelimiters[1][skipEnd.length]) {
-      skipEnd += input[i];
-      if (skipEnd === skipDelimiters[1]) {
-        skip = false;
-        skipEnd = '';
+    } else if (
+      input[i] === skipDelimiters[0][0] &&
+      input.slice(i, i + skipDelimiters[0].length) === skipDelimiters[0]
+    ) {
+      // skip to the end of the delimiter
+      const end = input.indexOf(skipDelimiters[1], i);
+      if (end > 0) {
+        i = end + skipDelimiters[1].length;
+      } else {
+        // if the end is not found, maybe the next chunk will have the end
       }
     }
   }
