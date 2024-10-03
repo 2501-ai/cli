@@ -6,6 +6,7 @@ import { queryCommand } from './commands/query';
 import { initCommand } from './commands/init';
 import { agentsCommand } from './commands/agents';
 import { setCommand } from './commands/set';
+import { wtfCommand } from './commands/wtf';
 import { jobSubscriptionCommand } from './commands/jobs';
 
 import { authMiddleware } from './middleware/auth';
@@ -114,6 +115,12 @@ program
   .argument('<key>', 'The key to set')
   .argument('<value>', 'The value to set')
   .action(setCommand);
+
+program
+  .command('wtf')
+  .description('What the f*ck did I just do?')
+  .hook('preAction', authMiddleware)
+  .action(wtfCommand);
 
 (async () => {
   const isLatest = await isLatestVersion();
