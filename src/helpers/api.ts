@@ -25,7 +25,7 @@ export type FunctionAction = {
   args: any;
 };
 
-export type EngineCapability = 'stream' | 'async';
+export type EngineCapability = 'stream' | 'async' | 'vector_stores';
 
 export type QueryResponseDTO = {
   asynchronous: boolean;

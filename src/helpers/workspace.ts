@@ -16,32 +16,41 @@ import { generatePDFs } from '../utils/pdf';
 axios.defaults.baseURL = `${API_HOST}${API_VERSION}`;
 axios.defaults.timeout = 120 * 1000;
 
-export async function uploadWorkspaceFile(workspace: string): Promise<{
+export async function prepareWorkspaceFiles(
+  workspace: string,
+  uploadFile = true
+): Promise<{
   files: { path: string; data: Buffer }[];
   vectorStoredFiles: { id: string; name: string }[];
 }> {
   const files = await generatePDFs(workspace);
+  const vectorStoredFiles: { id: string; name: string }[] = [];
+
   if (!files.length) {
-    return { files: [], vectorStoredFiles: [] };
+    return { files, vectorStoredFiles };
   }
 
-  const data = new FormData();
-  for (let i = 0; i < files.length; i++) {
-    const name = files[i].path.split('/').pop();
-    data.set('file' + i, new Blob([files[i].data]), name);
-  }
-
-  const config = readConfig();
-  const response = await axios.post<{ id: string; name: string }[]>(
-    '/files',
-    data,
-    {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-        Authorization: `Bearer ${config?.api_key}`,
-      },
+  // This will only upload files for engine with vector_store capability.
+  if (uploadFile) {
+    const data = new FormData();
+    for (let i = 0; i < files.length; i++) {
+      const name = files[i].path.split('/').pop();
+      data.set('file' + i, new Blob([files[i].data]), name);
     }
-  );
+    const config = readConfig();
+    const response = await axios.post<{ id: string; name: string }[]>(
+      '/files',
+      data,
+      {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+          Authorization: `Bearer ${config?.api_key}`,
+        },
+      }
+    );
+
+    vectorStoredFiles.push(...response.data);
+  }
 
   if (process.env.NODE_ENV !== 'dev') {
     // Don't pollute the filesystem with temporary files
@@ -49,7 +58,7 @@ export async function uploadWorkspaceFile(workspace: string): Promise<{
     Logger.debug('Agent : Workspace PDF deleted:', files[0].path);
   }
 
-  return { files, vectorStoredFiles: response.data };
+  return { files, vectorStoredFiles };
 }
 
 export async function indexWorkspaceFiles(
@@ -129,11 +138,13 @@ export function writeWorkspaceState(state: WorkspaceState): void {
 }
 
 /**
- * Synchronize the workspace state locally with the current state of the workspace.
+ * Update the workspace state locally with the current state of the workspace.
  *
  * This function will update the hash and files properties of the workspace state.
  */
-export async function syncWorkspaceState(workspace: string): Promise<boolean> {
+export async function updateWorkspaceState(
+  workspace: string
+): Promise<boolean> {
   Logger.debug('Syncing workspace state:', workspace);
   const currentState = readWorkspaceState(workspace);
   const { md5, fileHashes } = await getDirectoryMd5Hash({
@@ -193,24 +204,4 @@ export function getWorkspaceDiff(
     added.length > 0 || removed.length > 0 || modified.length > 0;
 
   return { added, removed, modified, hasChanges };
-}
-
-export async function synchroniseWorkspaceChanges(
-  agentId: string,
-  workspace: string
-) {
-  Logger.debug('Agent : Workspace has changes, synchronizing...');
-  await syncWorkspaceState(workspace);
-  // TODO: improve and send only changed files ?
-  const workspaceResponse = await uploadWorkspaceFile(workspace);
-  if (
-    workspaceResponse?.vectorStoredFiles &&
-    workspaceResponse?.vectorStoredFiles.length
-  ) {
-    await indexWorkspaceFiles(
-      agentId,
-      workspaceResponse.files,
-      workspaceResponse.vectorStoredFiles
-    );
-  }
 }

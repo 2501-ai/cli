@@ -16,7 +16,9 @@ import {
 } from '../helpers/streams';
 import {
   getWorkspaceChanges,
-  synchroniseWorkspaceChanges,
+  indexWorkspaceFiles,
+  updateWorkspaceState,
+  prepareWorkspaceFiles,
 } from '../helpers/workspace';
 import { initCommand } from './init';
 import { AgentConfig, FunctionExecutionResult } from '../utils/types';
@@ -31,17 +33,13 @@ const initializeAgentConfig = async (
   workspace: string,
   skipWarmup: boolean
 ): Promise<AgentConfig> => {
-  const findEligibleAgent = async (): Promise<AgentConfig> => {
-    let eligible = getEligibleAgent(workspace);
-    if (!eligible && !skipWarmup) {
-      await initCommand({ workspace });
-      eligible = getEligibleAgent(workspace);
-    }
-    if (!eligible) throw new Error('No eligible agent found after init');
-    return eligible;
-  };
-
-  return findEligibleAgent();
+  let eligible = getEligibleAgent(workspace);
+  if (!eligible && !skipWarmup) {
+    await initCommand({ workspace });
+    eligible = getEligibleAgent(workspace);
+  }
+  if (!eligible) throw new Error('No eligible agent found after init');
+  return eligible;
 };
 
 const executeActions = async (
@@ -103,7 +101,15 @@ export const queryCommand = async (
       const workspaceDiff = await getWorkspaceChanges(workspace);
       if (workspaceDiff.hasChanges) {
         logger.start('Synchronizing workspace');
-        await synchroniseWorkspaceChanges(agentConfig.id, workspace);
+
+        Logger.debug('Agent : Workspace has changes, synchronizing...');
+        await updateWorkspaceState(workspace);
+        // TODO: improve and send only changed files ?
+        const { vectorStoredFiles, files } = await prepareWorkspaceFiles(
+          workspace,
+          false // agentManager.capabilities.includes('vector_stores')
+        );
+        await indexWorkspaceFiles(agentConfig.id, files, vectorStoredFiles);
         logger.stop('Workspace synchronized');
         return true;
       }

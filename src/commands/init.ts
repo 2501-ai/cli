@@ -1,8 +1,6 @@
 import axios from 'axios';
 import fs from 'fs';
 import { FormData } from 'formdata-node';
-
-import { indexWorkspaceFiles, uploadWorkspaceFile } from '../helpers/workspace';
 import { addAgent, readConfig } from '../utils/conf';
 
 import Logger from '../utils/logger';
@@ -23,7 +21,7 @@ interface InitCommandOptions {
 
 const logger = new Logger();
 
-async function initConfiguration(configKey: string) {
+async function getConfiguration(configKey: string) {
   const config = readConfig();
   const { data: configurations } = await axios.get(`/configurations`, {
     headers: {
@@ -43,11 +41,11 @@ async function initConfiguration(configKey: string) {
 
 async function initAgent(
   workspace: string,
-  selected_config: any,
-  workspaceResponse: {
-    files: { path: string; data: Buffer }[];
-    vectorStoredFiles: { id: string; name: string }[];
-  }
+  selected_config: any
+  // workspaceResponse: {
+  //   files: { path: string; data: Buffer }[];
+  //   vectorStoredFiles: { id: string; name: string }[];
+  // }
 ) {
   const config = readConfig();
   const { data: createResponse } = await axios.post(
@@ -57,7 +55,7 @@ async function initAgent(
       configuration: selected_config.id,
       prompt: selected_config.prompt,
       engine: config?.engine || DEFAULT_ENGINE,
-      files: workspaceResponse.vectorStoredFiles.map((file) => file.id),
+      // files: workspaceResponse.vectorStoredFiles.map((file) => file.id),
     },
     {
       headers: {
@@ -127,25 +125,12 @@ export async function initCommand(options?: InitCommandOptions) {
   try {
     logger.intro('>>> Initializing Agent');
 
-    logger.start('Synchronizing workspace');
-    const workspacePath = await getWorkspacePath(options);
-    logger.message('Scanning workspace files');
-    const workspaceResponse = await uploadWorkspaceFile(workspacePath);
     const configKey = options?.config || 'CODING_AGENT';
-    const selectedConfig = await initConfiguration(configKey);
-    logger.stop('Workspace created');
+    const selectedConfig = await getConfiguration(configKey);
+    const workspacePath = await getWorkspacePath(options);
 
     logger.start('Creating agent');
-    const agent = await initAgent(
-      workspacePath,
-      selectedConfig,
-      workspaceResponse
-    );
-    await indexWorkspaceFiles(
-      agent.id,
-      workspaceResponse.files,
-      workspaceResponse.vectorStoredFiles
-    );
+    const agent = await initAgent(workspacePath, selectedConfig);
 
     logger.stop(`Agent ${agent.id} created`);
   } catch (e: unknown) {
