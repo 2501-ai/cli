@@ -2,10 +2,9 @@ import { marked, MarkedExtension } from 'marked';
 import { markedTerminal } from 'marked-terminal';
 import {
   cancelQuery,
-  FunctionAction,
   getAgentStatus,
+  indexFiles,
   queryAgent,
-  QueryResponseDTO,
   submitToolOutputs,
 } from '../helpers/api';
 import {
@@ -16,16 +15,21 @@ import {
 } from '../helpers/streams';
 import {
   getWorkspaceChanges,
-  indexWorkspaceFiles,
   updateWorkspaceState,
-  prepareWorkspaceFiles,
 } from '../helpers/workspace';
 import { initCommand } from './init';
-import { AgentConfig, FunctionExecutionResult } from '../utils/types';
+import {
+  AgentConfig,
+  FunctionAction,
+  FunctionExecutionResult,
+  QueryResponseDTO,
+} from '../utils/types';
 import { getFunctionArgs } from '../utils/actions';
 import { AgentManager } from '../managers/agentManager';
 import { getEligibleAgent, readConfig } from '../utils/conf';
 import Logger from '../utils/logger';
+import { generatePDFs } from '../utils/pdf';
+import fs from 'fs';
 
 marked.use(markedTerminal() as MarkedExtension);
 
@@ -88,6 +92,7 @@ export const queryCommand = async (
     const skipWarmup = !!options.skipWarmup;
     const stream = options.stream ?? config?.stream ?? true;
 
+    ////////// Agent Init //////////
     const agentConfig = await initializeAgentConfig(workspace, skipWarmup);
     const agentManager = new AgentManager({
       id: agentConfig.id,
@@ -105,18 +110,22 @@ export const queryCommand = async (
         Logger.debug('Agent : Workspace has changes, synchronizing...');
         await updateWorkspaceState(workspace);
         // TODO: improve and send only changed files ?
-        const { vectorStoredFiles, files } = await prepareWorkspaceFiles(
-          workspace,
-          false // agentManager.capabilities.includes('vector_stores')
-        );
-        await indexWorkspaceFiles(agentConfig.id, files, vectorStoredFiles);
+        const files = await generatePDFs(workspace);
+
+        if (process.env.NODE_ENV !== 'dev') {
+          // Don't pollute the filesystem with temporary files
+          fs.unlinkSync(files[0].path);
+          Logger.debug('Agent : Workspace PDF deleted:', files[0].path);
+        }
+
+        await indexFiles(agentConfig.id, files);
         logger.stop('Workspace synchronized');
         return true;
       }
       return false;
     };
 
-    const checkAgentStatus = async (): Promise<void> => {
+    const cancelPrevious = async (): Promise<void> => {
       const statusResponse = await getAgentStatus(agentManager.id);
       Logger.debug('Agent status:', statusResponse?.status);
       if (
@@ -153,7 +162,7 @@ export const queryCommand = async (
       return [actions, queryResponse];
     };
 
-    const processSubmitResponse = async (
+    const handleSubmitResponse = async (
       submitResponse: QueryResponseDTO | undefined
     ): Promise<[FunctionAction[], string]> => {
       let actions: FunctionAction[] = [];
@@ -182,16 +191,24 @@ export const queryCommand = async (
       return [actions, finalResponse];
     };
 
-    const changedWorkspace = !skipWarmup && (await synchronizeWorkspace());
-    if (agentManager.capabilities.includes('async')) await checkAgentStatus();
+    ////////// Workflow start //////////
+    let workspaceChanged = false;
+
+    if (!skipWarmup) {
+      workspaceChanged = await synchronizeWorkspace();
+    }
+    if (agentManager.capabilities.includes('async')) {
+      await cancelPrevious();
+    }
 
     logger.start('Thinking');
     const agentResponse = await queryAgent(
       agentManager.id,
-      changedWorkspace,
+      workspaceChanged,
       query,
       stream
     );
+
     // eslint-disable-next-line prefer-const
     let [actions, queryResponse] = await handleAgentResponse(agentResponse);
     logger.stop(queryResponse || 'Done processing');
@@ -203,7 +220,7 @@ export const queryCommand = async (
       const submitResponse = toolOutputs.length
         ? await submitToolOutputs(agentManager.id, toolOutputs, stream)
         : undefined;
-      [actions, finalResponse] = await processSubmitResponse(submitResponse);
+      [actions, finalResponse] = await handleSubmitResponse(submitResponse);
       if (actions.length && finalResponse) {
         logger.stop(finalResponse);
       }

@@ -3,7 +3,7 @@ import os from 'os';
 import * as path from 'path';
 
 import Logger from '../utils/logger';
-import { AgentConfig, Config } from './types';
+import { AgentConfig, LocalConfig } from './types';
 
 const CONFIG_FILE_PATH = path.join(
   path.join(os.homedir(), '.2501'),
@@ -15,7 +15,7 @@ const CONFIG_FILE_PATH = path.join(
  * If the file doesn't exist, it creates a new configuration file with default values.
  * @returns The configuration object if successful, or null if an error occurred.
  */
-export function readConfig(): Config | null {
+export function readConfig(): LocalConfig | null {
   try {
     if (!fs.existsSync(CONFIG_FILE_PATH)) {
       fs.mkdirSync(path.dirname(CONFIG_FILE_PATH), { recursive: true });
@@ -43,9 +43,9 @@ export function readConfig(): Config | null {
  * @param key - The key to set.
  * @param value - The value to set.
  */
-export function setValue<K extends keyof Config>(
+export function setValue<K extends keyof LocalConfig>(
   key: K,
-  value: Config[K]
+  value: LocalConfig[K]
 ): void {
   try {
     const config = readConfig();
@@ -62,7 +62,7 @@ export function setValue<K extends keyof Config>(
  * Writes the provided configuration object to the configuration file.
  * @param config - The configuration object to write.
  */
-export function writeConfig(config: Config): void {
+export function writeConfig(config: LocalConfig): void {
   try {
     const data = JSON.stringify(config, null, 2);
     fs.writeFileSync(CONFIG_FILE_PATH, data, 'utf8');

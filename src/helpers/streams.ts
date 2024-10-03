@@ -1,6 +1,5 @@
-import { FunctionAction } from './api';
 import Logger from '../utils/logger';
-import { StreamEvent } from '../utils/types';
+import { FunctionAction, StreamEvent } from '../utils/types';
 import { CHUNK_MESSAGE_CLEAR } from '../utils/messaging';
 import chalk from 'chalk';
 import { getFunctionArgs, getFunctionName } from '../utils/actions';
@@ -109,19 +108,19 @@ export function getSubActionMessage(
 
   switch (functionName) {
     case 'read_file':
-      actionMsg += toItalic(`└ Reading file: ${args.path}`);
+      actionMsg += toItalic(`└ Read file: ${args.path}`);
       break;
     case 'write_file':
-      actionMsg += toItalic(`└ Writing to file: ${args.path}`);
+      actionMsg += toItalic(`└ Written to file: ${args.path}`);
       break;
     case 'update_file':
-      actionMsg += toItalic(`└ Updating file: ${args.path}`);
+      actionMsg += toItalic(`└ Updated file: ${args.path}`);
       break;
     case 'run_shell':
-      actionMsg += toItalic(`└ Executing command: ${args.command}`);
+      actionMsg += toItalic(`└ Executed command: ${args.command}`);
       break;
     case 'browse_url':
-      actionMsg += toItalic(`└ Browsing URL: ${args.url}`);
+      actionMsg += toItalic(`└ Browsed URL: ${args.url}`);
       break;
     default:
       // TODO: find a better way to display the action. Right now it just adds the message indefinitely.

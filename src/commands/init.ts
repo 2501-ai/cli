@@ -7,6 +7,8 @@ import Logger from '../utils/logger';
 
 import { API_HOST, API_VERSION } from '../constants';
 import { isDirUnsafe } from '../helpers/security';
+import { Configuration } from '../utils/types';
+import { createAgent } from '../helpers/api';
 
 axios.defaults.baseURL = `${API_HOST}${API_VERSION}`;
 axios.defaults.timeout = 120 * 1000;
@@ -21,13 +23,16 @@ interface InitCommandOptions {
 
 const logger = new Logger();
 
-async function getConfiguration(configKey: string) {
+async function getConfiguration(configKey: string): Promise<Configuration> {
   const config = readConfig();
-  const { data: configurations } = await axios.get(`/configurations`, {
-    headers: {
-      Authorization: `Bearer ${config?.api_key}`,
-    },
-  });
+  const { data: configurations } = await axios.get<Configuration[]>(
+    `/configurations`,
+    {
+      headers: {
+        Authorization: `Bearer ${config?.api_key}`,
+      },
+    }
+  );
 
   const selectedConfig = configurations.find(
     (config: { key: string; prompt: string }) => config.key === configKey
@@ -41,37 +46,23 @@ async function getConfiguration(configKey: string) {
 
 async function initAgent(
   workspace: string,
-  selected_config: any
+  configuration: Configuration
   // workspaceResponse: {
   //   files: { path: string; data: Buffer }[];
-  //   vectorStoredFiles: { id: string; name: string }[];
+  // vectorStoredFiles: { id: string; name: string }[];
   // }
 ) {
   const config = readConfig();
-  const { data: createResponse } = await axios.post(
-    '/agents',
-    {
-      workspace,
-      configuration: selected_config.id,
-      prompt: selected_config.prompt,
-      engine: config?.engine || DEFAULT_ENGINE,
-      // files: workspaceResponse.vectorStoredFiles.map((file) => file.id),
-    },
-    {
-      headers: {
-        Authorization: `Bearer ${config?.api_key}`,
-      },
-    }
-  );
-  Logger.debug('Agent created:', createResponse);
 
+  const createResponse = await createAgent(workspace, configuration);
+  Logger.debug('Agent created:', createResponse);
   // Add agent to config.
   addAgent({
     id: createResponse.id,
     name: createResponse.name,
     capabilities: createResponse.capabilities,
     workspace,
-    configuration: selected_config.id,
+    configuration: configuration.id,
     engine: config?.engine || DEFAULT_ENGINE,
   });
   return createResponse;

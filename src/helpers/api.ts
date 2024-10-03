@@ -2,6 +2,13 @@ import axios from 'axios';
 
 import { API_HOST, API_VERSION, QueryStatus } from '../constants';
 import { readConfig } from '../utils/conf';
+import { FormData } from 'formdata-node';
+import { DEFAULT_ENGINE } from '../commands/init';
+import {
+  Configuration,
+  FunctionAction,
+  QueryResponseDTO,
+} from '../utils/types';
 
 // const ONE_MINUTES_MILLIS = 60 * 1000;
 const FIVE_MINUTES_MILLIS = 5 * 60 * 1000;
@@ -13,26 +20,18 @@ axios.defaults.headers.common['Authorization'] = `Bearer ${config?.api_key}`;
 axios.defaults.baseURL = `${API_HOST}${API_VERSION}`;
 axios.defaults.timeout = FIVE_MINUTES_MILLIS;
 
-export type FunctionAction = {
-  id: string; // ex: "call_fPPBsOHeRJGmpcZQeT3wRVTK",
-  type: string; // ex: 'function'
-  function:
-    | {
-        name: string; // ex: 'update_file';
-        arguments: any;
-      }
-    | string; // ex: 'update_file';
-  args: any;
-};
-
-export type EngineCapability = 'stream' | 'async' | 'vector_stores';
-
-export type QueryResponseDTO = {
-  asynchronous: boolean;
-  capabilities: EngineCapability[]; // async, stream, submit_output
-  response?: string;
-  actions?: FunctionAction[];
-  prompt?: string;
+export const createAgent = async (
+  workspace: string,
+  selected_config: Configuration
+) => {
+  const { data: createResponse } = await axios.post('/agents', {
+    workspace,
+    configuration: selected_config.id,
+    prompt: selected_config.prompt,
+    engine: config?.engine || DEFAULT_ENGINE,
+    // files: workspaceResponse.vectorStoredFiles.map((file) => file.id),
+  });
+  return createResponse;
 };
 
 /**
@@ -96,3 +95,22 @@ export const cancelQuery = async (agentId: string) => {
   const { data } = await axios.post(`/agents/${agentId}/cancel`);
   return data;
 };
+
+/**
+ * Index the workspace files for an agent
+ * @param agentId
+ * @param files
+ */
+export async function indexFiles(
+  agentId: string,
+  files: { path: string; data: Buffer }[]
+  // filesIds: { id: string; name: string }[]
+) {
+  const data = new FormData();
+  for (let i = 0; i < files.length; i++) {
+    const name = files[i].path.split('/').pop();
+    data.set('file' + i, new Blob([files[i].data]), name);
+  }
+
+  await axios.post(`/agents/${agentId}/files/index`, data);
+}

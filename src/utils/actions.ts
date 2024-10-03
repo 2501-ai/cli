@@ -1,8 +1,8 @@
 import { ACTION_FNS } from '../managers/agentManager';
-import { FunctionAction } from '../helpers/api';
 import { jsonrepair } from 'jsonrepair';
 import { cleanupBackticks } from './json';
 import Logger from './logger';
+import { FunctionAction } from './types';
 
 /**
  * TODO: This function should be removed in the future, and we should have a standardised way to get the function name
