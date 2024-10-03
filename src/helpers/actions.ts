@@ -57,12 +57,9 @@ export function update_file({
 }) {
   Logger.debug('Updating sections:', sectionsDiff);
   const fileContent = fs.readFileSync(path, 'utf8');
-  // const fileContent = rawFileContent.replace(/\r\n/g, '\n');
-  // Logger.debug('Raw file content identical: ' + rawFileContent === fileContent);
-
   const newContent = modifyCodeSections({
-    originalContent: fileContent.replace(/\n/g, '\n'),
-    diffSections: sectionsDiff.map((diff) => diff.replace(/\n/g, '\n')),
+    originalContent: fileContent,
+    diffSections: sectionsDiff,
   });
 
   const content = isIgnoredFile(path)
