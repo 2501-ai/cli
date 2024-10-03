@@ -114,6 +114,7 @@ program
 program
   .command('wtf')
   .description('What the f*ck did I just do?')
+  .hook('preAction', authMiddleware)
   .action(wtfCommand);
 
 (async () => {
