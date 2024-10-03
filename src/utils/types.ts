@@ -49,7 +49,7 @@ export type StreamEvent = {
   status: StreamEventStatus | null;
   message: string;
   actions?: FunctionAction[];
-  usage?: UsageData;
+  usage: UsageData | null;
 };
 
 export type UsageData = {
