@@ -114,8 +114,6 @@ export type InitTaskContext = {
 // This function will be called when the `init` command is executed
 export async function initCommand(options?: InitCommandOptions) {
   try {
-    logger.intro('>>> Initializing Agent');
-
     const configKey = options?.config || 'CODING_AGENT';
     const selectedConfig = await getConfiguration(configKey);
     const workspacePath = await getWorkspacePath(options);
