@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { StreamEvent } from './utils/types';
 
 if (process.env.AUTH_JWT) {
   axios.defaults.headers.common['Cookie'] =
@@ -78,3 +79,10 @@ export const IGNORED_FILE_PATTERNS = [
 
 export const DEFAULT_MAX_DEPTH = 5;
 export const DEFAULT_MAX_DIR_SIZE = 50 * 1024 * 1024; // 50 MB
+
+export const DEFAULT_ACTIONS_REPONSE: StreamEvent = {
+  status: 'requires_action',
+  message: 'Action required',
+  actions: [],
+  usage: null,
+};

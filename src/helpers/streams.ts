@@ -1,9 +1,9 @@
-import { FunctionAction } from './api';
 import Logger from '../utils/logger';
-import { StreamEvent } from '../utils/types';
+import { FunctionAction, StreamEvent } from '../utils/types';
 import { CHUNK_MESSAGE_CLEAR } from '../utils/messaging';
 import chalk from 'chalk';
 import { getFunctionArgs, getFunctionName } from '../utils/actions';
+import path from 'path';
 
 /**
  * Parse the chunks of messages from the agent response,
@@ -65,6 +65,36 @@ function toItalic(text: string): string {
   return chalk.italic.gray(text.trim());
 }
 
+/*
+ * Get the italic postfix for the action. Ex: `${taskTitle} : (Updating file: ...)`
+ */
+export function getActionPostfix(action: FunctionAction): string {
+  const functionName = getFunctionName(action);
+  const args = getFunctionArgs(action);
+
+  switch (functionName) {
+    case 'read_file':
+      return toItalic(`(Reading file: ${path.basename(args.path)})`);
+    case 'write_file':
+      return toItalic(`(Writing to file: ${path.basename(args.path)})`);
+    case 'update_file':
+      return toItalic(`(Updating file: ${path.basename(args.path)})`);
+    case 'run_shell':
+      // avoid displaying the full cd command.
+      const formatted =
+        args.command.startsWith('cd') && args.command.indexOf('&&') > 0
+          ? (args.command as string)
+              .split('&&')
+              .slice(args.command.indexOf('&&') + 1)
+          : args.command;
+      return toItalic(`(Executing command: ${formatted})`);
+    case 'browse_url':
+      return toItalic(`(Browsing URL: ${args.url})`);
+    default:
+      return '';
+  }
+}
+
 export function getSubActionMessage(
   message: string,
   action: FunctionAction
@@ -78,19 +108,19 @@ export function getSubActionMessage(
 
   switch (functionName) {
     case 'read_file':
-      actionMsg += toItalic(`└ Reading file: ${args.path}`);
+      actionMsg += toItalic(`└ File read: ${args.path}`);
       break;
     case 'write_file':
-      actionMsg += toItalic(`└ Writing to file: ${args.path}`);
+      actionMsg += toItalic(`└ File written: ${args.path}`);
       break;
     case 'update_file':
-      actionMsg += toItalic(`└ Updating file: ${args.path}`);
+      actionMsg += toItalic(`└ File updated: ${args.path}`);
       break;
     case 'run_shell':
-      actionMsg += toItalic(`└ Executing command: ${args.command}`);
+      actionMsg += toItalic(`└ Command executed: ${args.command}`);
       break;
     case 'browse_url':
-      actionMsg += toItalic(`└ Browsing URL: ${args.url}`);
+      actionMsg += toItalic(`└ URL browsed: ${args.url}`);
       break;
     default:
       // TODO: find a better way to display the action. Right now it just adds the message indefinitely.
@@ -101,14 +131,15 @@ export function getSubActionMessage(
   // Logger.debug('SubActionMessage:', actionMsg);
   return actionMsg.trim();
 }
+
 // Variable will be availble as long as the process is running
 let totalTokens = 0;
 
+// Skip the stream chunk parsing when the following delimiters are found in the content (which can break the parsing)
 export const UPDATE_FILE_DELIMITERS: [string, string] = ['<<<<<', '>>>>>'];
 
 export async function processStreamedResponse(
-  agentResponse: AsyncIterable<Buffer>,
-  logger: Logger
+  agentResponse: AsyncIterable<Buffer>
 ) {
   const actions: FunctionAction[] = [];
   let message = '';
@@ -117,7 +148,9 @@ export async function processStreamedResponse(
 
   for await (const chunk of agentResponse) {
     let content = '';
-    //If there were previous chunks, we need to join them
+    let streamEvents: StreamEvent[];
+
+    //If there were previous chunks, we need to add them
     chunks.push(chunk.toString('utf-8'));
 
     if (chunks.length > 0) {
@@ -125,15 +158,10 @@ export async function processStreamedResponse(
     } else {
       content = Buffer.from(chunk).toString('utf8');
     }
-    // Logger.debug(`Streamed data [Chunks: ${chunks.length}]:`, content);
-
-    let streamEvents: StreamEvent[];
     try {
       streamEvents = [JSON.parse(content)];
       chunks = [];
     } catch (e) {
-      // TODO: test this in staging environment !!!!!!!!!!!!!!!!
-      // Logger.debug('Error parsing stream content:', e);
       // Chunks might come in multiple parts
       const { parsed, remaining } = parseChunkedMessages<StreamEvent>(
         content,
@@ -143,7 +171,7 @@ export async function processStreamedResponse(
       // Logger.debug('Parsed:', parsed);
 
       if (remaining) {
-        Logger.debug('Remaining:', remaining);
+        // Logger.debug('Remaining:', remaining);
         chunks = [remaining];
       } else {
         chunks = [];
@@ -152,12 +180,18 @@ export async function processStreamedResponse(
     }
 
     streamEvents.forEach((streamEvent) => {
-      // Logger.debug('StreamEvent', streamEvent);
+      Logger.debug('StreamEvent', streamEvent);
       switch (streamEvent.status) {
         case 'requires_action':
+          // The default message is too verbose, for now we will just display the actions
+          // if (streamEvent.message !== DEFAULT_ACTIONS_REPONSE.message) {
+          //   message = streamEvent.message;
+          // } else {
+          //   message = '';
+          // }
           message = '';
           actions.push(...(streamEvent.actions ?? []));
-          logger.message(streamEvent.message);
+          // logger.message(streamEvent.message);
           break;
         case 'message':
           message = streamEvent.message;
@@ -186,7 +220,7 @@ export async function processStreamedResponse(
           }
           break;
         default:
-          logger.message(streamEvent.message);
+        // logger.message(streamEvent.message);
       }
     });
   }

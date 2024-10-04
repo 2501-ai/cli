@@ -13,14 +13,12 @@ import {
 import Logger from '../utils/logger';
 import { readConfig } from '../utils/conf';
 
-import {
-  EngineCapability,
-  FunctionAction,
-  getAgentStatus,
-} from '../helpers/api';
+import { getAgentStatus } from '../helpers/api';
 import {
   AgentCallbackType,
+  EngineCapability,
   EngineType,
+  FunctionAction,
   FunctionExecutionResult,
 } from '../utils/types';
 import { getFunctionName } from '../utils/actions';

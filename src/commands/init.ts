@@ -1,14 +1,13 @@
 import axios from 'axios';
 import fs from 'fs';
-import { FormData } from 'formdata-node';
-
-import { indexWorkspaceFiles, uploadWorkspaceFile } from '../helpers/workspace';
 import { addAgent, readConfig } from '../utils/conf';
 
 import Logger from '../utils/logger';
 
 import { API_HOST, API_VERSION } from '../constants';
 import { isDirUnsafe } from '../helpers/security';
+import { Configuration } from '../utils/types';
+import { createAgent } from '../helpers/api';
 
 axios.defaults.baseURL = `${API_HOST}${API_VERSION}`;
 axios.defaults.timeout = 120 * 1000;
@@ -19,17 +18,21 @@ interface InitCommandOptions {
   name?: string;
   workspace?: string | boolean;
   config?: string;
+  ignoreUnsafe?: boolean;
 }
 
 const logger = new Logger();
 
-async function initConfiguration(configKey: string) {
+async function getConfiguration(configKey: string): Promise<Configuration> {
   const config = readConfig();
-  const { data: configurations } = await axios.get(`/configurations`, {
-    headers: {
-      Authorization: `Bearer ${config?.api_key}`,
-    },
-  });
+  const { data: configurations } = await axios.get<Configuration[]>(
+    `/configurations`,
+    {
+      headers: {
+        Authorization: `Bearer ${config?.api_key}`,
+      },
+    }
+  );
 
   const selectedConfig = configurations.find(
     (config: { key: string; prompt: string }) => config.key === configKey
@@ -39,44 +42,6 @@ async function initConfiguration(configKey: string) {
     process.exit(1);
   }
   return selectedConfig;
-}
-
-async function initAgent(
-  workspace: string,
-  selected_config: any,
-  workspaceResponse: {
-    files: { path: string; data: Buffer }[];
-    vectorStoredFiles: { id: string; name: string }[];
-  }
-) {
-  const config = readConfig();
-  const { data: createResponse } = await axios.post(
-    '/agents',
-    {
-      workspace,
-      configuration: selected_config.id,
-      prompt: selected_config.prompt,
-      engine: config?.engine || DEFAULT_ENGINE,
-      files: workspaceResponse.vectorStoredFiles.map((file) => file.id),
-    },
-    {
-      headers: {
-        Authorization: `Bearer ${config?.api_key}`,
-      },
-    }
-  );
-  Logger.debug('Agent created:', createResponse);
-
-  // Add agent to config.
-  addAgent({
-    id: createResponse.id,
-    name: createResponse.name,
-    capabilities: createResponse.capabilities,
-    workspace,
-    configuration: selected_config.id,
-    engine: config?.engine || DEFAULT_ENGINE,
-  });
-  return createResponse;
 }
 
 async function getWorkspacePath(options?: InitCommandOptions): Promise<string> {
@@ -94,7 +59,7 @@ async function getWorkspacePath(options?: InitCommandOptions): Promise<string> {
     finalPath = process.cwd();
   }
 
-  if (isDirUnsafe(finalPath)) {
+  if (!options?.ignoreUnsafe && isDirUnsafe(finalPath)) {
     logger.stop(
       `Files in the workspace "${finalPath}" are considered sensitive`
     );
@@ -112,42 +77,29 @@ async function getWorkspacePath(options?: InitCommandOptions): Promise<string> {
   return finalPath;
 }
 
-export type InitTaskContext = {
-  workspace: string;
-  workspaceResponse: {
-    data: FormData | null;
-    files: { id: string; name: string }[];
-  };
-  selectedConfig: any;
-  agent: any;
-};
-
 // This function will be called when the `init` command is executed
 export async function initCommand(options?: InitCommandOptions) {
   try {
-    logger.intro('>>> Initializing Agent');
-
-    logger.start('Synchronizing workspace');
-    const workspacePath = await getWorkspacePath(options);
-    logger.message('Scanning workspace files');
-    const workspaceResponse = await uploadWorkspaceFile(workspacePath);
     const configKey = options?.config || 'CODING_AGENT';
-    const selectedConfig = await initConfiguration(configKey);
-    logger.stop('Workspace created');
+    const configuration = await getConfiguration(configKey);
+    const workspace = await getWorkspacePath(options);
 
     logger.start('Creating agent');
-    const agent = await initAgent(
-      workspacePath,
-      selectedConfig,
-      workspaceResponse
-    );
-    await indexWorkspaceFiles(
-      agent.id,
-      workspaceResponse.files,
-      workspaceResponse.vectorStoredFiles
-    );
+    const config = readConfig();
 
-    logger.stop(`Agent ${agent.id} created`);
+    const createResponse = await createAgent(workspace, configuration);
+    Logger.debug('Agent created:', createResponse);
+    // Add agent to config.
+    addAgent({
+      id: createResponse.id,
+      name: createResponse.name,
+      capabilities: createResponse.capabilities,
+      workspace,
+      configuration: configuration.id,
+      engine: config?.engine || DEFAULT_ENGINE,
+    });
+
+    logger.stop(`Agent ${createResponse.id} created`);
   } catch (e: unknown) {
     logger.handleError(e as Error, (e as Error).message);
   }

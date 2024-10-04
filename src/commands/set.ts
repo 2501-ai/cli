@@ -1,6 +1,6 @@
 import { readConfig, setValue } from '../utils/conf';
 import Logger from '../utils/logger';
-import { Config } from '../utils/types';
+import { LocalConfig } from '../utils/types';
 
 export function setCommand() {
   const config = readConfig();
@@ -23,6 +23,6 @@ export function setCommand() {
     value = JSON.parse(value);
   }
 
-  setValue(key as keyof Config, value);
+  setValue(key as keyof LocalConfig, value);
   Logger.log(`${key} set successfully.`);
 }
