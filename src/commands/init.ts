@@ -1,6 +1,5 @@
 import axios from 'axios';
 import fs from 'fs';
-import { FormData } from 'formdata-node';
 import { addAgent, readConfig } from '../utils/conf';
 
 import Logger from '../utils/logger';
@@ -19,6 +18,7 @@ interface InitCommandOptions {
   name?: string;
   workspace?: string | boolean;
   config?: string;
+  ignoreUnsafe?: boolean;
 }
 
 const logger = new Logger();
@@ -44,30 +44,6 @@ async function getConfiguration(configKey: string): Promise<Configuration> {
   return selectedConfig;
 }
 
-async function initAgent(
-  workspace: string,
-  configuration: Configuration
-  // workspaceResponse: {
-  //   files: { path: string; data: Buffer }[];
-  // vectorStoredFiles: { id: string; name: string }[];
-  // }
-) {
-  const config = readConfig();
-
-  const createResponse = await createAgent(workspace, configuration);
-  Logger.debug('Agent created:', createResponse);
-  // Add agent to config.
-  addAgent({
-    id: createResponse.id,
-    name: createResponse.name,
-    capabilities: createResponse.capabilities,
-    workspace,
-    configuration: configuration.id,
-    engine: config?.engine || DEFAULT_ENGINE,
-  });
-  return createResponse;
-}
-
 async function getWorkspacePath(options?: InitCommandOptions): Promise<string> {
   if (options?.workspace === false) {
     const path = `/tmp/2501/${Date.now()}`;
@@ -83,7 +59,7 @@ async function getWorkspacePath(options?: InitCommandOptions): Promise<string> {
     finalPath = process.cwd();
   }
 
-  if (isDirUnsafe(finalPath)) {
+  if (!options?.ignoreUnsafe && isDirUnsafe(finalPath)) {
     logger.stop(
       `Files in the workspace "${finalPath}" are considered sensitive`
     );
@@ -101,27 +77,29 @@ async function getWorkspacePath(options?: InitCommandOptions): Promise<string> {
   return finalPath;
 }
 
-export type InitTaskContext = {
-  workspace: string;
-  workspaceResponse: {
-    data: FormData | null;
-    files: { id: string; name: string }[];
-  };
-  selectedConfig: any;
-  agent: any;
-};
-
 // This function will be called when the `init` command is executed
 export async function initCommand(options?: InitCommandOptions) {
   try {
     const configKey = options?.config || 'CODING_AGENT';
-    const selectedConfig = await getConfiguration(configKey);
-    const workspacePath = await getWorkspacePath(options);
+    const configuration = await getConfiguration(configKey);
+    const workspace = await getWorkspacePath(options);
 
     logger.start('Creating agent');
-    const agent = await initAgent(workspacePath, selectedConfig);
+    const config = readConfig();
 
-    logger.stop(`Agent ${agent.id} created`);
+    const createResponse = await createAgent(workspace, configuration);
+    Logger.debug('Agent created:', createResponse);
+    // Add agent to config.
+    addAgent({
+      id: createResponse.id,
+      name: createResponse.name,
+      capabilities: createResponse.capabilities,
+      workspace,
+      configuration: configuration.id,
+      engine: config?.engine || DEFAULT_ENGINE,
+    });
+
+    logger.stop(`Agent ${createResponse.id} created`);
   } catch (e: unknown) {
     logger.handleError(e as Error, (e as Error).message);
   }

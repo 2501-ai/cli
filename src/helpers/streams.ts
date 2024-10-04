@@ -108,19 +108,19 @@ export function getSubActionMessage(
 
   switch (functionName) {
     case 'read_file':
-      actionMsg += toItalic(`└ Read file: ${args.path}`);
+      actionMsg += toItalic(`└ File read: ${args.path}`);
       break;
     case 'write_file':
-      actionMsg += toItalic(`└ Written to file: ${args.path}`);
+      actionMsg += toItalic(`└ File written: ${args.path}`);
       break;
     case 'update_file':
-      actionMsg += toItalic(`└ Updated file: ${args.path}`);
+      actionMsg += toItalic(`└ File updated: ${args.path}`);
       break;
     case 'run_shell':
-      actionMsg += toItalic(`└ Executed command: ${args.command}`);
+      actionMsg += toItalic(`└ Command executed: ${args.command}`);
       break;
     case 'browse_url':
-      actionMsg += toItalic(`└ Browsed URL: ${args.url}`);
+      actionMsg += toItalic(`└ URL browsed: ${args.url}`);
       break;
     default:
       // TODO: find a better way to display the action. Right now it just adds the message indefinitely.

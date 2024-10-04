@@ -43,7 +43,7 @@ export async function write_file(args: { path: string; content: string }) {
     : `Content :
     ${args.content}`;
   return `
-    File written to ${args.path}
+    File written: ${args.path}
     ${content}`;
 }
 
