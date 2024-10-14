@@ -56,7 +56,7 @@ const executeActions = async (
     const args = getFunctionArgs(action);
     const taskTitle =
       args.answer || args.command || (args.url ? `Browsing: ${args.url}` : '');
-    logger.start(`${taskTitle} ${getActionPostfix(action)}`);
+    logger.start(`${taskTitle}\n  ${getActionPostfix(action)}`);
 
     const toolOutput = await agentManager.executeAction(action, args);
     Logger.debug('Tool output:', toolOutput);
