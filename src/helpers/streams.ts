@@ -74,11 +74,11 @@ export function getActionPostfix(action: FunctionAction): string {
 
   switch (functionName) {
     case 'read_file':
-      return toItalic(`(Reading file: ${path.basename(args.path)})`);
+      return toItalic(`└ (Reading file: ${path.basename(args.path)})`);
     case 'write_file':
-      return toItalic(`(Writing to file: ${path.basename(args.path)})`);
+      return toItalic(`└ (Writing to file: ${path.basename(args.path)})`);
     case 'update_file':
-      return toItalic(`(Updating file: ${path.basename(args.path)})`);
+      return toItalic(`└ (Updating file: ${path.basename(args.path)})`);
     case 'run_shell':
       // avoid displaying the full cd command.
       const formatted =
@@ -87,9 +87,9 @@ export function getActionPostfix(action: FunctionAction): string {
               .split('&&')
               .slice(args.command.indexOf('&&') + 1)
           : args.command;
-      return toItalic(`(Executing command: ${formatted})`);
+      return toItalic(`└ (Executing command: ${formatted})`);
     case 'browse_url':
-      return toItalic(`(Browsing URL: ${args.url})`);
+      return toItalic(`└ (Browsing URL: ${args.url})`);
     default:
       return '';
   }
