@@ -16,6 +16,17 @@ enum Colors {
   WHITE = 'white',
 }
 
+function getTerminalWidth(): number {
+  let terminalWidth: number;
+  if (process.stdout.isTTY) {
+    terminalWidth = process.stdout.columns;
+  } else {
+    // Default to 400 columns if terminal width is not available
+    terminalWidth = 400;
+  }
+  return terminalWidth;
+}
+
 const stringify = (args: any[]) => {
   const seen = new WeakSet();
 
@@ -74,7 +85,7 @@ export default class Logger {
       this.spin.message(message);
       return;
     }
-    this.spin.start(message);
+    this.spin.start(message?.substring(0, getTerminalWidth() - 10));
     this.#spinnerStarted = true;
   }
 
