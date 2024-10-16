@@ -1,3 +1,4 @@
+import fs from 'fs';
 import { marked, MarkedExtension } from 'marked';
 import { markedTerminal } from 'marked-terminal';
 import {
@@ -29,7 +30,6 @@ import { AgentManager } from '../managers/agentManager';
 import { getEligibleAgent, readConfig } from '../utils/conf';
 import Logger from '../utils/logger';
 import { generatePDFs } from '../utils/pdf';
-import fs from 'fs';
 
 marked.use(markedTerminal() as MarkedExtension);
 
@@ -56,17 +56,16 @@ const executeActions = async (
     const args = getFunctionArgs(action);
     const taskTitle =
       args.answer || args.command || (args.url ? `Browsing: ${args.url}` : '');
-    logger.start(
-      `${taskTitle}\n  ${getActionPostfix(action).substring(0, 30)}...`
-    );
+
+    logger.start(`${taskTitle} ${getActionPostfix(action)}`);
 
     const toolOutput = await agentManager.executeAction(action, args);
     Logger.debug('Tool output:', toolOutput);
 
-    const msg = getSubActionMessage(taskTitle, action);
+    const subActionMessage = getSubActionMessage(taskTitle, action);
     toolOutput.success
-      ? logger.stop(msg, 0)
-      : logger.stop(`(failed) ${msg}`, 1);
+      ? logger.stop(subActionMessage, 0)
+      : logger.stop(`(failed) ${subActionMessage}`, 1);
     results.push(toolOutput);
   }
 
