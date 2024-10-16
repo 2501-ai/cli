@@ -21,7 +21,7 @@ function getTerminalWidth(): number {
   if (process.stdout.isTTY) {
     terminalWidth = process.stdout.columns;
   } else {
-    // Default to 80 columns if terminal width is not available
+    // Default to 400 columns if terminal width is not available
     terminalWidth = 400;
   }
   return terminalWidth;
