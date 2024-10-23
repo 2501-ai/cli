@@ -33,11 +33,13 @@ function createPDFFromFiles(
 
     doc.pipe(stream);
 
-    fileList.forEach((file) => {
-      doc.addPage();
+    fileList.forEach((file, index) => {
+      if (index > 0) {
+        doc.addPage();
+      }
       doc
-        .fontSize(12)
-        .text(`File: ${file}`, {
+        .fontSize(10)
+        .text(`File:${file}::END`, {
           underline: true,
         })
         .moveDown(0.5);

@@ -1,11 +1,8 @@
-import { readConfig, setValue } from '../utils/conf';
+import { setValue } from '../utils/conf';
 import Logger from '../utils/logger';
 import { LocalConfig } from '../utils/types';
 
 export function setCommand() {
-  const config = readConfig();
-  if (!config) return;
-
   const key = process.argv[3];
   let value = process.argv[4];
 
