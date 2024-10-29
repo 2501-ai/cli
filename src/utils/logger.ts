@@ -17,14 +17,11 @@ enum Colors {
 }
 
 function getTerminalWidth(): number {
-  let terminalWidth: number;
   if (process.stdout.isTTY) {
-    terminalWidth = process.stdout.columns;
+    return process.stdout.columns;
   } else {
-    // Default to 400 columns if terminal width is not available
-    terminalWidth = 400;
+    return 80;
   }
-  return terminalWidth;
 }
 
 const stringify = (args: any[]) => {
@@ -60,6 +57,7 @@ const stringify = (args: any[]) => {
 
 export default class Logger {
   #spinnerStarted = false;
+  #lastUpdateTime = 0;
 
   constructor(public spin = p.spinner()) {}
 
@@ -81,24 +79,46 @@ export default class Logger {
   }
 
   start(message?: string) {
+    const terminalWidth = getTerminalWidth();
+    const maxMessageLength = terminalWidth - 10;
+    const truncatedMessage = message
+      ? message.substring(0, maxMessageLength)
+      : undefined;
+
     if (this.#spinnerStarted) {
-      this.spin.message(message);
+      this.spin.message(truncatedMessage);
       return;
     }
-    this.spin.start(message?.substring(0, getTerminalWidth() - 10));
+
+    if (truncatedMessage && truncatedMessage.length > maxMessageLength) {
+      this.spin.message(truncatedMessage.slice(0, maxMessageLength));
+    }
+
+    this.spin.start(truncatedMessage);
     this.#spinnerStarted = true;
   }
 
   message(message: string) {
-    this.spin.message(message);
-  }
-
-  stop(message?: string, code?: number) {
-    if (!this.#spinnerStarted) {
-      this.spin.message(message);
+    const now = Date.now();
+    if (now - this.#lastUpdateTime < 100) {
       return;
     }
-    this.spin.stop(message, code);
+    this.#lastUpdateTime = now;
+
+    const terminalWidth = getTerminalWidth();
+    const maxMessageLength = terminalWidth - 10;
+    const truncatedMessage = message.substring(0, maxMessageLength);
+    this.spin.message(truncatedMessage);
+  }
+
+  stop(message?: string) {
+    if (!this.#spinnerStarted) {
+      return;
+    }
+    if (message) {
+      this.spin.message(message.substring(0, getTerminalWidth() - 10));
+    }
+    this.spin.stop();
     this.#spinnerStarted = false;
   }
 
