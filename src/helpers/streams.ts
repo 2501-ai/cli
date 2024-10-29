@@ -18,7 +18,6 @@ export function parseChunkedMessages<T>(input: string): {
   remaining: string;
 } {
   const parsed: T[] = [];
-  let remaining = '';
   let currentJson = '';
   let braceCount = 0;
   let inString = false;
@@ -33,30 +32,31 @@ export function parseChunkedMessages<T>(input: string): {
       inString = !inString;
     }
 
-    // Track escaped characters
+    // Track double escaped characters (\\)
     escapeNext = char === '\\' && !escapeNext;
 
-    // Only count braces if we're not in a string
-    if (!inString) {
-      if (char === '{') braceCount++;
-      if (char === '}') braceCount--;
+    // Skip the rest if we're in a string
+    if (inString) {
+      continue;
     }
 
-    // Attempt to parse JSON once a fully matched object is detected
-    if (braceCount === 0 && currentJson.trim()) {
-      try {
-        parsed.push(JSON.parse(currentJson));
-        currentJson = ''; // Reset for the next JSON object
-      } catch {
-        // If parsing fails, we continue accumulating characters
+    // Count braces if we're not in a string
+    if (char === '{') braceCount++;
+    if (char === '}') {
+      // Attempt to parse JSON once a fully matched object is detected
+      if (--braceCount === 0 && currentJson.trim().length > 0) {
+        try {
+          parsed.push(JSON.parse(currentJson));
+          currentJson = ''; // Reset for the next JSON object
+        } catch {
+          // If parsing fails, we continue accumulating characters
+        }
       }
     }
   }
 
-  // Remaining unparsed JSON
-  remaining = currentJson;
-
-  return { parsed, remaining };
+  // If there are remaining characters, it means the JSON object is incomplete
+  return { parsed, remaining: currentJson };
 }
 
 function toItalic(text: string): string {
