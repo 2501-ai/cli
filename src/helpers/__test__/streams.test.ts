@@ -55,4 +55,18 @@ describe('streams', () => {
     expect(remaining).toBe('');
     expect(parsed.length).toBe(3);
   });
+
+  it('should toThrow when trying to parse an incomplete content', () => {
+    const content = '{"status":"chunked_message","message":"}';
+    expect(() => parseChunkedMessages(content)).toThrow();
+  });
+
+  it('should throw when invalid content is given', () => {
+    const content = `{"status":"chunked_message","message":"\\"}`;
+    expect(() => parseChunkedMessages(content)).toThrow();
+  });
+  it('should throw when invalid content is given #2', () => {
+    const content = `{"status":"chunked_message","message":"}`;
+    expect(() => parseChunkedMessages(content)).toThrow();
+  });
 });

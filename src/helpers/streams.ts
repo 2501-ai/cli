@@ -146,6 +146,7 @@ export async function processStreamedResponse(
   for await (const chunk of agentResponse) {
     let content = '';
     let streamEvents: StreamEvent[];
+    // Logger.debug('Chunk:', chunk.toString('utf-8'));
 
     //If there were previous chunks, we need to add them
     chunks.push(chunk.toString('utf-8'));

@@ -135,7 +135,7 @@ export default class Logger {
 
   handleError(
     e: Error | AxiosError,
-    defaultMsg = 'The server has returned an error. Please try again'
+    defaultMsg = 'Unexpected error. Please try again !'
   ) {
     if (isDebug) {
       if (axios.isAxiosError(e)) {
@@ -163,17 +163,18 @@ export default class Logger {
       const errorData = axiosError.response?.data as { code?: string };
 
       if (axiosError.response?.status === 401) {
-        this.cancel('Unauthorized. Please verify your API key.');
-        return;
+        defaultMsg = 'Unauthorized. Please verify your API key.';
       }
 
       if (axiosError.response?.status === 403) {
         if (errorData?.code === 'TOKEN_LIMIT') {
-          this.cancel(
-            'Monthly token usage limit reached. Please upgrade your plan or contact us !'
-          );
-          return;
+          defaultMsg =
+            'Monthly token usage limit reached. Please upgrade your plan or contact us !';
         }
+      }
+
+      if (axiosError.response?.status === 500) {
+        defaultMsg = 'The server has returned an error. Please try again';
       }
 
       if (axiosError.code === 'ECONNREFUSED') {
@@ -181,8 +182,6 @@ export default class Logger {
       }
     }
     this.cancel(defaultMsg);
-    // this.cancel(defaultMsg)
-    // Logger.error("Unexpected error. We're working on it!");
   }
 
   static agent(data: any) {
