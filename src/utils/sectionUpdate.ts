@@ -19,7 +19,7 @@ export function modifyCodeSections({
     const startIdx = modifiedContent.indexOf(previousContent);
     if (startIdx === -1) {
       throw new Error(`Previous content not found in the original content: 
- ${previousContent}`);
+${previousContent}`);
     }
 
     const endIdx = startIdx + previousContent.length;

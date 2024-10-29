@@ -21,7 +21,6 @@ export function readConfig(): LocalConfig | null {
       fs.mkdirSync(path.dirname(CONFIG_FILE_PATH), { recursive: true });
       fs.writeFileSync(
         CONFIG_FILE_PATH,
-        // TODO: set the stream to true when the feature i stable
         JSON.stringify(
           { workspace_disabled: false, agents: [], stream: true },
           null,

@@ -9,31 +9,27 @@ import path from 'path';
  * Parse the chunks of messages from the agent response,
  * and return the parsed messages and the remaining content
  *
- * @param input
- * @param skipDelimiters - Skip parsing between delimiters. Ex: ['<<<<<', '>>>>>']
+ * The input can contain multiple or partial JSON objects.
+ *
+ * @param input - String input to be parsed.
  */
-export function parseChunkedMessages<T>(
-  input: string,
-  skipDelimiters: [string, string]
-): {
+export function parseChunkedMessages<T>(input: string): {
   parsed: T[];
   remaining: string;
 } {
   // Logger.debug('Parsing chunked messages:', input);
   const result: T[] = [];
-  const stack: string[] = [];
+  let stack = 0;
   let startIndex = 0;
   let nextParseIndex = 0;
 
   for (let i = 0; i < input.length; i++) {
     if (input[i] === '{') {
-      if (stack.length === 0) {
+      if (stack++ === 0) {
         startIndex = i;
       }
-      stack.push('{');
     } else if (input[i] === '}') {
-      stack.pop();
-      if (stack.length === 0) {
+      if (--stack === 0) {
         const chunk = input.slice(startIndex, i + 1);
         try {
           result.push(JSON.parse(chunk));
@@ -43,14 +39,18 @@ export function parseChunkedMessages<T>(
           throw new Error(`Error parsing chunked message: '${chunk}'`);
         }
       }
-    } else if (
-      input[i] === skipDelimiters[0][0] &&
-      input.slice(i, i + skipDelimiters[0].length) === skipDelimiters[0]
-    ) {
-      // skip to the end of the delimiter
-      const end = input.indexOf(skipDelimiters[1], i);
-      if (end > 0) {
-        i = end + skipDelimiters[1].length;
+    }
+    // Check if the content is between double-quotes and skip to the end of the string
+    else if (input[i] === '"') {
+      let end = input.indexOf('"', i + 1);
+
+      // Skip the escaped and double escaped double quotes.
+      while (input[end - 1] === '\\' && input[end - 2] !== '\\') {
+        end = input.indexOf('"', end + 1);
+      }
+
+      if (end > i) {
+        i = end;
       } else {
         // if the end is not found, maybe the next chunk will have the end
       }
@@ -135,9 +135,6 @@ export function getSubActionMessage(
 // Variable will be availble as long as the process is running
 let totalTokens = 0;
 
-// Skip the stream chunk parsing when the following delimiters are found in the content (which can break the parsing)
-export const UPDATE_FILE_DELIMITERS: [string, string] = ['<<<<<', '>>>>>'];
-
 export async function processStreamedResponse(
   agentResponse: AsyncIterable<Buffer>
 ) {
@@ -149,6 +146,7 @@ export async function processStreamedResponse(
   for await (const chunk of agentResponse) {
     let content = '';
     let streamEvents: StreamEvent[];
+    // Logger.debug('Chunk:', chunk.toString('utf-8'));
 
     //If there were previous chunks, we need to add them
     chunks.push(chunk.toString('utf-8'));
@@ -163,10 +161,7 @@ export async function processStreamedResponse(
       chunks = [];
     } catch (e) {
       // Chunks might come in multiple parts
-      const { parsed, remaining } = parseChunkedMessages<StreamEvent>(
-        content,
-        UPDATE_FILE_DELIMITERS
-      );
+      const { parsed, remaining } = parseChunkedMessages<StreamEvent>(content);
 
       // Logger.debug('Parsed:', parsed);
 
