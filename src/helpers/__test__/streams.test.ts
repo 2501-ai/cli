@@ -49,24 +49,33 @@ describe('streams', () => {
 
   it('should parse content fully', () => {
     const content =
-      '{"status":"chunked_message","message":"\\\\"}{"status":"chunked_message","message":"n"}{"status":"chunked_message","message":"import"}';
+      '{"status":"chunked_message","message":"\\\\\\""}{"status":"chunked_message","message":"\\\\\\""}';
     const { remaining, parsed } = parseChunkedMessages(content);
 
     expect(remaining).toBe('');
-    expect(parsed.length).toBe(3);
+    expect(parsed.length).toBe(2);
   });
 
-  it('should toThrow when trying to parse an incomplete content', () => {
+  it('should have remains when trying to parse an incomplete content', () => {
     const content = '{"status":"chunked_message","message":"}';
-    expect(() => parseChunkedMessages(content)).toThrow();
+    const { remaining, parsed } = parseChunkedMessages(content);
+
+    expect(remaining).toBe(content);
+    expect(parsed.length).toBe(0);
   });
 
-  it('should throw when invalid content is given', () => {
+  it('should have remains when invalid content is given', () => {
     const content = `{"status":"chunked_message","message":"\\"}`;
-    expect(() => parseChunkedMessages(content)).toThrow();
+    const { remaining, parsed } = parseChunkedMessages(content);
+
+    expect(remaining).toBe(content);
+    expect(parsed.length).toBe(0);
   });
-  it('should throw when invalid content is given #2', () => {
+  it('should have remains when invalid content is given #2', () => {
     const content = `{"status":"chunked_message","message":"}`;
-    expect(() => parseChunkedMessages(content)).toThrow();
+    const { remaining, parsed } = parseChunkedMessages(content);
+
+    expect(remaining).toBe(content);
+    expect(parsed.length).toBe(0);
   });
 });
