@@ -44,7 +44,7 @@ export function parseChunkedMessages<T>(input: string): {
     if (char === '{') braceCount++;
     if (char === '}') {
       // Attempt to parse JSON once a fully matched object is detected
-      if (--braceCount === 0 && currentJson.trim()) {
+      if (--braceCount === 0 && currentJson.trim().length > 0) {
         try {
           parsed.push(JSON.parse(currentJson));
           currentJson = ''; // Reset for the next JSON object
@@ -55,6 +55,7 @@ export function parseChunkedMessages<T>(input: string): {
     }
   }
 
+  // If there are remaining characters, it means the JSON object is incomplete
   return { parsed, remaining: currentJson };
 }
 
