@@ -9,7 +9,7 @@ This repository contains installation scripts for the AI Autonomous Systems CLI 
 To install the AI Autonomous Systems CLI on a Linux machine, run the following command:
 
 ```sh
-curl -sL https://raw.githubusercontent.com/2501-ai/2501-cli/main/installers/linux-installer.sh | bash
+curl -sL https://raw.githubusercontent.com/2501-ai/cli/main/installers/linux-installer.sh | bash
 ```
 
 ### macOS
@@ -17,7 +17,7 @@ curl -sL https://raw.githubusercontent.com/2501-ai/2501-cli/main/installers/linu
 To install the AI Autonomous Systems CLI on a macOS machine, run the following command:
 
 ```sh
-curl -sL https://raw.githubusercontent.com/2501-ai/2501-cli/main/installers/macOS-installer.sh | bash
+curl -sL https://raw.githubusercontent.com/2501-ai/cli/main/installers/macOS-installer.sh | bash
 ```
 
 ### Windows
@@ -25,7 +25,7 @@ curl -sL https://raw.githubusercontent.com/2501-ai/2501-cli/main/installers/macO
 To install the AI Autonomous Systems CLI on a Windows machine, run the following command in PowerShell:
 
 ```powershell
-iex "& {$(irm https://raw.githubusercontent.com/2501-ai/2501-cli/main/installers/windows-installer.bat)}"
+iex "& {$(irm https://raw.githubusercontent.com/2501-ai/cli/main/installers/windows-installer.bat)}"
 ```
 
 ## Post-Installation
