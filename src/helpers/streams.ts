@@ -35,22 +35,22 @@ export function parseChunkedMessages<T>(input: string): {
     // Track double escaped characters (\\)
     escapeNext = char === '\\' && !escapeNext;
 
-    // Skip if we're in a string
+    // Skip the rest if we're in a string
     if (inString) {
       continue;
     }
 
     // Count braces if we're not in a string
     if (char === '{') braceCount++;
-    if (char === '}') braceCount--;
-
-    // Attempt to parse JSON once a fully matched object is detected
-    if (braceCount === 0 && currentJson.trim()) {
-      try {
-        parsed.push(JSON.parse(currentJson));
-        currentJson = ''; // Reset for the next JSON object
-      } catch {
-        // If parsing fails, we continue accumulating characters
+    if (char === '}') {
+      // Attempt to parse JSON once a fully matched object is detected
+      if (--braceCount === 0 && currentJson.trim()) {
+        try {
+          parsed.push(JSON.parse(currentJson));
+          currentJson = ''; // Reset for the next JSON object
+        } catch {
+          // If parsing fails, we continue accumulating characters
+        }
       }
     }
   }
