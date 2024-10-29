@@ -4,12 +4,10 @@ import TurndownService from 'turndown';
 import execa from 'execa';
 import * as cheerio from 'cheerio';
 
-import { Logger } from '../utils/logger';
-import { UpdateInstruction } from '../utils/types';
+import Logger from '../utils/logger';
 
-import { FileUpdater } from '../utils/fileUpdater';
-
-import { getIgnoredFiles } from './workspace';
+import { modifyCodeSections } from '../utils/sectionUpdate';
+import { getIgnoredFiles } from '../utils/files';
 
 /**
  * Directory to store logs
@@ -36,82 +34,6 @@ export function read_file(args: { path: string }): string | null {
   return fs.readFileSync(args.path, 'utf8');
 }
 
-// export function update_file_v2({
-//   filePath,
-//   modifications,
-// }: {
-//   filePath: string;
-//   modifications: {
-//     target: string | RegExp;
-//     replacement: string;
-//     action?: 'replace' | 'insert' | 'remove';
-//   }[];
-// }) {
-//   let modifiedContent = fs.readFileSync(filePath, 'utf-8');
-//
-//   for (const modification of modifications) {
-//     const { target, replacement, action = 'replace' } = modification;
-//
-//     switch (action) {
-//       case 'replace':
-//         modifiedContent = modifiedContent.replace(target, replacement);
-//         break;
-//
-//       case 'insert':
-//         // For 'insert', we will insert the replacement before the target
-//         if (typeof target === 'string') {
-//           const regex = new RegExp(target, 'g');
-//           modifiedContent = modifiedContent.replace(
-//             regex,
-//             `${replacement}${target}`
-//           );
-//         } else {
-//           modifiedContent = modifiedContent.replace(
-//             target,
-//             (match) => `${replacement}${match}`
-//           );
-//         }
-//         break;
-//
-//       case 'remove':
-//         // For 'remove', we will replace the target with an empty string
-//         modifiedContent = modifiedContent.replace(target, '');
-//         break;
-//
-//       default:
-//         throw new Error(`Unknown action: ${action}`);
-//     }
-//   }
-//
-//   fs.writeFileSync(filePath, modifiedContent, 'utf-8');
-//
-//   return `File updated: ${filePath}\nNew content:\n\`\`\`\n${modifiedContent}\n\`\`\``;
-// }
-
-// export function update_file_v2({
-//   filePath,
-//   modifications,
-// }: {
-//   filePath: string;
-//   modifications: { target: string | RegExp; replacement: string }[];
-// }) {
-//   let modifiedContent = fs.readFileSync(filePath, 'utf-8');
-//
-//   for (const modification of modifications) {
-//     const { target, replacement } = modification;
-//     modifiedContent = modifiedContent.replace(target, replacement);
-//   }
-//
-//   fs.writeFileSync(filePath, modifiedContent, 'utf-8');
-//   return `
-//     File updated: ${filePath}
-//     New content:
-//     \`\`\`
-//     ${modifiedContent}
-//     \`\`\`
-//   `;
-// }
-
 export async function write_file(args: { path: string; content: string }) {
   Logger.debug(`Writing file at "${args.path}"`);
   fs.mkdirSync(path.dirname(args.path), { recursive: true });
@@ -121,37 +43,33 @@ export async function write_file(args: { path: string; content: string }) {
     : `Content :
     ${args.content}`;
   return `
-    File written to ${args.path}
+    File written: ${args.path}
     ${content}`;
 }
 
 export function update_file({
+  sectionsDiff,
   path,
-  updates,
-  write = true,
 }: {
   path: string;
-  updates: UpdateInstruction[];
-  write?: boolean;
-}): string {
-  Logger.debug(`Updating file at "${path}"`);
-  Logger.debug('Updates:', updates);
-
-  let fileContent = fs.readFileSync(path, 'utf8');
-
-  const updater = new FileUpdater(fileContent, updates);
-  fileContent = updater.execute();
-
-  if (write === false) {
-    return fileContent;
-  }
+  answer: string;
+  sectionsDiff: string[];
+}) {
+  Logger.debug('Updating sections:', sectionsDiff);
+  const fileContent = fs.readFileSync(path, 'utf8');
+  const newContent = modifyCodeSections({
+    originalContent: fileContent,
+    diffSections: sectionsDiff,
+  });
 
   const content = isIgnoredFile(path)
     ? ''
-    : `New Content :
+    : `New file Content :
     \`\`\`
-    ${fileContent}
+    ${newContent}
     \`\`\``;
+
+  fs.writeFileSync(path, newContent);
 
   return `
     File updated: ${path}
@@ -170,9 +88,8 @@ export async function run_shell(args: {
     const { stderr, stdout } = await execa(args.command, {
       shell: args.shell ?? true,
       env: args.env,
-
       preferLocal: true,
-      timeout: 1000 * 60 * 5,
+      timeout: 1000 * 60,
     });
 
     if (stdout) output += stdout;
@@ -185,7 +102,10 @@ export async function run_shell(args: {
 
     return output;
   } catch (error) {
-    return `${ERROR_BOL} I failed to run ${args.command}, please fix the situation, errors below.\n ${(error as Error).message} \n ${error}`;
+    return `${ERROR_BOL} I failed to run ${args.command}, please fix the situation, errors below.\n ${(error as Error).message}
+     \`\`\`
+     ${error}
+     \`\`\``;
   }
 }
 export const ERROR_BOL = `ERROR :`; // beginning of line

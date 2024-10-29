@@ -3,23 +3,20 @@
  * @property {string} state_hash - hash of the workspace state
  * @property {Map<string, string>} file_hashes - Mappings of file paths to their md5 hashes
  */
-export type WorkspaceState = {
+export interface WorkspaceState {
   path: string;
   state_hash: string;
   file_hashes: Map<string, string>;
-};
+}
 
-/**
- * @property {string} lineStart - starting line number for the update (required for update and remove)
- * @property {string|null} lineEnd - Optional ending line number (exclusive) for the update (required for update and remove)
- * @property {string|null} content - Optional content to replace or insert (if undefined, it removes the content)
- */
-export type UpdateInstruction = {
-  lineStart: number;
-  lineEnd?: number | null;
-  content?: string | null;
-};
-
+export interface Configuration {
+  id: string;
+  prompt: string;
+  key: string;
+  name: string;
+  engine_type: string;
+  owner_id: string;
+}
 /**
  * Represents the difference between two workspace states.
  * @property {string[]} added - Files that are present in the new state but not in the old state
@@ -32,4 +29,83 @@ export interface WorkspaceDiff {
   removed: string[];
   modified: string[];
   hasChanges: boolean;
+}
+
+export type StreamEventStatus =
+  | 'completed'
+  | 'in_progress'
+  | 'usage'
+  | 'message'
+  | 'chunked_message'
+  | 'failed'
+  | 'requires_action';
+
+export type FunctionAction = {
+  id: string; // ex: "call_fPPBsOHeRJGmpcZQeT3wRVTK",
+  type: string; // ex: 'function'
+  function:
+    | {
+        name: string; // ex: 'update_file';
+        arguments: any;
+      }
+    | string; // ex: 'update_file';
+  args: any;
+};
+
+export type EngineCapability = 'stream' | 'async';
+
+export type QueryResponseDTO = {
+  asynchronous: boolean;
+  capabilities: EngineCapability[]; // async, stream, submit_output
+  response?: string;
+  actions?: FunctionAction[];
+  prompt?: string;
+};
+
+export type StreamEvent = {
+  status: StreamEventStatus | null;
+  message: string;
+  actions?: FunctionAction[];
+  usage: UsageData | null;
+};
+
+export type UsageData = {
+  /**
+   * Number of completion tokens used over the course of the run step.
+   */
+  completion_tokens: number;
+  /**
+   * Number of prompt tokens used over the course of the run step.
+   */
+  prompt_tokens: number;
+  /**
+   * Total number of tokens used (prompt + completion).
+   */
+  total_tokens: number;
+};
+export type EngineType = 'rhino' | 'rabbit';
+
+export interface AgentConfig {
+  id: string;
+  name: string;
+  workspace: string;
+  engine: EngineType;
+  configuration: string;
+  capabilities: EngineCapability[];
+}
+
+export type LocalConfig = {
+  workspace_disabled: boolean;
+  api_key?: string;
+  engine?: EngineType;
+  stream?: boolean;
+  agents: AgentConfig[];
+};
+
+export type AgentCallbackType = (...args: unknown[]) => Promise<void>;
+
+export interface FunctionExecutionResult {
+  output: string;
+  tool_call_id: string;
+  success: boolean;
 }

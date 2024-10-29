@@ -1,66 +1,32 @@
 import axios from 'axios';
 import fs from 'fs';
-
-import {
-  indexWorkspaceFiles,
-  syncWorkspaceFiles,
-  syncWorkspaceState,
-} from '../helpers/workspace';
 import { addAgent, readConfig } from '../utils/conf';
-import { TaskManager } from '../managers/taskManager';
+
+import Logger from '../utils/logger';
 
 import { API_HOST, API_VERSION } from '../constants';
-import { Logger } from '../utils/logger';
-import { FormData } from 'formdata-node';
-import { ListrTask } from 'listr2';
+import { isDirUnsafe } from '../helpers/security';
+import { Configuration } from '../utils/types';
+import { createAgent } from '../helpers/api';
 
 axios.defaults.baseURL = `${API_HOST}${API_VERSION}`;
-axios.defaults.timeout = 8000;
+axios.defaults.timeout = 120 * 1000;
 
 export const DEFAULT_ENGINE = 'rhino';
 
-interface initCommandOptions {
+interface InitCommandOptions {
   name?: string;
   workspace?: string | boolean;
   config?: string;
+  ignoreUnsafe?: boolean;
 }
 
-async function initConfiguration(configId: string) {
-  const config = readConfig();
-  const { data: configurations } = await axios.get(`/configurations`, {
-    headers: {
-      Authorization: `Bearer ${config?.api_key}`,
-    },
-  });
+const logger = new Logger();
 
-  const selectedConfig = configurations.find(
-    (config: { key: string; prompt: string }) => config.key === configId
-  );
-  if (!selectedConfig) {
-    Logger.error('Invalid configuration ID');
-    process.exit(1);
-  }
-  return selectedConfig;
-}
-
-async function initAgent(
-  workspace: string,
-  selected_config: any,
-  workspaceResponse: {
-    data: FormData | null;
-    files: { id: string; name: string }[];
-  }
-) {
+async function getConfiguration(configKey: string): Promise<Configuration> {
   const config = readConfig();
-  const { data: agent } = await axios.post(
-    '/agents',
-    {
-      workspace,
-      configuration: selected_config.id,
-      prompt: selected_config.prompt,
-      engine: config?.engine || DEFAULT_ENGINE,
-      files: workspaceResponse.files.map((file) => file.id),
-    },
+  const { data: configurations } = await axios.get<Configuration[]>(
+    `/configurations`,
     {
       headers: {
         Authorization: `Bearer ${config?.api_key}`,
@@ -68,141 +34,73 @@ async function initAgent(
     }
   );
 
-  // Add agent to config.
-  addAgent({
-    id: agent.id,
-    name: agent.name,
-    workspace,
-    configuration: selected_config.id,
-    engine: config?.engine || DEFAULT_ENGINE,
-  });
-  return agent;
+  const selectedConfig = configurations.find(
+    (config: { key: string; prompt: string }) => config.key === configKey
+  );
+  if (!selectedConfig) {
+    Logger.error(`Configuration not found: ${configKey}`);
+    process.exit(1);
+  }
+  return selectedConfig;
 }
 
-export function getInitTaskList(
-  options: initCommandOptions | undefined
-): ListrTask[] {
-  const configId = (options && options.config) || 'CODING_AGENT';
-  return [
-    {
-      task: async (ctx, task) => {
-        return task.newListr(
-          [
-            {
-              task: async (_, task) => {
-                task.title = 'Creating workspace..';
-                return task.newListr(
-                  [
-                    {
-                      task: (_, subtask) => {
-                        if (options && options.workspace === false) {
-                          const path = `/tmp/2501/${Date.now()}`;
-                          fs.mkdirSync(path, { recursive: true });
-                          subtask.title = `Using workspace at ${ctx.workspace}`;
-                          return path;
-                        }
-                        const hasCustomWorkspace =
-                          options &&
-                          typeof options.workspace === 'string' &&
-                          !!options.workspace;
+async function getWorkspacePath(options?: InitCommandOptions): Promise<string> {
+  if (options?.workspace === false) {
+    const path = `/tmp/2501/${Date.now()}`;
+    fs.mkdirSync(path, { recursive: true });
+    logger.message(`Using workspace at ${path}`);
+    return path;
+  }
 
-                        ctx.workspace = hasCustomWorkspace
-                          ? options.workspace
-                          : process.cwd();
-                        subtask.title = `Using workspace at ${ctx.workspace}`;
-                      },
-                    },
-                    {
-                      task: async (_, subtask) => {
-                        const workspaceResponse = await syncWorkspaceFiles(
-                          ctx.workspace
-                        );
-                        await syncWorkspaceState(ctx.workspace);
-                        ctx.workspaceResponse = workspaceResponse;
-                        if (!workspaceResponse.data) {
-                          subtask.title = `Workspace is empty`;
-                        } else {
-                          subtask.title = `Workspace files synchronized`;
-                        }
-                      },
-                    },
-                  ],
-                  { concurrent: false }
-                );
-              },
-            },
-            {
-              title: 'Initializing configuration..',
-              task: async (_, subtask) => {
-                ctx.selectedConfig = await initConfiguration(configId);
-                if (subtask.task.parent) {
-                  subtask.task.parent.title = `Configuration ${ctx.selectedConfig.id} initialized`;
-                } else {
-                  subtask.task.title = `Configuration ${ctx.selectedConfig.id} initialized`;
-                }
-              },
-            },
-          ],
-          { concurrent: true, rendererOptions: { collapseSubtasks: true } }
-        );
-        // .add([
-        //   {
-        //     task: async (_, task) => {
-        //       task.task.parent!.title = `Initialization complete`;
-        //     },
-        //   },
-        // ]);
-      },
-    },
-    {
-      title: 'Creating agent..',
-      task: async (ctx, task) => {
-        ctx.agent = await initAgent(
-          ctx.workspace,
-          ctx.selectedConfig,
-          ctx.workspaceResponse
-        );
-        task.title = `Agent ${ctx.agent.id} created`;
-      },
-    },
-    {
-      title: 'Indexing workspace files..',
-      retry: 3,
-      task: async (ctx, task) => {
-        Logger.debug('Context:', ctx);
-        if (!ctx.workspaceResponse.data) {
-          task.title = `Nothing to index`;
-          return;
-        }
-        await indexWorkspaceFiles(
-          ctx.agent.id,
-          ctx.workspaceResponse.data,
-          ctx.workspaceResponse.files
-        );
-        task.title = `Workspace files indexed`;
-      },
-    },
-    {
-      task: async (_, task) => {
-        if (task.task.parent) {
-          task.task.parent.title = `Initialization complete`;
-        } else {
-          task.title = `Initialization complete`;
-        }
-      },
-    },
-  ];
+  let finalPath;
+  if (typeof options?.workspace === 'string' && !!options.workspace) {
+    finalPath = options.workspace;
+  } else {
+    finalPath = process.cwd();
+  }
+
+  if (!options?.ignoreUnsafe && isDirUnsafe(finalPath)) {
+    logger.stop(
+      `Files in the workspace "${finalPath}" are considered sensitive`
+    );
+    const res = await logger.prompt(
+      `Are you sure you want to continue the synchronization ? (y/n)`
+    );
+    if (res === false) {
+      logger.cancel('Operation cancelled');
+      process.exit(0);
+    }
+    logger.start(`Using workspace at ${finalPath}`);
+  } else {
+    logger.message(`Using workspace at ${finalPath}`);
+  }
+  return finalPath;
 }
 
 // This function will be called when the `init` command is executed
-export async function initCommand(options?: initCommandOptions) {
+export async function initCommand(options?: InitCommandOptions) {
   try {
-    await TaskManager.run(getInitTaskList(options), {
-      concurrent: false,
-      exitOnError: true,
-      collectErrors: 'full',
+    const configKey = options?.config || 'CODING_AGENT';
+    const configuration = await getConfiguration(configKey);
+    const workspace = await getWorkspacePath(options);
+
+    logger.start('Creating agent');
+    const config = readConfig();
+
+    const createResponse = await createAgent(workspace, configuration);
+    Logger.debug('Agent created:', createResponse);
+    // Add agent to config.
+    addAgent({
+      id: createResponse.id,
+      name: createResponse.name,
+      capabilities: createResponse.capabilities,
+      workspace,
+      configuration: configuration.id,
+      engine: config?.engine || DEFAULT_ENGINE,
     });
-  } catch (e) {
-    Logger.error('Initialization error:', e);
+
+    logger.stop(`Agent ${createResponse.id} created`);
+  } catch (e: unknown) {
+    logger.handleError(e as Error, (e as Error).message);
   }
 }

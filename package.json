@@ -1,14 +1,18 @@
 {
   "name": "@2501-ai/cli",
-  "version": "0.0.16",
+  "version": "0.0.46",
   "description": "",
   "main": "dist/index.js",
+  "bin": {
+    "@2501": "./dist/index.js"
+  },
   "scripts": {
-    "build": "rm -rf dist && tsc",
+    "build": "tsc",
+    "build:clean": "rm -rf dist && tsc",
     "build:link": "npm run build && npm link",
-    "unlink": "npm unlink @2501-ai/cli",
+    "unlink": "npm unlink -g @2501-ai/cli",
     "start": "node .",
-    "lint:fix": "eslint . --ext .ts,.tsx --fix",
+    "lint": "eslint . --ext .ts,.tsx --fix",
     "prepare": "husky",
     "test": "jest --silent"
   },
@@ -28,24 +32,22 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@listr2/manager": "^2.0.11",
+    "@clack/prompts": "^0.7.0",
     "@types/node": "^16.18.105",
     "axios": "^1.7.4",
+    "chalk": "^4.1.2",
     "cheerio": "^1.0.0",
     "commander": "^12.1.0",
+    "consola": "^3.2.3",
     "execa": "^5.1.1",
     "formdata-node": "^6.0.3",
     "istextorbinary": "^9.5.0",
     "jsonrepair": "^3.8.0",
-    "listr2": "^8.2.4",
     "marked": "^12.0.2",
     "marked-terminal": "^7.1.0",
     "pdfkit": "^0.15.0",
     "terminal-kit": "^3.1.1",
     "turndown": "^7.2.0"
-  },
-  "bin": {
-    "@2501": "./dist/index.js"
   },
   "devDependencies": {
     "@types/jest": "^29.5.12",
@@ -67,5 +69,8 @@
     "hooks": {
       "pre-commit": "npm run lint"
     }
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

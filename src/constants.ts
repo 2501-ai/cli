@@ -1,16 +1,24 @@
-// src/constants/api.js
+import axios from 'axios';
+import { StreamEvent } from './utils/types';
 
-// API Configuration
+if (process.env.AUTH_JWT) {
+  axios.defaults.headers.common['Cookie'] =
+    `_vercel_jwt=${process.env.AUTH_JWT}`;
+}
+
 export const API_HOST =
   process.env.NODE_ENV === 'dev'
     ? 'http://localhost:1337'
-    : 'https://engine.2501.ai';
+    : process.env.NODE_ENV === 'staging'
+      ? 'https://staging.engine.2501.ai'
+      : 'https://engine.2501.ai';
+
 export const API_VERSION = '/api/v1';
 
 export enum QueryStatus {
   // Engine Statuses:
   Idle = 'idle',
-  // openAI Statuses:
+  // Async Statuses:
   Queued = 'queued',
   InProgress = 'in_progress',
   RequiresAction = 'requires_action',
@@ -22,7 +30,7 @@ export enum QueryStatus {
   Expired = 'expired',
 }
 
-export const OPENAI_TERMINAL_STATUSES: QueryStatus[] = [
+export const ASYNC_TERMINAL_STATUSES: QueryStatus[] = [
   QueryStatus.Completed,
   QueryStatus.Failed,
   QueryStatus.Expired,
@@ -47,6 +55,7 @@ export const IGNORED_FILE_PATTERNS = [
   '.DS_Store',
   'Thumbs.db',
   '.cache',
+  '.Trash',
   '*.tmp',
   '*.temp',
   '.svn',
@@ -67,3 +76,13 @@ export const IGNORED_FILE_PATTERNS = [
   'credentials.xml',
   '(?:^|/).[^/]*$', // Ignore directories starting with .
 ];
+
+export const DEFAULT_MAX_DEPTH = 5;
+export const DEFAULT_MAX_DIR_SIZE = 50 * 1024 * 1024; // 50 MB
+
+export const DEFAULT_ACTIONS_REPONSE: StreamEvent = {
+  status: 'requires_action',
+  message: 'Action required',
+  actions: [],
+  usage: null,
+};

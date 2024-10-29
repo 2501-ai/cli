@@ -4,7 +4,7 @@ setlocal enabledelayedexpansion
 REM Set Node.js version
 set NODE_VERSION=20.0.0
 
-echo -----2501 AI Autonomous Systems INSTALLER------- 
+echo -----2501 AI Autonomous Systems INSTALLER-------
 
 REM Install fnm (Fast Node Manager)
 echo Installing fnm...

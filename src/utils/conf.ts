@@ -1,22 +1,9 @@
 import fs from 'fs';
 import os from 'os';
 import * as path from 'path';
-import { Logger } from './logger';
 
-export interface AgentConfig {
-  id: string;
-  name: string;
-  workspace: string;
-  engine: string;
-  configuration: string;
-}
-
-export type Config = {
-  workspace_disabled: boolean;
-  api_key?: string;
-  engine?: string;
-  agents: AgentConfig[];
-};
+import Logger from '../utils/logger';
+import { AgentConfig, LocalConfig } from './types';
 
 const CONFIG_FILE_PATH = path.join(
   path.join(os.homedir(), '.2501'),
@@ -28,13 +15,18 @@ const CONFIG_FILE_PATH = path.join(
  * If the file doesn't exist, it creates a new configuration file with default values.
  * @returns The configuration object if successful, or null if an error occurred.
  */
-export function readConfig(): Config | null {
+export function readConfig(): LocalConfig | null {
   try {
     if (!fs.existsSync(CONFIG_FILE_PATH)) {
       fs.mkdirSync(path.dirname(CONFIG_FILE_PATH), { recursive: true });
       fs.writeFileSync(
         CONFIG_FILE_PATH,
-        JSON.stringify({ workspace_disabled: false, agents: [] }, null, 2),
+        // TODO: set the stream to true when the feature i stable
+        JSON.stringify(
+          { workspace_disabled: false, agents: [], stream: true },
+          null,
+          2
+        ),
         'utf8'
       );
     }
@@ -51,9 +43,9 @@ export function readConfig(): Config | null {
  * @param key - The key to set.
  * @param value - The value to set.
  */
-export function setValue<K extends keyof Config>(
+export function setValue<K extends keyof LocalConfig>(
   key: K,
-  value: Config[K]
+  value: LocalConfig[K]
 ): void {
   try {
     const config = readConfig();
@@ -70,7 +62,7 @@ export function setValue<K extends keyof Config>(
  * Writes the provided configuration object to the configuration file.
  * @param config - The configuration object to write.
  */
-export function writeConfig(config: Config): void {
+export function writeConfig(config: LocalConfig): void {
   try {
     const data = JSON.stringify(config, null, 2);
     fs.writeFileSync(CONFIG_FILE_PATH, data, 'utf8');
@@ -144,12 +136,7 @@ export async function flushAgents(): Promise<void> {
   }
 }
 
-export function getEligibleAgents(
-  agentId: string | undefined,
-  workspace: string
-): AgentConfig | null {
-  const agents = agentId ? listAgents() : listAgentsFromWorkspace(workspace);
-  return (
-    agents.find((a) => a.id === agentId) || agents[agents.length - 1] || null
-  );
+export function getEligibleAgent(workspace?: string): AgentConfig | null {
+  const agents = workspace ? listAgentsFromWorkspace(workspace) : listAgents();
+  return agents[agents.length - 1];
 }

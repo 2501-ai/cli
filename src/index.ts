@@ -6,9 +6,17 @@ import { queryCommand } from './commands/query';
 import { initCommand } from './commands/init';
 import { agentsCommand } from './commands/agents';
 import { setCommand } from './commands/set';
+import { wtfCommand } from './commands/wtf';
 import { jobSubscriptionCommand } from './commands/jobs';
 
 import { authMiddleware } from './middleware/auth';
+import { isLatestVersion } from './utils/versioning';
+import Logger from './utils/logger';
+
+process.on('SIGINT', () => {
+  console.log('Process interrupted with Ctrl+C');
+  process.exit(130); // Exit with code 130 (128 + 2 for SIGINT)
+});
 
 const program = new Command();
 
@@ -29,11 +37,17 @@ program
   )
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   .version(require('../package.json').version)
-  .on('command:*', async (...args) => {
-    const query = args[0] && args[0].join(' ');
+  .on('command:*', async (args, options) => {
+    const query = args?.join(' ');
+    if (!query) {
+      return;
+    }
+    Logger.debug('Options', options);
     // @TODO : implement options support.
-    authMiddleware();
-    await queryCommand(query, {});
+    await authMiddleware();
+    await queryCommand(query, {
+      stream: options.stream,
+    });
   });
 
 // Config command
@@ -50,6 +64,7 @@ program
   .description('Execute a query using the specified agent')
   .option('--workspace <path>', 'Specify a different workspace path')
   .option('--agentId <id>', 'Specify the agent ID')
+  .option('--stream [stream]', 'Stream the output of the query', true)
   .hook('preAction', authMiddleware)
   .action(queryCommand);
 
@@ -101,4 +116,19 @@ program
   .argument('<value>', 'The value to set')
   .action(setCommand);
 
-program.parse(process.argv);
+program
+  .command('wtf')
+  .description('What the f*ck did I just do?')
+  .hook('preAction', authMiddleware)
+  .action(wtfCommand);
+
+(async () => {
+  const isLatest = await isLatestVersion();
+  if (!isLatest) {
+    Logger.log(
+      'UPDATE AVAILABLE : A new version of 2501 CLI is available. Run `npm i -g @2501-ai/cli` to update'
+    );
+  }
+
+  program.parse(process.argv);
+})();
