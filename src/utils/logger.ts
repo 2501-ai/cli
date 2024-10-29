@@ -79,7 +79,6 @@ export default class Logger {
   }
 
   start(message?: string) {
-    console.log('XXXXXXXXX');
     const terminalWidth = getTerminalWidth();
     const maxMessageLength = terminalWidth - 10;
     const truncatedMessage = message
