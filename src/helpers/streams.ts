@@ -17,48 +17,46 @@ export function parseChunkedMessages<T>(input: string): {
   parsed: T[];
   remaining: string;
 } {
-  // Logger.debug('Parsing chunked messages:', input);
-  const result: T[] = [];
-  let stack = 0;
-  let startIndex = 0;
-  let nextParseIndex = 0;
+  const parsed: T[] = [];
+  let remaining = '';
+  let currentJson = '';
+  let braceCount = 0;
+  let inString = false;
+  let escapeNext = false;
 
   for (let i = 0; i < input.length; i++) {
-    if (input[i] === '{') {
-      if (stack++ === 0) {
-        startIndex = i;
-      }
-    } else if (input[i] === '}') {
-      if (--stack === 0) {
-        const chunk = input.slice(startIndex, i + 1);
-        try {
-          result.push(JSON.parse(chunk));
-          nextParseIndex = i + 1;
-        } catch {
-          // Handle parsing error if necessary
-          throw new Error(`Error parsing chunked message: '${chunk}'`);
-        }
-      }
+    const char = input[i];
+    currentJson += char;
+
+    // Track if we're within a string
+    if (char === '"' && !escapeNext) {
+      inString = !inString;
     }
-    // Check if the content is between double-quotes and skip to the end of the string
-    else if (input[i] === '"') {
-      let end = input.indexOf('"', i + 1);
 
-      // Skip the escaped and double escaped double quotes.
-      while (input[end - 1] === '\\' && input[end - 2] !== '\\') {
-        end = input.indexOf('"', end + 1);
-      }
+    // Track escaped characters
+    escapeNext = char === '\\' && !escapeNext;
 
-      if (end > i) {
-        i = end;
-      } else {
-        // if the end is not found, maybe the next chunk will have the end
+    // Only count braces if we're not in a string
+    if (!inString) {
+      if (char === '{') braceCount++;
+      if (char === '}') braceCount--;
+    }
+
+    // Attempt to parse JSON once a fully matched object is detected
+    if (braceCount === 0 && currentJson.trim()) {
+      try {
+        parsed.push(JSON.parse(currentJson));
+        currentJson = ''; // Reset for the next JSON object
+      } catch {
+        // If parsing fails, we continue accumulating characters
       }
     }
   }
 
-  const remaining = input.slice(nextParseIndex);
-  return { parsed: result, remaining };
+  // Remaining unparsed JSON
+  remaining = currentJson;
+
+  return { parsed, remaining };
 }
 
 function toItalic(text: string): string {
