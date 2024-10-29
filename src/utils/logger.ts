@@ -79,6 +79,7 @@ export default class Logger {
   }
 
   start(message?: string) {
+    console.log('XXXXXXXXX');
     const terminalWidth = getTerminalWidth();
     const maxMessageLength = terminalWidth - 10;
     const truncatedMessage = message
@@ -111,14 +112,12 @@ export default class Logger {
     this.spin.message(truncatedMessage);
   }
 
-  stop(message?: string) {
+  stop(message?: string, code?: number) {
     if (!this.#spinnerStarted) {
+      this.spin.message(message);
       return;
     }
-    if (message) {
-      this.spin.message(message.substring(0, getTerminalWidth() - 10));
-    }
-    this.spin.stop();
+    this.spin.stop(message, code);
     this.#spinnerStarted = false;
   }
 
