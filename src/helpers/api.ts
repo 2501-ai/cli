@@ -47,7 +47,7 @@ export const queryAgent = async (
     `/agents/${agentId}/query`,
     { query, changed, stream },
     {
-      // responseType: stream ? 'stream' : 'json',
+      responseType: stream ? 'stream' : 'json',
       timeout: stream ? TEN_MINUTES_MILLIS : FIVE_MINUTES_MILLIS,
     }
   );
@@ -85,7 +85,7 @@ export const submitToolOutputs = async (
     },
     {
       timeout: stream ? TEN_MINUTES_MILLIS : FIVE_MINUTES_MILLIS,
-      responseType: stream ? 'stream' : 'json',
+      // responseType: stream ? 'stream' : 'json',
     }
   );
   return data;

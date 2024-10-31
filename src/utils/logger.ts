@@ -113,10 +113,10 @@ export default class Logger {
 
   stop(message?: string, code?: number) {
     if (!this.#spinnerStarted) {
-      this.spin.message(message);
+      this.spin.message(marked.parse(message || '') as string);
       return;
     }
-    this.spin.stop(message, code);
+    this.spin.stop(marked.parse(message || '') as string, code);
     this.#spinnerStarted = false;
   }
 

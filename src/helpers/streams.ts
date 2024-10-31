@@ -133,9 +133,7 @@ export function getSubActionMessage(
 // Variable will be availble as long as the process is running
 let totalTokens = 0;
 
-export async function processStreamedResponse(
-  agentResponse: AsyncIterable<Buffer>
-) {
+export async function processStreamedResponse(agentResponse: any) {
   const actions: FunctionAction[] = [];
   let message = '';
 
