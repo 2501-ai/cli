@@ -134,7 +134,11 @@ export class AgentManager {
         const config = readConfig();
         const { data: correctionData } = await axios.post(
           `/agents/${this.id}/verifyOutput`,
-          { task: taskTitle, previous, proposal: JSON.stringify(args) },
+          {
+            task: taskTitle,
+            previous,
+            proposal: typeof args === 'string' ? args : JSON.stringify(args),
+          },
           {
             timeout: 60000,
             headers: {

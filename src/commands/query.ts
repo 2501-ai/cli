@@ -1,4 +1,5 @@
 import fs from 'fs';
+import { Readable } from 'stream';
 import { marked, MarkedExtension } from 'marked';
 import { markedTerminal } from 'marked-terminal';
 import {
@@ -209,6 +210,25 @@ export const queryCommand = async (
       query,
       stream
     );
+
+    if (stream) {
+      const streamResponse = agentResponse as Readable;
+      streamResponse.on('data', (data: any) => {
+        if (!data.toString().includes('message')) {
+          return;
+        }
+
+        try {
+          const res = JSON.parse(data.toString());
+          if (res.status === 'message') {
+            logger.stop(res.message);
+            logger.start('Processing');
+          }
+        } catch (e) {
+          // Ignore
+        }
+      });
+    }
 
     // eslint-disable-next-line prefer-const
     let [actions, queryResponse] = await handleAgentResponse(agentResponse);
