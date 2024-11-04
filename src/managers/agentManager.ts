@@ -137,7 +137,7 @@ export class AgentManager {
           {
             task: taskTitle,
             previous,
-            proposal: typeof args === 'string' ? args : JSON.stringify(args),
+            proposal: typeof args === 'string' ? args : args.content,
           },
           {
             timeout: 60000,
