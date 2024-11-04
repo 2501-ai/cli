@@ -36,13 +36,15 @@ marked.use(markedTerminal() as MarkedExtension);
 const initializeAgentConfig = async (
   workspace: string,
   skipWarmup: boolean
-): Promise<AgentConfig> => {
+): Promise<AgentConfig | null> => {
   let eligible = getEligibleAgent(workspace);
   if (!eligible && !skipWarmup) {
     await initCommand({ workspace });
     eligible = getEligibleAgent(workspace);
   }
-  if (!eligible) throw new Error('No eligible agent found after init');
+  if (!eligible) {
+    return null;
+  }
   return eligible;
 };
 
@@ -95,6 +97,11 @@ export const queryCommand = async (
 
     ////////// Agent Init //////////
     const agentConfig = await initializeAgentConfig(workspace, skipWarmup);
+
+    // If not agent is ellible, it usually means there was an error during the init process that is already displayed.
+    if (!agentConfig) {
+      return;
+    }
     const agentManager = new AgentManager({
       id: agentConfig.id,
       name: agentConfig.name,

@@ -156,8 +156,10 @@ export default class Logger {
     defaultMsg = 'Unexpected error. Please try again !'
   ) {
     if (isDebug) {
+      let msg = '';
       if (axios.isAxiosError(e)) {
         const axiosError = e as AxiosError;
+        msg = (axiosError.response?.data as { error: string })?.error;
         Logger.error('Command error - Axios error', {
           code: axiosError.code,
           message: axiosError.message,
@@ -172,14 +174,16 @@ export default class Logger {
       } else {
         Logger.error('Command error', e);
       }
-      this.cancel(defaultMsg);
+      this.cancel(msg || defaultMsg);
       return;
     }
 
+    let msg = '';
     if (axios.isAxiosError(e)) {
       const axiosError = e as AxiosError;
       const errorData = axiosError.response?.data as { code?: string };
 
+      msg = (axiosError.response?.data as { error: string })?.error;
       if (axiosError.response?.status === 401) {
         defaultMsg = 'Unauthorized. Please verify your API key.';
       }
@@ -199,7 +203,7 @@ export default class Logger {
         defaultMsg = 'Server unreachable. Please try again later.';
       }
     }
-    this.cancel(defaultMsg);
+    this.cancel(msg || defaultMsg);
   }
 
   static agent(data: any) {
