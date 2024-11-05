@@ -173,7 +173,9 @@ export async function processStreamedResponse(
     }
 
     streamEvents.forEach((streamEvent) => {
-      Logger.debug('StreamEvent', streamEvent);
+      if (streamEvent.status !== 'chunked_message') {
+        Logger.debug('StreamEvent', streamEvent);
+      }
       switch (streamEvent.status) {
         case 'requires_action':
           // The default message is too verbose, for now we will just display the actions

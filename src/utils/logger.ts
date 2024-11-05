@@ -156,50 +156,57 @@ export default class Logger {
     defaultMsg = 'Unexpected error. Please try again !'
   ) {
     if (isDebug) {
-      if (axios.isAxiosError(e)) {
-        const axiosError = e as AxiosError;
-        Logger.error('Command error - Axios error', {
-          code: axiosError.code,
-          message: axiosError.message,
-          name: axiosError.name,
-          responseData: axiosError.response?.data || 'no error',
-          data: axiosError.toJSON(),
-        });
-        if (axiosError.code === 'ECONNREFUSED') {
-          defaultMsg = 'Server unreachable. Please try again later.';
-        }
-        // Logger.error('Command error - Axios error', axiosError.toJSON());
-      } else {
+      if (!axios.isAxiosError(e)) {
         Logger.error('Command error', e);
+        return this.cancel(defaultMsg);
       }
-      this.cancel(defaultMsg);
-      return;
-    }
 
-    if (axios.isAxiosError(e)) {
       const axiosError = e as AxiosError;
-      const errorData = axiosError.response?.data as { code?: string };
-
-      if (axiosError.response?.status === 401) {
-        defaultMsg = 'Unauthorized. Please verify your API key.';
-      }
-
-      if (axiosError.response?.status === 403) {
-        if (errorData?.code === 'TOKEN_LIMIT') {
-          defaultMsg =
-            'Monthly token usage limit reached. Please upgrade your plan or contact us !';
-        }
-      }
-
-      if (axiosError.response?.status === 500) {
-        defaultMsg = 'The server has returned an error. Please try again';
-      }
-
+      Logger.error('Command error - Axios error', {
+        code: axiosError.code,
+        message: axiosError.message,
+        name: axiosError.name,
+        responseData: axiosError.response?.data || 'no error',
+        data: axiosError.toJSON(),
+      });
       if (axiosError.code === 'ECONNREFUSED') {
         defaultMsg = 'Server unreachable. Please try again later.';
       }
+
+      return this.cancel(
+        (axiosError.response?.data as { error: string })?.error || defaultMsg
+      );
     }
-    this.cancel(defaultMsg);
+
+    if (!axios.isAxiosError(e)) {
+      return this.cancel(defaultMsg);
+    }
+
+    const axiosError = e as AxiosError;
+    const errorData = axiosError.response?.data as { code?: string };
+
+    if (axiosError.response?.status === 401) {
+      defaultMsg = 'Unauthorized. Please verify your API key.';
+    }
+
+    if (axiosError.response?.status === 403) {
+      if (errorData?.code === 'TOKEN_LIMIT') {
+        defaultMsg =
+          'Monthly token usage limit reached. Please upgrade your plan or contact us !';
+      }
+    }
+
+    if (axiosError.response?.status === 500) {
+      defaultMsg = 'The server has returned an error. Please try again';
+    }
+
+    if (axiosError.code === 'ECONNREFUSED') {
+      defaultMsg = 'Server unreachable. Please try again later.';
+    }
+
+    this.cancel(
+      (axiosError.response?.data as { error: string })?.error || defaultMsg
+    );
   }
 
   static agent(data: any) {
