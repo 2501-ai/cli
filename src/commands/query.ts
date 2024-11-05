@@ -98,7 +98,7 @@ export const queryCommand = async (
     ////////// Agent Init //////////
     const agentConfig = await initializeAgentConfig(workspace, skipWarmup);
 
-    // If not agent is ellible, it usually means there was an error during the init process that is already displayed.
+    // If not agent is eligible, it usually means there was an error during the init process that is already displayed.
     if (!agentConfig) {
       return;
     }
