@@ -116,7 +116,7 @@ export default class Logger {
       this.spin.message(marked.parse(message || '') as string);
       return;
     }
-    this.spin.stop(marked.parse(message || '') as string, code);
+    this.spin.stop((marked.parse(message || '') as string).trim(), code);
     this.#spinnerStarted = false;
   }
 
