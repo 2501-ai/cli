@@ -59,7 +59,7 @@ export function parseChunkedMessages<T>(input: string): {
   return { parsed, remaining: currentJson };
 }
 
-function toItalic(text: string): string {
+export function toItalic(text: string): string {
   return chalk.italic.gray(text.trim());
 }
 
