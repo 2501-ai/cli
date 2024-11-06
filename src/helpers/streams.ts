@@ -98,7 +98,7 @@ export function getSubActionMessage(
   action: FunctionAction
 ): string {
   // @todo maybe reactivate after tests
-  let actionMsg = `${message}\n   `;
+  let actionMsg = `${message}\n${chalk.gray('│')}  `;
   const functionName = getFunctionName(action);
   const args = getFunctionArgs(action);
 
