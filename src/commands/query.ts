@@ -234,9 +234,8 @@ export const queryCommand = async (
               stepMessage += `\n   ${toItalic(` └ ${step}`)}`;
             }
             logger.stop(stepMessage);
+            logger.start('Processing');
           }
-
-          logger.start('Processing');
         } catch (e) {
           // Ignore
         }
