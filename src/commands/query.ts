@@ -245,7 +245,9 @@ export const queryCommand = async (
 
     // eslint-disable-next-line prefer-const
     let [actions, queryResponse] = await handleAgentResponse(agentResponse);
-    logger.stop(queryResponse || 'Done processing');
+    if (queryResponse) {
+      logger.stop(queryResponse);
+    }
 
     let finalResponse = '';
     while (actions.length) {
