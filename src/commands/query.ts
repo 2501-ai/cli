@@ -14,6 +14,7 @@ import {
   getSubActionMessage,
   isStreamingContext,
   processStreamedResponse,
+  toItalic,
 } from '../helpers/streams';
 import {
   getWorkspaceChanges,
@@ -221,14 +222,18 @@ export const queryCommand = async (
     if (stream) {
       const streamResponse = agentResponse as Readable;
       streamResponse.on('data', (data: any) => {
-        if (!data.toString().includes('message')) {
+        if (!data.toString().includes('reasoning')) {
           return;
         }
 
         try {
           const res = JSON.parse(data.toString());
-          if (res.status === 'message') {
-            logger.stop(res.message);
+          if (res.status === 'reasoning') {
+            let stepMessage: string = `Reasoning steps that will be followed:`;
+            for (const step of res.steps.steps) {
+              stepMessage += `\n   ${toItalic(` └ ${step}`)}`;
+            }
+            logger.stop(stepMessage);
             logger.start('Processing');
           }
         } catch (e) {
@@ -239,7 +244,9 @@ export const queryCommand = async (
 
     // eslint-disable-next-line prefer-const
     let [actions, queryResponse] = await handleAgentResponse(agentResponse);
-    logger.stop(queryResponse || 'Done processing');
+    if (queryResponse) {
+      logger.stop(queryResponse);
+    }
 
     let finalResponse = '';
     while (actions.length) {
