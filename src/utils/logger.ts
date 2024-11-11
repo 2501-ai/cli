@@ -16,7 +16,7 @@ enum Colors {
   WHITE = 'white',
 }
 
-function getTerminalWidth(): number {
+export function getTerminalWidth(): number {
   if (process.stdout.isTTY) {
     return process.stdout.columns;
   } else {
