@@ -2,6 +2,7 @@ import fs from 'fs';
 import { Readable } from 'stream';
 import { marked, MarkedExtension } from 'marked';
 import { markedTerminal } from 'marked-terminal';
+import chalk from 'chalk';
 import {
   cancelQuery,
   getAgentStatus,
@@ -30,7 +31,7 @@ import {
 import { getFunctionArgs } from '../utils/actions';
 import { AgentManager } from '../managers/agentManager';
 import { getEligibleAgent, readConfig } from '../utils/conf';
-import Logger from '../utils/logger';
+import Logger, { getTerminalWidth } from '../utils/logger';
 import { generatePDFs } from '../utils/pdf';
 
 marked.use(markedTerminal() as MarkedExtension);
@@ -262,7 +263,7 @@ export const queryCommand = async (
     }
 
     if (finalResponse) {
-      logger.stop('Execution completed');
+      logger.stop(chalk.italic.gray('-'.repeat(getTerminalWidth() - 10)));
       Logger.agent(finalResponse);
     }
 
