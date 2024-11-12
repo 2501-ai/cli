@@ -29,22 +29,30 @@ export function modifyCodeSections({
       .map((part) => part.replace('<<<<<', '').replace('>>>>>', '').trim())
       .filter((c) => !!c);
 
-    // Convert previousContent to a regex pattern
-    const regex = previousContentToRegex(previousContent);
-    const match = regex.exec(modifiedContent);
+    if (/^\s*$/.test(previousContent)) {
+      if (!/^\s*$/.test(newContent)) {
+        modifiedContent += '\n' + newContent;
+      } else {
+        throw new Error(`Both previous and new content are empty: 
+          ${diffSection}`);
+      }
+    } else {
+      const regex = previousContentToRegex(previousContent);
+      const match = regex.exec(modifiedContent);
 
-    if (!match) {
-      throw new Error(`Previous content not found in the original content: 
+      if (!match) {
+        throw new Error(`Previous content not found in the original content: 
   ${previousContent}`);
+      }
+
+      const startIdx = match.index;
+      const endIdx = startIdx + match[0].length;
+
+      modifiedContent =
+        modifiedContent.slice(0, startIdx) +
+        newContent +
+        modifiedContent.slice(endIdx);
     }
-
-    const startIdx = match.index;
-    const endIdx = startIdx + match[0].length;
-
-    modifiedContent =
-      modifiedContent.slice(0, startIdx) +
-      newContent +
-      modifiedContent.slice(endIdx);
   });
 
   return modifiedContent;
