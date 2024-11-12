@@ -17,6 +17,10 @@ function previousContentToRegex(previousContent: string) {
   return new RegExp(pattern, 'gm');
 }
 
+function removeLineNumbers(content: string): string {
+  return content.replace(/^\d+:\s*/gm, (match) => ' '.repeat(match.length));
+}
+
 export function modifyCodeSections({
   originalContent,
   diffSections,
@@ -24,15 +28,19 @@ export function modifyCodeSections({
   let modifiedContent = originalContent;
 
   diffSections.forEach((diffSection) => {
-    const [previousContent, newContent] = diffSection
+    const splittedDiffs = diffSection
       .split(/=====/)
       .map((part) => part.replace('<<<<<', '').replace('>>>>>', '').trim())
       .filter((c) => !!c);
+
+    const previousContent = removeLineNumbers(splittedDiffs[0]);
+    const newContent = removeLineNumbers(splittedDiffs[1]);
 
     if (/^\s*$/.test(previousContent)) {
       if (!/^\s*$/.test(newContent)) {
         modifiedContent += '\n' + newContent;
       } else {
+        console.log(`Both previous and new content are empty: ${diffSection}`);
         throw new Error(`Both previous and new content are empty: 
           ${diffSection}`);
       }
@@ -41,6 +49,11 @@ export function modifyCodeSections({
       const match = regex.exec(modifiedContent);
 
       if (!match) {
+        console.log(
+          `Previous content not found in the original content: ${previousContent}`
+        );
+        console.log(`Original content: ${originalContent}`);
+        console.log(`Diff: ${diffSection}`);
         throw new Error(`Previous content not found in the original content: 
   ${previousContent}`);
       }
