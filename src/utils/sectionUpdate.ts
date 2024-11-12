@@ -3,6 +3,20 @@ type ModifyCodeSectionsParams = {
   diffSections: string[];
 };
 
+// Convert previousContent into a regex pattern
+function previousContentToRegex(previousContent: string) {
+  // Split into non-whitespace tokens
+  const tokens = previousContent.match(/\S+/g) || [];
+  // Escape regex special characters in each token
+  const escapedTokens = tokens.map((t) =>
+    t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  );
+  // Join tokens with optional whitespace
+  const pattern = escapedTokens.join('\\s*');
+  // Create regex with global and multiline flags
+  return new RegExp(pattern, 'gm');
+}
+
 export function modifyCodeSections({
   originalContent,
   diffSections,
@@ -12,17 +26,21 @@ export function modifyCodeSections({
   diffSections.forEach((diffSection) => {
     const [previousContent, newContent] = diffSection
       .split(/=====/)
-      // trim removes whitespaces and new lines chars.
       .map((part) => part.replace('<<<<<', '').replace('>>>>>', '').trim())
       .filter((c) => !!c);
 
-    const startIdx = modifiedContent.indexOf(previousContent);
-    if (startIdx === -1) {
+    // Convert previousContent to a regex pattern
+    const regex = previousContentToRegex(previousContent);
+    const match = regex.exec(modifiedContent);
+
+    if (!match) {
       throw new Error(`Previous content not found in the original content: 
-${previousContent}`);
+  ${previousContent}`);
     }
 
-    const endIdx = startIdx + previousContent.length;
+    const startIdx = match.index;
+    const endIdx = startIdx + match[0].length;
+
     modifiedContent =
       modifiedContent.slice(0, startIdx) +
       newContent +
