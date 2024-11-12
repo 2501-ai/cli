@@ -49,11 +49,8 @@ function createPDFFromFiles(
           'utf8'
         );
         const lines = fileContent.split(/\r?\n/);
-        lines.forEach((line, index) => {
-          doc
-            .fontSize(10)
-            .text(`${index + 1}: ${line}`)
-            .moveDown(0.2);
+        lines.forEach((line) => {
+          doc.fontSize(10).text(line).moveDown(0.2);
         });
       } else {
         doc

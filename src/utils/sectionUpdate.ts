@@ -3,70 +3,90 @@ type ModifyCodeSectionsParams = {
   diffSections: string[];
 };
 
-// Convert previousContent into a regex pattern
-function previousContentToRegex(previousContent: string) {
-  // Split into non-whitespace tokens
-  const tokens = previousContent.match(/\S+/g) || [];
-  // Escape regex special characters in each token
-  const escapedTokens = tokens.map((t) =>
-    t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-  );
-  // Join tokens with optional whitespace
-  const pattern = escapedTokens.join('\\s*');
-  // Create regex with global and multiline flags
-  return new RegExp(pattern, 'gm');
-}
-
-function removeLineNumbers(content: string): string {
-  return content.replace(/^\d+:\s*/gm, (match) => ' '.repeat(match.length));
-}
-
 export function modifyCodeSections({
   originalContent,
   diffSections,
 }: ModifyCodeSectionsParams): string {
   let modifiedContent = originalContent;
 
-  diffSections.forEach((diffSection) => {
-    const splittedDiffs = diffSection
-      .split(/=====/)
-      .map((part) => part.replace('<<<<<', '').replace('>>>>>', '').trim())
-      .filter((c) => !!c);
+  function applyDiff(existingContent: string, diffSections: string[]) {
+    // Split the existing content into lines
+    const existingLines = existingContent.split('\n');
+    let currentIndex = 0;
 
-    const previousContent = removeLineNumbers(splittedDiffs[0]);
-    const newContent = removeLineNumbers(splittedDiffs[1]);
+    for (const diffSection of diffSections) {
+      // Parse the diffSection to get old content and new content
+      const [oldContent, newContent] = ['<<<<<', '====='].map(
+        (startMarker, index) => {
+          const endMarker = index === 0 ? '=====' : '>>>>>';
+          const regex = new RegExp(`${startMarker}([\\s\\S]*?)${endMarker}`);
+          const match = diffSection.match(regex);
+          return match
+            ? match[1].replace(/^\r?\n+|\r?\n+$/g, '').split('\n')
+            : [];
+        }
+      );
 
-    if (/^\s*$/.test(previousContent)) {
-      if (!/^\s*$/.test(newContent)) {
-        modifiedContent += '\n' + newContent;
+      const isOldContentEmpty = oldContent.every((line) => line.trim() === '');
+
+      if (isOldContentEmpty) {
+        // Append newContent to the end of the existing content
+        existingLines.push(...newContent);
+        // No need to update currentIndex since we're appending at the end
       } else {
-        console.log(`Both previous and new content are empty: ${diffSection}`);
-        throw new Error(`Both previous and new content are empty: 
-          ${diffSection}`);
-      }
-    } else {
-      const regex = previousContentToRegex(previousContent);
-      const match = regex.exec(modifiedContent);
-
-      if (!match) {
-        console.log(
-          `Previous content not found in the original content: ${previousContent}`
+        // Find the index in existingLines where oldContent matches, starting from currentIndex
+        const index = findIndexOfSequence(
+          existingLines,
+          oldContent,
+          currentIndex
         );
-        console.log(`Original content: ${originalContent}`);
-        console.log(`Diff: ${diffSection}`);
-        throw new Error(`Previous content not found in the original content: 
-  ${previousContent}`);
+
+        if (index !== -1) {
+          // Replace oldContent with newContent in existingLines
+          existingLines.splice(index, oldContent.length, ...newContent);
+          // Update currentIndex to prevent matching the same content again
+          currentIndex = index + newContent.length;
+        } else {
+          throw new Error('Old content not found in existing content.');
+          console.error('Old content not found in existing content.');
+        }
       }
-
-      const startIdx = match.index;
-      const endIdx = startIdx + match[0].length;
-
-      modifiedContent =
-        modifiedContent.slice(0, startIdx) +
-        newContent +
-        modifiedContent.slice(endIdx);
     }
-  });
 
+    // Join the existingLines back into a string
+    const updatedContent = existingLines.join('\n');
+    return updatedContent;
+  }
+
+  function findIndexOfSequence(
+    haystack: string[],
+    needle: string[],
+    startIndex = 0
+  ) {
+    // haystack: array of lines
+    // needle: array of lines
+    // Returns index in haystack where needle starts, or -1 if not found
+
+    // Handle empty needle (oldContent)
+    if (needle.length === 0) {
+      return -1;
+    }
+
+    for (let i = startIndex; i <= haystack.length - needle.length; i++) {
+      let match = true;
+      for (let j = 0; j < needle.length; j++) {
+        if (haystack[i + j] !== needle[j]) {
+          match = false;
+          break;
+        }
+      }
+      if (match) {
+        return i;
+      }
+    }
+    return -1;
+  }
+
+  modifiedContent = applyDiff(modifiedContent, diffSections);
   return modifiedContent;
 }
