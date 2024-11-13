@@ -9,59 +9,57 @@ import path from 'path';
  * Parse the chunks of messages from the agent response,
  * and return the parsed messages and the remaining content
  *
- * @param input
- * @param skipDelimiters - Skip parsing between delimiters. Ex: ['<<<<<', '>>>>>']
+ * The input can contain multiple or partial JSON objects.
+ *
+ * @param input - String input to be parsed.
  */
-export function parseChunkedMessages<T>(
-  input: string,
-  skipDelimiters: [string, string]
-): {
+export function parseChunkedMessages<T>(input: string): {
   parsed: T[];
   remaining: string;
 } {
-  // Logger.debug('Parsing chunked messages:', input);
-  const result: T[] = [];
-  const stack: string[] = [];
-  let startIndex = 0;
-  let nextParseIndex = 0;
+  const parsed: T[] = [];
+  let currentJson = '';
+  let braceCount = 0;
+  let inString = false;
+  let escapeNext = false;
 
   for (let i = 0; i < input.length; i++) {
-    if (input[i] === '{') {
-      if (stack.length === 0) {
-        startIndex = i;
-      }
-      stack.push('{');
-    } else if (input[i] === '}') {
-      stack.pop();
-      if (stack.length === 0) {
-        const chunk = input.slice(startIndex, i + 1);
+    const char = input[i];
+    currentJson += char;
+
+    // Track if we're within a string
+    if (char === '"' && !escapeNext) {
+      inString = !inString;
+    }
+
+    // Track double escaped characters (\\)
+    escapeNext = char === '\\' && !escapeNext;
+
+    // Skip the rest if we're in a string
+    if (inString) {
+      continue;
+    }
+
+    // Count braces if we're not in a string
+    if (char === '{') braceCount++;
+    if (char === '}') {
+      // Attempt to parse JSON once a fully matched object is detected
+      if (--braceCount === 0 && currentJson.trim().length > 0) {
         try {
-          result.push(JSON.parse(chunk));
-          nextParseIndex = i + 1;
+          parsed.push(JSON.parse(currentJson));
+          currentJson = ''; // Reset for the next JSON object
         } catch {
-          // Handle parsing error if necessary
-          throw new Error(`Error parsing chunked message: '${chunk}'`);
+          // If parsing fails, we continue accumulating characters
         }
-      }
-    } else if (
-      input[i] === skipDelimiters[0][0] &&
-      input.slice(i, i + skipDelimiters[0].length) === skipDelimiters[0]
-    ) {
-      // skip to the end of the delimiter
-      const end = input.indexOf(skipDelimiters[1], i);
-      if (end > 0) {
-        i = end + skipDelimiters[1].length;
-      } else {
-        // if the end is not found, maybe the next chunk will have the end
       }
     }
   }
 
-  const remaining = input.slice(nextParseIndex);
-  return { parsed: result, remaining };
+  // If there are remaining characters, it means the JSON object is incomplete
+  return { parsed, remaining: currentJson };
 }
 
-function toItalic(text: string): string {
+export function toItalic(text: string): string {
   return chalk.italic.gray(text.trim());
 }
 
@@ -100,7 +98,7 @@ export function getSubActionMessage(
   action: FunctionAction
 ): string {
   // @todo maybe reactivate after tests
-  let actionMsg = `${message}\n   `;
+  let actionMsg = `${message}\n${chalk.gray('│')}  `;
   const functionName = getFunctionName(action);
   const args = getFunctionArgs(action);
 
@@ -135,9 +133,6 @@ export function getSubActionMessage(
 // Variable will be availble as long as the process is running
 let totalTokens = 0;
 
-// Skip the stream chunk parsing when the following delimiters are found in the content (which can break the parsing)
-export const UPDATE_FILE_DELIMITERS: [string, string] = ['<<<<<', '>>>>>'];
-
 export async function processStreamedResponse(
   agentResponse: AsyncIterable<Buffer>
 ) {
@@ -149,6 +144,7 @@ export async function processStreamedResponse(
   for await (const chunk of agentResponse) {
     let content = '';
     let streamEvents: StreamEvent[];
+    // Logger.debug('Chunk:', chunk.toString('utf-8'));
 
     //If there were previous chunks, we need to add them
     chunks.push(chunk.toString('utf-8'));
@@ -163,10 +159,7 @@ export async function processStreamedResponse(
       chunks = [];
     } catch (e) {
       // Chunks might come in multiple parts
-      const { parsed, remaining } = parseChunkedMessages<StreamEvent>(
-        content,
-        UPDATE_FILE_DELIMITERS
-      );
+      const { parsed, remaining } = parseChunkedMessages<StreamEvent>(content);
 
       // Logger.debug('Parsed:', parsed);
 
@@ -180,7 +173,9 @@ export async function processStreamedResponse(
     }
 
     streamEvents.forEach((streamEvent) => {
-      Logger.debug('StreamEvent', streamEvent);
+      if (streamEvent.status !== 'chunked_message') {
+        Logger.debug('StreamEvent', streamEvent);
+      }
       switch (streamEvent.status) {
         case 'requires_action':
           // The default message is too verbose, for now we will just display the actions

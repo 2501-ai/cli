@@ -124,7 +124,7 @@ export class AgentManager {
     if (args.url) {
       taskTitle = 'Browsing: ' + args.url;
     }
-    Logger.debug('    Action args:', args);
+    Logger.debug('Action args:', args);
     let corrected = false;
     // Specific to write_file action
     if (args.path && args.content) {
@@ -134,7 +134,11 @@ export class AgentManager {
         const config = readConfig();
         const { data: correctionData } = await axios.post(
           `/agents/${this.id}/verifyOutput`,
-          { task: taskTitle, previous, proposal: JSON.stringify(args) },
+          {
+            task: taskTitle,
+            previous,
+            proposal: args.content,
+          },
           {
             timeout: 60000,
             headers: {

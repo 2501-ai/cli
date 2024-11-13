@@ -1,6 +1,6 @@
 {
   "name": "@2501-ai/cli",
-  "version": "0.0.46",
+  "version": "0.0.48",
   "description": "",
   "main": "dist/index.js",
   "bin": {
@@ -12,7 +12,7 @@
     "build:link": "npm run build && npm link",
     "unlink": "npm unlink -g @2501-ai/cli",
     "start": "node .",
-    "lint": "eslint . --ext .ts,.tsx --fix",
+    "lint": "tsc --noEmit && eslint . --ext .ts,.tsx --fix",
     "prepare": "husky",
     "test": "jest --silent"
   },

@@ -16,15 +16,12 @@ enum Colors {
   WHITE = 'white',
 }
 
-function getTerminalWidth(): number {
-  let terminalWidth: number;
+export function getTerminalWidth(): number {
   if (process.stdout.isTTY) {
-    terminalWidth = process.stdout.columns;
+    return process.stdout.columns;
   } else {
-    // Default to 400 columns if terminal width is not available
-    terminalWidth = 400;
+    return 80;
   }
-  return terminalWidth;
 }
 
 const stringify = (args: any[]) => {
@@ -60,6 +57,7 @@ const stringify = (args: any[]) => {
 
 export default class Logger {
   #spinnerStarted = false;
+  #lastUpdateTime = 0;
 
   constructor(public spin = p.spinner()) {}
 
@@ -81,24 +79,44 @@ export default class Logger {
   }
 
   start(message?: string) {
+    const terminalWidth = getTerminalWidth();
+    const maxMessageLength = terminalWidth - 10;
+    const truncatedMessage = message
+      ? message.substring(0, maxMessageLength)
+      : undefined;
+
     if (this.#spinnerStarted) {
-      this.spin.message(message);
+      this.spin.message(truncatedMessage);
       return;
     }
-    this.spin.start(message?.substring(0, getTerminalWidth() - 10));
+
+    if (truncatedMessage && truncatedMessage.length > maxMessageLength) {
+      this.spin.message(truncatedMessage.slice(0, maxMessageLength));
+    }
+
+    this.spin.start(truncatedMessage);
     this.#spinnerStarted = true;
   }
 
   message(message: string) {
-    this.spin.message(message);
+    const now = Date.now();
+    if (now - this.#lastUpdateTime < 100) {
+      return;
+    }
+    this.#lastUpdateTime = now;
+
+    const terminalWidth = getTerminalWidth();
+    const maxMessageLength = terminalWidth - 10;
+    const truncatedMessage = message.substring(0, maxMessageLength);
+    this.spin.message(truncatedMessage);
   }
 
   stop(message?: string, code?: number) {
     if (!this.#spinnerStarted) {
-      this.spin.message(message);
+      this.spin.message(marked.parse(message || '') as string);
       return;
     }
-    this.spin.stop(message, code);
+    this.spin.stop((marked.parse(message || '') as string).trim(), code);
     this.#spinnerStarted = false;
   }
 
@@ -135,54 +153,60 @@ export default class Logger {
 
   handleError(
     e: Error | AxiosError,
-    defaultMsg = 'The server has returned an error. Please try again'
+    defaultMsg = 'Unexpected error. Please try again !'
   ) {
     if (isDebug) {
-      if (axios.isAxiosError(e)) {
-        const axiosError = e as AxiosError;
-        Logger.error('Command error - Axios error', {
-          code: axiosError.code,
-          message: axiosError.message,
-          name: axiosError.name,
-          responseData: axiosError.response?.data || 'no error',
-          data: axiosError.toJSON(),
-        });
-        if (axiosError.code === 'ECONNREFUSED') {
-          defaultMsg = 'Server unreachable. Please try again later.';
-        }
-        // Logger.error('Command error - Axios error', axiosError.toJSON());
-      } else {
+      if (!axios.isAxiosError(e)) {
         Logger.error('Command error', e);
+        return this.cancel(defaultMsg);
       }
-      this.cancel(defaultMsg);
-      return;
-    }
 
-    if (axios.isAxiosError(e)) {
       const axiosError = e as AxiosError;
-      const errorData = axiosError.response?.data as { code?: string };
-
-      if (axiosError.response?.status === 401) {
-        this.cancel('Unauthorized. Please verify your API key.');
-        return;
-      }
-
-      if (axiosError.response?.status === 403) {
-        if (errorData?.code === 'TOKEN_LIMIT') {
-          this.cancel(
-            'Monthly token usage limit reached. Please upgrade your plan or contact us !'
-          );
-          return;
-        }
-      }
-
+      Logger.error('Command error - Axios error', {
+        code: axiosError.code,
+        message: axiosError.message,
+        name: axiosError.name,
+        responseData: axiosError.response?.data || 'no error',
+        data: axiosError.toJSON(),
+      });
       if (axiosError.code === 'ECONNREFUSED') {
         defaultMsg = 'Server unreachable. Please try again later.';
       }
+
+      return this.cancel(
+        (axiosError.response?.data as { error: string })?.error || defaultMsg
+      );
     }
-    this.cancel(defaultMsg);
-    // this.cancel(defaultMsg)
-    // Logger.error("Unexpected error. We're working on it!");
+
+    if (!axios.isAxiosError(e)) {
+      return this.cancel(defaultMsg);
+    }
+
+    const axiosError = e as AxiosError;
+    const errorData = axiosError.response?.data as { code?: string };
+
+    if (axiosError.response?.status === 401) {
+      defaultMsg = 'Unauthorized. Please verify your API key.';
+    }
+
+    if (axiosError.response?.status === 403) {
+      if (errorData?.code === 'TOKEN_LIMIT') {
+        defaultMsg =
+          'Monthly token usage limit reached. Please upgrade your plan or contact us !';
+      }
+    }
+
+    if (axiosError.response?.status === 500) {
+      defaultMsg = 'The server has returned an error. Please try again';
+    }
+
+    if (axiosError.code === 'ECONNREFUSED') {
+      defaultMsg = 'Server unreachable. Please try again later.';
+    }
+
+    this.cancel(
+      (axiosError.response?.data as { error: string })?.error || defaultMsg
+    );
   }
 
   static agent(data: any) {

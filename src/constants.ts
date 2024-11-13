@@ -55,6 +55,7 @@ export const IGNORED_FILE_PATTERNS = [
   '.DS_Store',
   'Thumbs.db',
   '.cache',
+  '.idea',
   '.Trash',
   '*.tmp',
   '*.temp',

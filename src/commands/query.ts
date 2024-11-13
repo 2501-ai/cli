@@ -1,6 +1,8 @@
 import fs from 'fs';
+import { Readable } from 'stream';
 import { marked, MarkedExtension } from 'marked';
 import { markedTerminal } from 'marked-terminal';
+import chalk from 'chalk';
 import {
   cancelQuery,
   getAgentStatus,
@@ -13,6 +15,7 @@ import {
   getSubActionMessage,
   isStreamingContext,
   processStreamedResponse,
+  toItalic,
 } from '../helpers/streams';
 import {
   getWorkspaceChanges,
@@ -28,21 +31,24 @@ import {
 import { getFunctionArgs } from '../utils/actions';
 import { AgentManager } from '../managers/agentManager';
 import { getEligibleAgent, readConfig } from '../utils/conf';
-import Logger from '../utils/logger';
+import Logger, { getTerminalWidth } from '../utils/logger';
 import { generatePDFs } from '../utils/pdf';
+import { isLooping } from '../utils/loopDetection';
 
 marked.use(markedTerminal() as MarkedExtension);
 
 const initializeAgentConfig = async (
   workspace: string,
   skipWarmup: boolean
-): Promise<AgentConfig> => {
+): Promise<AgentConfig | null> => {
   let eligible = getEligibleAgent(workspace);
   if (!eligible && !skipWarmup) {
     await initCommand({ workspace });
     eligible = getEligibleAgent(workspace);
   }
-  if (!eligible) throw new Error('No eligible agent found after init');
+  if (!eligible) {
+    return null;
+  }
   return eligible;
 };
 
@@ -86,7 +92,6 @@ export const queryCommand = async (
   }
 ) => {
   Logger.debug('Options:', options);
-
   try {
     const config = readConfig();
     const workspace = options.workspace || process.cwd();
@@ -95,6 +100,11 @@ export const queryCommand = async (
 
     ////////// Agent Init //////////
     const agentConfig = await initializeAgentConfig(workspace, skipWarmup);
+
+    // If not agent is eligible, it usually means there was an error during the init process that is already displayed.
+    if (!agentConfig) {
+      return;
+    }
     const agentManager = new AgentManager({
       id: agentConfig.id,
       name: agentConfig.name,
@@ -210,12 +220,43 @@ export const queryCommand = async (
       stream
     );
 
+    if (stream) {
+      const streamResponse = agentResponse as Readable;
+      streamResponse.on('data', (data: any) => {
+        if (!data.toString().includes('reasoning')) {
+          return;
+        }
+
+        try {
+          const res = JSON.parse(data.toString());
+          if (res.status === 'reasoning') {
+            let stepMessage: string = `Reasoning steps that will be followed:`;
+            for (const step of res.steps.steps) {
+              stepMessage += `\n${chalk.gray('│')}  ${toItalic(` └ ${step}`)}`;
+            }
+            logger.stop(stepMessage);
+            logger.start('Processing');
+          }
+        } catch (e) {
+          // Ignore
+        }
+      });
+    }
+
     // eslint-disable-next-line prefer-const
     let [actions, queryResponse] = await handleAgentResponse(agentResponse);
-    logger.stop(queryResponse || 'Done processing');
+    if (queryResponse) {
+      logger.stop(queryResponse);
+    }
 
     let finalResponse = '';
     while (actions.length) {
+      if (isLooping(actions)) {
+        return logger.stop(
+          'Unfortunately, a loop has been detected. Please try again.',
+          1
+        );
+      }
       const toolOutputs = await executeActions(actions, agentManager);
       logger.start('Reviewing the job');
       const submitResponse = toolOutputs.length
@@ -228,7 +269,7 @@ export const queryCommand = async (
     }
 
     if (finalResponse) {
-      logger.stop('Execution completed');
+      logger.stop(chalk.italic.gray('-'.repeat(getTerminalWidth() - 10)));
       Logger.agent(finalResponse);
     }
 

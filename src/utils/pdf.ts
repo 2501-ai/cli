@@ -33,11 +33,13 @@ function createPDFFromFiles(
 
     doc.pipe(stream);
 
-    fileList.forEach((file) => {
-      doc.addPage();
+    fileList.forEach((file, index) => {
+      if (index > 0) {
+        doc.addPage();
+      }
       doc
-        .fontSize(12)
-        .text(`File: ${file}`, {
+        .fontSize(10)
+        .text(`File:${file}::END`, {
           underline: true,
         })
         .moveDown(0.5);
@@ -47,11 +49,8 @@ function createPDFFromFiles(
           'utf8'
         );
         const lines = fileContent.split(/\r?\n/);
-        lines.forEach((line, index) => {
-          doc
-            .fontSize(10)
-            .text(`${index + 1}: ${line}`)
-            .moveDown(0.2);
+        lines.forEach((line) => {
+          doc.fontSize(10).text(line).moveDown(0.2);
         });
       } else {
         doc
