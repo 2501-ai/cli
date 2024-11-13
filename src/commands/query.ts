@@ -33,6 +33,8 @@ import { AgentManager } from '../managers/agentManager';
 import { getEligibleAgent, readConfig } from '../utils/conf';
 import Logger, { getTerminalWidth } from '../utils/logger';
 import { generatePDFs } from '../utils/pdf';
+import { isLooping } from '../utils/loopDetection';
+import chalk from 'chalk';
 
 marked.use(markedTerminal() as MarkedExtension);
 
@@ -91,7 +93,6 @@ export const queryCommand = async (
   }
 ) => {
   Logger.debug('Options:', options);
-
   try {
     const config = readConfig();
     const workspace = options.workspace || process.cwd();
@@ -232,7 +233,7 @@ export const queryCommand = async (
           if (res.status === 'reasoning') {
             let stepMessage: string = `Reasoning steps that will be followed:`;
             for (const step of res.steps.steps) {
-              stepMessage += `\n   ${toItalic(` └ ${step}`)}`;
+              stepMessage += `\n${chalk.gray('│')}  ${toItalic(` └ ${step}`)}`;
             }
             logger.stop(stepMessage);
             logger.start('Processing');
@@ -251,6 +252,12 @@ export const queryCommand = async (
 
     let finalResponse = '';
     while (actions.length) {
+      if (isLooping(actions)) {
+        return logger.stop(
+          'Unfortunately, a loop has been detected. Please try again.',
+          1
+        );
+      }
       const toolOutputs = await executeActions(actions, agentManager);
       logger.start('Reviewing the job');
       const submitResponse = toolOutputs.length
