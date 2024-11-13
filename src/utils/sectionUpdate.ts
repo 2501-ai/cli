@@ -48,7 +48,6 @@ export function modifyCodeSections({
           currentIndex = index + newContent.length;
         } else {
           throw new Error('Old content not found in existing content.');
-          console.error('Old content not found in existing content.');
         }
       }
     }
