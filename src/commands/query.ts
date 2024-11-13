@@ -34,7 +34,6 @@ import { getEligibleAgent, readConfig } from '../utils/conf';
 import Logger, { getTerminalWidth } from '../utils/logger';
 import { generatePDFs } from '../utils/pdf';
 import { isLooping } from '../utils/loopDetection';
-import chalk from 'chalk';
 
 marked.use(markedTerminal() as MarkedExtension);
 
