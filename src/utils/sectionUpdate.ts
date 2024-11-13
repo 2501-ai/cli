@@ -57,14 +57,15 @@ export function modifyCodeSections({
     return updatedContent;
   }
 
+  // @TODO : refacto this function
   function findIndexOfSequence(
     haystack: string[],
     needle: string[],
     startIndex = 0
   ) {
-    // haystack: array of lines
-    // needle: array of lines
-    // Returns index in haystack where needle starts, or -1 if not found
+    if (!Array.isArray(haystack) || !Array.isArray(needle)) {
+      throw new TypeError('findIndexOfSequence - Need array of string.');
+    }
 
     // Handle empty needle (oldContent)
     if (needle.length === 0) {
