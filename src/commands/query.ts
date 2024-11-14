@@ -103,6 +103,7 @@ const synchronizeWorkspace = async (
     }
 
     await indexFiles(agentId, files);
+    await new Promise((resolve) => setTimeout(resolve, 2000));
     logger.stop('Workspace synchronized');
     return true;
   }
