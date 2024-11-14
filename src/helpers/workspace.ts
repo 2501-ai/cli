@@ -126,5 +126,11 @@ export function getWorkspaceDiff(
   const hasChanges =
     added.length > 0 || removed.length > 0 || modified.length > 0;
 
-  return { added, removed, modified, hasChanges };
+  return {
+    added,
+    removed,
+    modified,
+    hasChanges,
+    isEmpty: !newState.file_hashes.size,
+  };
 }
