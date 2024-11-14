@@ -29,6 +29,7 @@ export interface WorkspaceDiff {
   removed: string[];
   modified: string[];
   hasChanges: boolean;
+  isEmpty: boolean;
 }
 
 export type StreamEventStatus =

@@ -37,6 +37,8 @@ import { isLooping } from '../utils/loopDetection';
 
 marked.use(markedTerminal() as MarkedExtension);
 
+const logger = new Logger();
+
 const initializeAgentConfig = async (
   workspace: string,
   skipWarmup: boolean
@@ -45,10 +47,12 @@ const initializeAgentConfig = async (
   if (!eligible && !skipWarmup) {
     await initCommand({ workspace });
     eligible = getEligibleAgent(workspace);
+
+    if (eligible) {
+      await synchronizeWorkspace(eligible?.id, workspace, true);
+    }
   }
-  if (!eligible) {
-    return null;
-  }
+
   return eligible;
 };
 
@@ -78,7 +82,35 @@ const executeActions = async (
   return results;
 };
 
-const logger = new Logger();
+const synchronizeWorkspace = async (
+  agentId: string,
+  workspace: string,
+  force: boolean = false
+): Promise<boolean> => {
+  const workspaceDiff = await getWorkspaceChanges(workspace);
+  if (workspaceDiff.isEmpty) return false;
+
+  if (workspaceDiff.hasChanges || force) {
+    logger.start('Synchronizing workspace');
+
+    Logger.debug('Agent : Workspace has changes, synchronizing...');
+    await updateWorkspaceState(workspace);
+    // TODO: improve and send only changed files ?
+    const files = await generatePDFs(workspace);
+
+    if (process.env.NODE_ENV !== 'dev') {
+      // Don't pollute the filesystem with temporary files
+      fs.unlinkSync(files[0].path);
+      Logger.debug('Agent : Workspace PDF deleted:', files[0].path);
+    }
+
+    await indexFiles(agentId, files);
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+    logger.stop('Workspace synchronized');
+    return true;
+  }
+  return false;
+};
 
 export const queryCommand = async (
   query: string,
@@ -112,29 +144,6 @@ export const queryCommand = async (
       capabilities: agentConfig.capabilities,
       workspace,
     });
-
-    const synchronizeWorkspace = async (): Promise<boolean> => {
-      const workspaceDiff = await getWorkspaceChanges(workspace);
-      if (workspaceDiff.hasChanges) {
-        logger.start('Synchronizing workspace');
-
-        Logger.debug('Agent : Workspace has changes, synchronizing...');
-        await updateWorkspaceState(workspace);
-        // TODO: improve and send only changed files ?
-        const files = await generatePDFs(workspace);
-
-        if (process.env.NODE_ENV !== 'dev') {
-          // Don't pollute the filesystem with temporary files
-          fs.unlinkSync(files[0].path);
-          Logger.debug('Agent : Workspace PDF deleted:', files[0].path);
-        }
-
-        await indexFiles(agentConfig.id, files);
-        logger.stop('Workspace synchronized');
-        return true;
-      }
-      return false;
-    };
 
     const cancelPrevious = async (): Promise<void> => {
       const statusResponse = await getAgentStatus(agentManager.id);
@@ -206,7 +215,7 @@ export const queryCommand = async (
     let workspaceChanged = false;
 
     if (!skipWarmup) {
-      workspaceChanged = await synchronizeWorkspace();
+      workspaceChanged = await synchronizeWorkspace(agentConfig.id, workspace);
     }
     if (agentManager.capabilities.includes('async')) {
       await cancelPrevious();
