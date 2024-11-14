@@ -88,6 +88,8 @@ const synchronizeWorkspace = async (
   force: boolean = false
 ): Promise<boolean> => {
   const workspaceDiff = await getWorkspaceChanges(workspace);
+  if (workspaceDiff.isEmpty) return false;
+
   if (workspaceDiff.hasChanges || force) {
     logger.start('Synchronizing workspace');
 
