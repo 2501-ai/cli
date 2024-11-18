@@ -1,7 +1,7 @@
 import { createHash } from 'crypto';
 import { FunctionAction } from './types';
 
-const REPETITION_THRESHOLD = 3;
+const REPETITION_THRESHOLD = 5;
 
 const actionHashes = new Map<string, number>();
 
