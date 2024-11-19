@@ -14,7 +14,8 @@
     "start": "node .",
     "lint": "tsc --noEmit && eslint . --ext .ts,.tsx --fix",
     "prepare": "husky",
-    "test": "jest --silent"
+    "test": "jest --silent",
+    "dev": "ts-node ./src/index.ts"
   },
   "keywords": [
     "AI",
