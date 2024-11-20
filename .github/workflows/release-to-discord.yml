@@ -1,9 +1,7 @@
 on:
   release:
-    types: [published] 
-  pull_request:
-    branches:
-      - main 
+    types: [published]
+  workflow_dispatch:
 
 jobs:
   github-releases-to-discord:
@@ -11,11 +9,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Debug GitHub Context
-        env:
-          GITHUB_CONTEXT: ${{ toJson(github) }}
-        run: echo "$GITHUB_CONTEXT"
         
       - name: Github Releases To Discord
         uses: sillyangel/releases-to-discord@v1
