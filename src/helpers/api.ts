@@ -18,7 +18,6 @@ const TEN_MINUTES_MILLIS = 10 * 60 * 1000;
 export const initAxios = async () => {
   const config = readConfig();
   if (config?.api_key === undefined) {
-    console.log('API KEY IS UNDEFINED');
     return;
   }
 
