@@ -37,6 +37,7 @@ async function getConfiguration(configKey: string): Promise<Configuration> {
   const selectedConfig = configurations.find(
     (config: { key: string; prompt: string }) => config.key === configKey
   );
+
   if (!selectedConfig) {
     Logger.error(`Configuration not found: ${configKey}`);
     process.exit(1);
@@ -87,7 +88,11 @@ export async function initCommand(options?: InitCommandOptions) {
     logger.start('Creating agent');
     const config = readConfig();
 
-    const createResponse = await createAgent(workspace, configuration);
+    const createResponse = await createAgent(
+      workspace,
+      configuration,
+      config?.engine
+    );
     Logger.debug('Agent created:', createResponse);
     // Add agent to config.
     addAgent({
