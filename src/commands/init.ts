@@ -65,7 +65,7 @@ async function getWorkspacePath(options?: InitCommandOptions): Promise<string> {
       `Files in the workspace "${finalPath}" are considered sensitive`
     );
     const res = await logger.prompt(
-      `Are you sure you want to continue the synchronization ? (y/n)`
+      `Are you sure you want to proceed with synchronization? This will synchronize a sensitive directory and may overwrite or modify critical files. (y/n)`
     );
     if (res === false) {
       logger.cancel('Operation cancelled');
