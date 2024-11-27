@@ -65,12 +65,15 @@ async function getWorkspacePath(options?: InitCommandOptions): Promise<string> {
       `Files in the workspace "${finalPath}" are considered sensitive`
     );
     const res = await logger.prompt(
-      `Are you sure you want to proceed with synchronization? This will synchronize a sensitive directory and may overwrite or modify critical files. (y/n)`
+      `Are you sure you want to proceed with synchronization ? This will synchronize a sensitive directory and may overwrite or modify critical files. (y/n)`
     );
-    if (res === false) {
+
+    // The symbol handles the CTRL+C cancelation from user.
+    if (res === false || res.toString() === 'Symbol(clack:cancel)') {
       logger.cancel('Operation cancelled');
       process.exit(0);
     }
+
     logger.start(`Using workspace at ${finalPath}`);
   } else {
     logger.message(`Using workspace at ${finalPath}`);
@@ -81,11 +84,13 @@ async function getWorkspacePath(options?: InitCommandOptions): Promise<string> {
 // This function will be called when the `init` command is executed
 export async function initCommand(options?: InitCommandOptions) {
   try {
+    // Required for the next stop messages to appear correctly
+    logger.start('Initializing');
     const configKey = options?.config || 'CODING_AGENT';
-    const configuration = await getConfiguration(configKey);
     const workspace = await getWorkspacePath(options);
+    const configuration = await getConfiguration(configKey);
 
-    logger.start('Creating agent');
+    logger.message('Creating agent');
     const config = readConfig();
 
     const createResponse = await createAgent(
