@@ -49,7 +49,7 @@ async function getWorkspacePath(options?: InitCommandOptions): Promise<string> {
   if (options?.workspace === false) {
     const path = `/tmp/2501/${Date.now()}`;
     fs.mkdirSync(path, { recursive: true });
-    logger.message(`Using workspace at ${path}`);
+    logger.log(`Using workspace at ${path}`);
     return path;
   }
 
@@ -61,19 +61,20 @@ async function getWorkspacePath(options?: InitCommandOptions): Promise<string> {
   }
 
   if (!options?.ignoreUnsafe && isDirUnsafe(finalPath)) {
-    logger.stop(
+    logger.log(
       `Files in the workspace "${finalPath}" are considered sensitive`
     );
     const res = await logger.prompt(
-      `Are you sure you want to proceed with synchronization? This will synchronize a sensitive directory and may overwrite or modify critical files. (y/n)`
+      `Are you sure you want to proceed with synchronization ? This will synchronize a sensitive directory and may overwrite or modify critical files. (y/n)`
     );
-    if (res === false) {
+
+    // The symbol handles the CTRL+C cancelation from user.
+    if (res === false || res.toString() === 'Symbol(clack:cancel)') {
       logger.cancel('Operation cancelled');
       process.exit(0);
     }
-    logger.start(`Using workspace at ${finalPath}`);
-  } else {
-    logger.message(`Using workspace at ${finalPath}`);
+
+    logger.log(`Using workspace at ${finalPath}`);
   }
   return finalPath;
 }
@@ -81,11 +82,11 @@ async function getWorkspacePath(options?: InitCommandOptions): Promise<string> {
 // This function will be called when the `init` command is executed
 export async function initCommand(options?: InitCommandOptions) {
   try {
-    const configKey = options?.config || 'CODING_AGENT';
-    const configuration = await getConfiguration(configKey);
     const workspace = await getWorkspacePath(options);
 
     logger.start('Creating agent');
+    const configKey = options?.config || 'CODING_AGENT';
+    const configuration = await getConfiguration(configKey);
     const config = readConfig();
 
     const createResponse = await createAgent(
