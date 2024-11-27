@@ -93,6 +93,7 @@ export interface AgentConfig {
   engine: EngineType;
   configuration: string;
   capabilities: EngineCapability[];
+  syncSensitive: boolean;
 }
 
 export type LocalConfig = {

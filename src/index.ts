@@ -74,6 +74,7 @@ program
   .description('Initializes a new agent')
   .option('--name <name>', 'Specify the name of the agent')
   .option('--workspace <path>', 'Specify a different workspace path')
+  .option('--syncSensitive', 'Sync sensitive directories')
   .option(
     '--no-workspace',
     'Will not sync the current workspace and will create a temporary one in /tmp/2501/'

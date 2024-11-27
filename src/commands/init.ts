@@ -18,7 +18,7 @@ interface InitCommandOptions {
   name?: string;
   workspace?: string | boolean;
   config?: string;
-  ignoreUnsafe?: boolean;
+  syncSensitive?: boolean;
 }
 
 const logger = new Logger();
@@ -59,7 +59,7 @@ async function getWorkspacePath(options?: InitCommandOptions): Promise<string> {
     finalPath = process.cwd();
   }
 
-  if (!options?.ignoreUnsafe && isDirUnsafe(finalPath)) {
+  if (!options?.syncSensitive && isDirUnsafe(finalPath)) {
     logger.stop(
       `Files in the workspace "${finalPath}" are considered sensitive`
     );
@@ -97,6 +97,7 @@ export async function initCommand(options?: InitCommandOptions) {
       workspace,
       configuration: configuration.id,
       engine: config?.engine || DEFAULT_ENGINE,
+      syncSensitive: options?.syncSensitive || false,
     });
 
     logger.stop(`Agent ${createResponse.id} created`);
