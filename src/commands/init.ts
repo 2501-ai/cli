@@ -60,19 +60,20 @@ async function getWorkspacePath(options?: InitCommandOptions): Promise<string> {
   }
 
   if (!options?.syncSensitive && isDirUnsafe(finalPath)) {
-    logger.stop(
+    logger.log(
       `Files in the workspace "${finalPath}" are considered sensitive`
     );
     const res = await logger.prompt(
-      `Are you sure you want to continue the synchronization ? (y/n)`
+      `Are you sure you want to proceed with synchronization ? This will synchronize a sensitive directory and may overwrite or modify critical files. (y/n)`
     );
-    if (res === false) {
+
+    // The symbol handles the CTRL+C cancelation from user.
+    if (res === false || res.toString() === 'Symbol(clack:cancel)') {
       logger.cancel('Operation cancelled');
       process.exit(0);
     }
-    logger.start(`Using workspace at ${finalPath}`);
-  } else {
-    logger.message(`Using workspace at ${finalPath}`);
+
+    logger.log(`Using workspace at ${finalPath}`);
   }
   return finalPath;
 }
