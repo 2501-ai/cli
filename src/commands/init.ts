@@ -49,7 +49,7 @@ async function getWorkspacePath(options?: InitCommandOptions): Promise<string> {
   if (options?.workspace === false) {
     const path = `/tmp/2501/${Date.now()}`;
     fs.mkdirSync(path, { recursive: true });
-    logger.message(`Using workspace at ${path}`);
+    logger.log(`Using workspace at ${path}`);
     return path;
   }
 
@@ -61,7 +61,7 @@ async function getWorkspacePath(options?: InitCommandOptions): Promise<string> {
   }
 
   if (!options?.ignoreUnsafe && isDirUnsafe(finalPath)) {
-    logger.stop(
+    logger.log(
       `Files in the workspace "${finalPath}" are considered sensitive`
     );
     const res = await logger.prompt(
@@ -74,9 +74,7 @@ async function getWorkspacePath(options?: InitCommandOptions): Promise<string> {
       process.exit(0);
     }
 
-    logger.start(`Using workspace at ${finalPath}`);
-  } else {
-    logger.message(`Using workspace at ${finalPath}`);
+    logger.log(`Using workspace at ${finalPath}`);
   }
   return finalPath;
 }
@@ -85,10 +83,9 @@ async function getWorkspacePath(options?: InitCommandOptions): Promise<string> {
 export async function initCommand(options?: InitCommandOptions) {
   try {
     // Required for the next stop messages to appear correctly
-    logger.start('Initializing');
     const configKey = options?.config || 'CODING_AGENT';
     const workspace = await getWorkspacePath(options);
-    logger.message('Creating agent');
+    logger.start('Creating agent');
 
     const configuration = await getConfiguration(configKey);
     const config = readConfig();
