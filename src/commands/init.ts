@@ -88,9 +88,9 @@ export async function initCommand(options?: InitCommandOptions) {
     logger.start('Initializing');
     const configKey = options?.config || 'CODING_AGENT';
     const workspace = await getWorkspacePath(options);
-    const configuration = await getConfiguration(configKey);
-
     logger.message('Creating agent');
+
+    const configuration = await getConfiguration(configKey);
     const config = readConfig();
 
     const createResponse = await createAgent(
