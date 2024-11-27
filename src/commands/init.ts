@@ -37,6 +37,7 @@ async function getConfiguration(configKey: string): Promise<Configuration> {
   const selectedConfig = configurations.find(
     (config: { key: string; prompt: string }) => config.key === configKey
   );
+
   if (!selectedConfig) {
     Logger.error(`Configuration not found: ${configKey}`);
     process.exit(1);
@@ -48,7 +49,7 @@ async function getWorkspacePath(options?: InitCommandOptions): Promise<string> {
   if (options?.workspace === false) {
     const path = `/tmp/2501/${Date.now()}`;
     fs.mkdirSync(path, { recursive: true });
-    logger.message(`Using workspace at ${path}`);
+    logger.log(`Using workspace at ${path}`);
     return path;
   }
 
@@ -81,14 +82,18 @@ async function getWorkspacePath(options?: InitCommandOptions): Promise<string> {
 // This function will be called when the `init` command is executed
 export async function initCommand(options?: InitCommandOptions) {
   try {
-    const configKey = options?.config || 'CODING_AGENT';
-    const configuration = await getConfiguration(configKey);
     const workspace = await getWorkspacePath(options);
 
     logger.start('Creating agent');
+    const configKey = options?.config || 'CODING_AGENT';
+    const configuration = await getConfiguration(configKey);
     const config = readConfig();
 
-    const createResponse = await createAgent(workspace, configuration);
+    const createResponse = await createAgent(
+      workspace,
+      configuration,
+      config?.engine
+    );
     Logger.debug('Agent created:', createResponse);
     // Add agent to config.
     addAgent({
