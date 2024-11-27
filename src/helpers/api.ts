@@ -17,8 +17,8 @@ const TEN_MINUTES_MILLIS = 10 * 60 * 1000;
 
 export const initAxios = async () => {
   const config = readConfig();
-  if (config?.api_key === undefined) {
-    return;
+  if (!config?.api_key) {
+    throw new Error('API key must be set.');
   }
 
   axios.defaults.headers.common['Authorization'] = `Bearer ${config?.api_key}`;
