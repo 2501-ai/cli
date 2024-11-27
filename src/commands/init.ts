@@ -82,11 +82,10 @@ async function getWorkspacePath(options?: InitCommandOptions): Promise<string> {
 // This function will be called when the `init` command is executed
 export async function initCommand(options?: InitCommandOptions) {
   try {
-    // Required for the next stop messages to appear correctly
-    const configKey = options?.config || 'CODING_AGENT';
     const workspace = await getWorkspacePath(options);
-    logger.start('Creating agent');
 
+    logger.start('Creating agent');
+    const configKey = options?.config || 'CODING_AGENT';
     const configuration = await getConfiguration(configKey);
     const config = readConfig();
 
