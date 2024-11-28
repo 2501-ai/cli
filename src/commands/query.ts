@@ -34,6 +34,7 @@ import { getEligibleAgent, readConfig } from '../utils/conf';
 import Logger, { getTerminalWidth } from '../utils/logger';
 import { generatePDFs } from '../utils/pdf';
 import { isLooping } from '../utils/loopDetection';
+import { JOIN_DISCORD_MESSAGE } from '../utils/messaging';
 
 marked.use(markedTerminal() as MarkedExtension);
 
@@ -124,6 +125,12 @@ export const queryCommand = async (
   }
 ) => {
   Logger.debug('Options:', options);
+
+  // display the join discord message 10% of the time
+  if (Math.random() < 0.1) {
+    logger.log(JOIN_DISCORD_MESSAGE);
+  }
+
   try {
     const config = readConfig();
     const workspace = options.workspace || process.cwd();
