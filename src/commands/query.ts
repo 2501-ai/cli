@@ -48,7 +48,8 @@ const initializeAgentConfig = async (
     await initCommand({ workspace });
     eligible = getEligibleAgent(workspace);
 
-    if (eligible) {
+    // If we have an eligible agent, always sync after init
+    if (eligible && !skipWarmup) {
       await synchronizeWorkspace(eligible?.id, workspace, true);
     }
   }
