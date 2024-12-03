@@ -8,6 +8,7 @@ import { API_HOST, API_VERSION } from '../constants';
 import { isDirUnsafe } from '../helpers/security';
 import { Configuration } from '../utils/types';
 import { createAgent } from '../helpers/api';
+import { JOIN_DISCORD_MESSAGE } from '../utils/messaging';
 
 axios.defaults.baseURL = `${API_HOST}${API_VERSION}`;
 axios.defaults.timeout = 120 * 1000;
@@ -95,6 +96,7 @@ export async function initCommand(options?: InitCommandOptions) {
       config?.engine
     );
     Logger.debug('Agent created:', createResponse);
+
     // Add agent to config.
     addAgent({
       id: createResponse.id,
@@ -106,6 +108,8 @@ export async function initCommand(options?: InitCommandOptions) {
     });
 
     logger.stop(`Agent ${createResponse.id} created`);
+
+    Logger.log(JOIN_DISCORD_MESSAGE);
   } catch (e: unknown) {
     logger.handleError(e as Error, (e as Error).message);
   }
