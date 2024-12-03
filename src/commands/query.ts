@@ -124,6 +124,7 @@ export const queryCommand = async (
   }
 ) => {
   Logger.debug('Options:', options);
+
   try {
     const config = readConfig();
     const workspace = options.workspace || process.cwd();

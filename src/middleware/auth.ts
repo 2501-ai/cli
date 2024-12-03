@@ -1,6 +1,7 @@
 import { terminal } from 'terminal-kit';
 import { readConfig, writeConfig } from '../utils/conf';
 import Logger from '../utils/logger';
+import { initAxios } from '../helpers/api';
 
 const logger = new Logger();
 
@@ -18,6 +19,7 @@ export async function authMiddleware() {
     );
     process.exit(1);
   }
+  await initAxios();
 }
 
 async function showFirstTimeMessage() {

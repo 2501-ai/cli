@@ -29,6 +29,7 @@ const LINUX_ALLOWED_SUBS = [
   '/var/spool/', // Spooling data
   '/var/run/', // Runtime data
   '/var/mail/', // Mail storage
+  '/usr', // User programs and binaries
 
   '/mnt/', // Mounted external storage
   '/media/', // Removable media
@@ -50,7 +51,6 @@ export const UNIX_UNSAFE_DIRS = [
   '/snap',
   '/sys',
   '/tmp',
-  '/usr',
   '/var',
   '/System/',
   '/Applications/',
