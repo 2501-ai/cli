@@ -6,6 +6,7 @@ import { FormData } from 'formdata-node';
 import { DEFAULT_ENGINE } from '../commands/init';
 import {
   Configuration,
+  EngineType,
   FunctionAction,
   QueryResponseDTO,
 } from '../utils/types';
@@ -14,21 +15,27 @@ import {
 const FIVE_MINUTES_MILLIS = 5 * 60 * 1000;
 const TEN_MINUTES_MILLIS = 10 * 60 * 1000;
 
-const config = readConfig();
+export const initAxios = async () => {
+  const config = readConfig();
+  if (!config?.api_key) {
+    throw new Error('API key must be set.');
+  }
 
-axios.defaults.headers.common['Authorization'] = `Bearer ${config?.api_key}`;
-axios.defaults.baseURL = `${API_HOST}${API_VERSION}`;
-axios.defaults.timeout = FIVE_MINUTES_MILLIS;
+  axios.defaults.headers.common['Authorization'] = `Bearer ${config?.api_key}`;
+  axios.defaults.baseURL = `${API_HOST}${API_VERSION}`;
+  axios.defaults.timeout = FIVE_MINUTES_MILLIS;
+};
 
 export const createAgent = async (
   workspace: string,
-  selected_config: Configuration
+  selected_config: Configuration,
+  engine?: EngineType | undefined
 ) => {
   const { data: createResponse } = await axios.post('/agents', {
     workspace,
     configuration: selected_config.id,
     prompt: selected_config.prompt,
-    engine: config?.engine || DEFAULT_ENGINE,
+    engine: engine || DEFAULT_ENGINE,
     // files: workspaceResponse.vectorStoredFiles.map((file) => file.id),
   });
   return createResponse;
