@@ -8,6 +8,7 @@ import Logger from '../utils/logger';
 
 import { modifyCodeSections } from '../utils/sectionUpdate';
 import { getIgnoredFiles } from '../utils/files';
+import { ShellManager } from '../managers/shellManager';
 
 /**
  * Directory to store logs
@@ -80,9 +81,15 @@ export async function run_shell(args: {
   command: string;
   shell?: boolean | string;
   env?: { [key: string]: string };
+  background?: boolean;
 }): Promise<string> {
-  let output: string = '';
-  Logger.debug(`    Running shell command: ${args.command}`);
+  Logger.debug(`Running shell command: ${args.command}`);
+
+  if (args.background) {
+    const shellManager = ShellManager.getInstance();
+    const processId = await shellManager.executeAsync(args.command);
+    return `Process started with ID: ${processId}`;
+  }
 
   try {
     const { stderr, stdout } = await execa(args.command, {
@@ -92,6 +99,7 @@ export async function run_shell(args: {
       timeout: 1000 * 60,
     });
 
+    let output = '';
     if (stdout) output += stdout;
     if (stderr) output += stderr;
 
@@ -102,12 +110,10 @@ export async function run_shell(args: {
 
     return output;
   } catch (error) {
-    return `${ERROR_BOL} I failed to run ${args.command}, please fix the situation, errors below.\n ${(error as Error).message}
-     \`\`\`
-     ${error}
-     \`\`\``;
+    return `Error running command: ${args.command}\n${error}`;
   }
 }
+
 export const ERROR_BOL = `ERROR :`; // beginning of line
 export const hasError = (output: string) => {
   return output.startsWith(ERROR_BOL);
@@ -133,4 +139,45 @@ export async function browse_url(args: { url: string }) {
     Result of content of page :
     ${md.replace(/\s+/g, '')}
   `;
+}
+export async function check_process_status(args: {
+  processId?: string;
+}): Promise<string> {
+  const shellManager = ShellManager.getInstance();
+
+  if (args.processId) {
+    const status = shellManager.getStatus(args.processId);
+    if (!status) {
+      return `No process found with ID: ${args.processId}`;
+    }
+    return JSON.stringify(
+      {
+        id: status.id,
+        command: status.command,
+        status: status.status,
+        pid: status.pid,
+        startTime: status.startTime,
+        output: status.output,
+      },
+      null,
+      2
+    );
+  }
+
+  const processes = shellManager.getAllProcesses();
+  if (processes.length === 0) {
+    return 'No running processes found';
+  }
+
+  return JSON.stringify(
+    processes.map((proc) => ({
+      id: proc.id,
+      command: proc.command,
+      status: proc.status,
+      pid: proc.pid,
+      startTime: proc.startTime,
+    })),
+    null,
+    2
+  );
 }

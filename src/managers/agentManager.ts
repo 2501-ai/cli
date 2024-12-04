@@ -4,6 +4,7 @@ import { ASYNC_TERMINAL_STATUSES, QueryStatus } from '../constants';
 
 import {
   browse_url,
+  check_process_status,
   read_file,
   run_shell,
   update_file,
@@ -31,6 +32,7 @@ export const ACTION_FNS = {
   run_shell,
   write_file,
   update_file,
+  check_process_status,
 };
 
 export class AgentManager {
