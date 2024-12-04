@@ -33,7 +33,12 @@ Before we begin, you need to configure your API key. (You can get your API key b
     'string'
   );
   if (res) {
-    writeConfig({ api_key: res, workspace_disabled: false, agents: [] });
+    writeConfig({
+      api_key: res,
+      workspace_disabled: false,
+      agents: [],
+      join_discord_shown: false,
+    });
 
     logger.log(
       `The CLI will now create a workspace and synchronize your files with the 2501 platform before creating your first agent.`

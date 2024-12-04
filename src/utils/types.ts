@@ -101,6 +101,7 @@ export type LocalConfig = {
   engine?: EngineType;
   stream?: boolean;
   agents: AgentConfig[];
+  join_discord_shown: boolean;
 };
 
 export type AgentCallbackType = (...args: unknown[]) => Promise<void>;
