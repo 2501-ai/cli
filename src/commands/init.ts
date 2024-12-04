@@ -1,6 +1,7 @@
 import axios from 'axios';
 import fs from 'fs';
-import { addAgent, readConfig } from '../utils/conf';
+import { terminal } from 'terminal-kit';
+import { addAgent, readConfig, setValue } from '../utils/conf';
 
 import Logger from '../utils/logger';
 
@@ -8,7 +9,7 @@ import { API_HOST, API_VERSION } from '../constants';
 import { isDirUnsafe } from '../helpers/security';
 import { Configuration } from '../utils/types';
 import { createAgent } from '../helpers/api';
-import { JOIN_DISCORD_MESSAGE } from '../utils/messaging';
+import { DISCORD_LINK } from '../utils/messaging';
 
 axios.defaults.baseURL = `${API_HOST}${API_VERSION}`;
 axios.defaults.timeout = 120 * 1000;
@@ -84,11 +85,26 @@ async function getWorkspacePath(options?: InitCommandOptions): Promise<string> {
 export async function initCommand(options?: InitCommandOptions) {
   try {
     const workspace = await getWorkspacePath(options);
+    const config = readConfig();
+
+    if (!config?.join_discord_shown) {
+      const term = terminal;
+
+      term('\n');
+      term.gray('🔗 Join our Discord\n');
+      term
+        .gray('│ ')
+        .gray(
+          'Connect with the 2501 team and community for updates, support, and insights:\n'
+        );
+      term.gray('│ ').gray.underline(`${DISCORD_LINK}\n`);
+
+      setValue('join_discord_shown', true);
+    }
 
     logger.start('Creating agent');
     const configKey = options?.config || 'CODING_AGENT';
     const configuration = await getConfiguration(configKey);
-    const config = readConfig();
 
     const createResponse = await createAgent(
       workspace,
@@ -108,8 +124,6 @@ export async function initCommand(options?: InitCommandOptions) {
     });
 
     logger.stop(`Agent ${createResponse.id} created`);
-
-    Logger.log(JOIN_DISCORD_MESSAGE);
   } catch (e: unknown) {
     logger.handleError(e as Error, (e as Error).message);
   }

@@ -12,7 +12,7 @@ import { jobSubscriptionCommand } from './commands/jobs';
 import { authMiddleware } from './middleware/auth';
 import { isLatestVersion } from './utils/versioning';
 import Logger from './utils/logger';
-import { JOIN_DISCORD_MESSAGE } from './utils/messaging';
+import { DISCORD_LINK } from './utils/messaging';
 
 process.on('SIGINT', () => {
   console.log('Process interrupted with Ctrl+C');
@@ -35,7 +35,7 @@ program
                                                   
         ---- AI Autonomous Systems ----
         
-${JOIN_DISCORD_MESSAGE}
+Join our Discord server: ${DISCORD_LINK}
   `
   )
   // eslint-disable-next-line @typescript-eslint/no-var-requires
