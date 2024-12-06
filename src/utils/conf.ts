@@ -123,10 +123,20 @@ export function addAgent(newAgent: AgentConfig): void {
 /**
  * Clears all agents from the configuration.
  */
-export async function flushAgents(): Promise<void> {
+export async function flushAgents(
+  workspaceUrl: string,
+  all?: boolean
+): Promise<void> {
   try {
     const config = readConfig();
-    if (config) {
+    console.log('config, all:', config);
+
+    if (config && !all) {
+      config.agents = config.agents.filter(
+        (agent) => agent.workspace !== workspaceUrl
+      );
+      writeConfig(config);
+    } else if (config && all) {
       config.agents = []; // Empty the agents array
       writeConfig(config);
     }
