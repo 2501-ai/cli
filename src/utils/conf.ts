@@ -129,7 +129,6 @@ export async function flushAgents(
 ): Promise<void> {
   try {
     const config = readConfig();
-    console.log('config, all:', config);
 
     if (config && !all) {
       config.agents = config.agents.filter(
