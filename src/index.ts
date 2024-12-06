@@ -92,7 +92,7 @@ program
     'List agents in the current workspace or all agents on the machine'
   )
   .option('--workspace <path>', 'Specify a different workspace path')
-  .option('--all', 'List all agents on the machine')
+  .option('--all', 'Parameter to target all agents during list or flush action')
   .option('--flush', 'Flush all agents from the configuration')
   .action(agentsCommand);
 
