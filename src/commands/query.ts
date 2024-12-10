@@ -19,6 +19,7 @@ import {
 } from '../helpers/streams';
 import {
   getWorkspaceChanges,
+  readWorkspaceState,
   updateWorkspaceState,
 } from '../helpers/workspace';
 import { initCommand } from './init';
@@ -34,6 +35,7 @@ import { getEligibleAgent, readConfig } from '../utils/conf';
 import Logger, { getTerminalWidth } from '../utils/logger';
 import { generatePDFs } from '../utils/pdf';
 import { isLooping } from '../utils/loopDetection';
+import { ShellManager } from '../managers/shellManager';
 
 marked.use(markedTerminal() as MarkedExtension);
 
@@ -224,10 +226,31 @@ export const queryCommand = async (
     }
 
     logger.start('Thinking');
+
+    const runningProcesses = readWorkspaceState(workspace).running_processes;
+    let runningProcessQuery = '';
+    // Check if there are processes still running.
+    if (runningProcesses?.length) {
+      runningProcessQuery =
+        '\n<USER_NOTES>Here are the processes that were started in the background and their state:';
+      for (const proc of runningProcesses) {
+        const shellProcess = await ShellManager.instance.getShellprocess(
+          proc.pid,
+          workspace
+        );
+        if (!shellProcess) {
+          runningProcessQuery += `\nPID:${proc.pid}| Command: ${JSON.stringify(proc.command)} | Process not found or already terminated for the current workspace.`;
+        } else {
+          runningProcessQuery += `\nPID:${proc.pid}| Command: ${JSON.stringify(proc.command)} | State: ${shellProcess.status}`;
+        }
+      }
+      runningProcessQuery += '\n</USER_NOTES>';
+    }
+
     const agentResponse = await queryAgent(
       agentManager.id,
       workspaceChanged,
-      query,
+      query + runningProcessQuery,
       stream
     );
 

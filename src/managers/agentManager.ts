@@ -174,7 +174,11 @@ export class AgentManager {
     );
 
     try {
-      let output = (await ACTION_FNS[functionName](args)) as string;
+      // check_process_status needs the workspace.
+      const context = {
+        workspace: this.workspace,
+      };
+      let output = (await ACTION_FNS[functionName](args, context)) as string;
 
       if (corrected) {
         output += `\n\n NOTE: your original content for ${args.path} was corrected with the new version below before running the function: \n\n${args.content}`;

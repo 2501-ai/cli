@@ -5,7 +5,6 @@ import execa from 'execa';
 import * as cheerio from 'cheerio';
 
 import Logger from '../utils/logger';
-
 import { modifyCodeSections } from '../utils/sectionUpdate';
 import { getIgnoredFiles } from '../utils/files';
 import { ShellManager } from '../managers/shellManager';
@@ -77,18 +76,27 @@ export function update_file({
     ${content}`;
 }
 
-export async function run_shell(args: {
-  command: string;
-  shell?: boolean | string;
-  env?: { [key: string]: string };
-  background?: boolean;
-}): Promise<string> {
+export async function run_shell(
+  args: {
+    command: string;
+    shell?: boolean | string;
+    env?: { [key: string]: string };
+    background?: boolean;
+  },
+  context?: { workspace: string }
+): Promise<string> {
   Logger.debug(`Running shell command: ${args.command}`);
 
   if (args.background) {
-    const shellManager = ShellManager.getInstance();
-    const processId = await shellManager.executeAsync(args.command);
-    return `Process started with ID: ${processId}`;
+    if (!context?.workspace) {
+      return `Error: Background process can only be run in a workspace context`;
+    }
+    const process = await ShellManager.instance.executeAsync(args.command);
+
+    // Store the running process in the workspace state.
+    ShellManager.instance.addProcessToWorkspace(process, context.workspace);
+
+    return `Process started with PID: ${process.pid}`;
   }
 
   try {
@@ -140,19 +148,25 @@ export async function browse_url(args: { url: string }) {
     ${md.replace(/\s+/g, '')}
   `;
 }
-export async function check_process_status(args: {
-  processId?: string;
-}): Promise<string> {
-  const shellManager = ShellManager.getInstance();
 
+export async function check_process_status(
+  args: {
+    processId?: string;
+  },
+  context: {
+    workspace: string;
+  }
+): Promise<string> {
   if (args.processId) {
-    const status = shellManager.getStatus(args.processId);
+    const status = await ShellManager.instance.getShellprocess(
+      args.processId,
+      context.workspace
+    );
     if (!status) {
       return `No process found with ID: ${args.processId}`;
     }
     return JSON.stringify(
       {
-        id: status.id,
         command: status.command,
         status: status.status,
         pid: status.pid,
@@ -164,14 +178,13 @@ export async function check_process_status(args: {
     );
   }
 
-  const processes = shellManager.getAllProcesses();
+  const processes = ShellManager.instance.getAllProcesses();
   if (processes.length === 0) {
     return 'No running processes found';
   }
 
   return JSON.stringify(
     processes.map((proc) => ({
-      id: proc.id,
       command: proc.command,
       status: proc.status,
       pid: proc.pid,

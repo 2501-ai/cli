@@ -1,4 +1,4 @@
-import { ShellManager } from '../managers/shellManager';
+import { ShellProcess, ShellManager } from '../managers/shellManager';
 
 interface ProcessPoolConfig {
   maxConcurrent: number;
@@ -9,29 +9,35 @@ const config: ProcessPoolConfig = {
   maxConcurrent: 5,
   timeout: 1000,
 };
-
+// TODO: might not be needed.
 export class ProcessPool {
   private running: Set<string> = new Set();
   private queue: Array<{
     command: string;
-    resolve: (value: string | PromiseLike<string>) => void;
+    resolve: (value: PromiseLike<ShellProcess>) => void;
   }> = [];
 
-  async execute(commands: string[]): Promise<Map<string, any>> {
-    const results = new Map<string, any>();
+  async execute(
+    commands: string[],
+    workspace: string
+  ): Promise<Map<number, any>> {
+    const results = new Map<number, any>();
 
     for (const cmd of commands) {
-      const processId = await this.scheduleCommand(cmd);
-      results.set(processId, ShellManager.getInstance().getStatus(processId));
+      const { pid } = await this.scheduleCommand(cmd);
+      results.set(
+        pid,
+        await ShellManager.instance.getShellprocess(pid, workspace)
+      );
     }
 
     return results;
   }
 
-  private async scheduleCommand(command: string): Promise<string> {
+  private async scheduleCommand(command: string): Promise<ShellProcess> {
     if (this.running.size >= config.maxConcurrent) {
       return new Promise((resolve) => this.queue.push({ command, resolve }));
     }
-    return ShellManager.getInstance().executeAsync(command);
+    return ShellManager.instance.executeAsync(command);
   }
 }
