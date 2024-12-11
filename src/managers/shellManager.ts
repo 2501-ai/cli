@@ -20,7 +20,7 @@ export interface ShellProcess {
 }
 
 /**
- * The ShellManager is a singleton that manages shell, and child processes.
+ * The ShellManager is a singleton that manages asynchronous child processes.
  */
 export class ShellManager {
   static #instance: ShellManager;
@@ -128,7 +128,7 @@ export class ShellManager {
   /**
    * Get a shell process by its ID, from the internal map or the workspace state.
    *
-   * **NB: This function will also attach the stdio files changes to the internal map, and cleanup the workspace state if the process is no longer running.**
+   * This function will also attach the stdio files changes to the internal map.**
    */
   public async getShellprocess(
     processId: string | number,
