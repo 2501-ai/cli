@@ -46,7 +46,6 @@
     "jsonrepair": "^3.8.0",
     "marked": "^12.0.2",
     "marked-terminal": "^7.1.0",
-    "node-ssh": "^13.2.0",
     "pdfkit": "^0.15.0",
     "terminal-kit": "^3.1.1",
     "turndown": "^7.2.0"
