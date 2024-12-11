@@ -87,7 +87,8 @@ export async function run_shell(
 ): Promise<string> {
   Logger.debug(`Running shell command: ${args.command}`);
 
-  if (!args.sync) {
+  // Commands should be synchronous by default. Default value is undefined.
+  if (args.sync === false) {
     if (!context?.workspace) {
       return `Error: Background process can only be run in a workspace context`;
     }
