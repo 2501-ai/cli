@@ -81,13 +81,13 @@ export async function run_shell(
     command: string;
     shell?: boolean | string;
     env?: { [key: string]: string };
-    background?: boolean;
+    sync?: boolean;
   },
   context?: { workspace: string }
 ): Promise<string> {
   Logger.debug(`Running shell command: ${args.command}`);
 
-  if (args.background) {
+  if (!args.sync) {
     if (!context?.workspace) {
       return `Error: Background process can only be run in a workspace context`;
     }

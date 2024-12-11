@@ -227,9 +227,9 @@ export const queryCommand = async (
 
     logger.start('Thinking');
 
+    // Check if there are processes still running and send their status to the agent.
     const runningProcesses = readWorkspaceState(workspace).running_processes;
     let runningProcessQuery = '';
-    // Check if there are processes still running.
     if (runningProcesses?.length) {
       runningProcessQuery =
         '\n<USER_NOTES>Here are the processes that were started in the background and their state:';
@@ -239,10 +239,13 @@ export const queryCommand = async (
           workspace
         );
         if (!shellProcess) {
-          runningProcessQuery += `\nPID:${proc.pid}| Command: ${JSON.stringify(proc.command)} | Process not found or already terminated for the current workspace.`;
+          runningProcessQuery += `\n<PROCESS>\nPID:${proc.pid}| Command: ${JSON.stringify(proc.command)} | Process not found or already terminated for the current workspace.`;
         } else {
-          runningProcessQuery += `\nPID:${proc.pid}| Command: ${JSON.stringify(proc.command)} | State: ${shellProcess.status}`;
+          runningProcessQuery += `\n<PROCESS>\nPID:${proc.pid}| Command: ${JSON.stringify(proc.command)} | Status: ${shellProcess.status}`;
         }
+
+        runningProcessQuery += `\n<LOGS>${shellProcess?.output || ''}\n</LOGS>`;
+        runningProcessQuery += '\n</PROCESS>';
       }
       runningProcessQuery += '\n</USER_NOTES>';
     }

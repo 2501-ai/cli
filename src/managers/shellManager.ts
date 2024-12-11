@@ -1,6 +1,7 @@
 import execa from 'execa';
 import fs from 'fs';
 import path from 'path';
+import { randomUUID } from 'node:crypto';
 
 import { DEFAULT_PROCESS_LOG_DIR } from '../constants';
 import { readWorkspaceState, writeWorkspaceState } from '../helpers/workspace';
@@ -60,42 +61,66 @@ export class ShellManager {
       `${dateFormated}_${timestamp}_${prefix}_stderr.log`
     );
 
+    const uniqueID = randomUUID();
+    const wrappedCommand = `export UNIQUE_PROCESS_ID=${uniqueID} && ${command}`;
     // Execute the command with the stdio redirected to the files.
-    const process = execa(command, {
+    const childProcess = execa(wrappedCommand, {
       shell: true,
-      detached: true,
       stdio: [
         'ignore',
-        fs.openSync(stdOutFile, 'a'),
-        fs.openSync(stdErrFile, 'a'),
+        fs.openSync(stdOutFile, 'w'),
+        fs.openSync(stdErrFile, 'w'),
       ],
       reject: false,
     });
-    const processId = process.pid;
-    if (!processId) {
-      throw new Error('Process ID not found');
-    }
 
     const shellProcess: ShellProcess = {
       command,
       status: 'running',
-      pid: processId,
+      pid: -1,
       output: '',
       startTime: new Date(),
       stdErrFile,
       stdOutFile,
     };
-    // Store the process in the internal map.
-    this.processes.set(processId, shellProcess);
 
     // Handle the process output.
-    process.stdout?.on('data', (data) => {
+    childProcess.stdout?.on('data', (data) => {
       shellProcess.output += data.toString();
     });
 
-    process.on('exit', (code) => {
+    childProcess.on('exit', (code) => {
       shellProcess.status = code === 0 ? 'done' : 'failed';
     });
+
+    childProcess.unref(); // Allows the parent process to exit independently
+
+    // Retrieve the process ID from the system since execa will only return the child process PID and not the command PID.
+    // Kind of a hack, but it works.
+    // TODO: Find an equivalent way to find this on Windows.
+    const res = await execa(
+      'ps',
+      ['-o', 'pid,command', '|', 'grep', uniqueID],
+      {
+        shell: true,
+        reject: false,
+        stdout: 'pipe',
+      }
+    );
+    const line = res.stdout
+      .split('\n')
+      .find((line) => line.includes(`export UNIQUE_PROCESS_ID=${uniqueID}`));
+    if (!line) {
+      throw new Error('Child process not found');
+    }
+    const processId = Number(line.split(' ')[0]);
+
+    if (!processId) {
+      throw new Error('Process ID not found');
+    }
+    shellProcess.pid = processId;
+    // Store the process in the internal map.
+    this.processes.set(processId, shellProcess);
 
     return shellProcess;
   }
@@ -133,7 +158,6 @@ export class ShellManager {
     try {
       process.kill(pid, 0); // Sends a signal 0 to check if the process exists
     } catch {
-      console.log('Process is no longer running.');
       // Cleanup the log files
       fs.unlinkSync(shellProcess.stdOutFile);
       fs.unlinkSync(shellProcess.stdErrFile);
@@ -145,10 +169,12 @@ export class ShellManager {
 
     shellProcess.status = 'running';
 
-    // Watch the files for changes.
-    fs.watchFile(shellProcess.stdOutFile, () => {
+    // Watch the files for changes
+    const watcher = fs.watchFile(shellProcess.stdOutFile, () => {
       shellProcess.output += fs.readFileSync(shellProcess.stdOutFile, 'utf-8');
     });
+    // Unref the watcher so it doesn't keep the event loop active and prevent the parent process from exiting.
+    watcher.unref();
 
     return shellProcess;
   }
