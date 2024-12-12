@@ -29,13 +29,15 @@ export const initAxios = async () => {
 export const createAgent = async (
   workspace: string,
   selected_config: Configuration,
-  engine?: EngineType | undefined
+  engine?: EngineType | undefined,
+  workspaceSummary?: string
 ) => {
   const { data: createResponse } = await axios.post('/agents', {
     workspace,
     configuration: selected_config.id,
     prompt: selected_config.prompt,
     engine: engine || DEFAULT_ENGINE,
+    workspaceSummary,
     // files: workspaceResponse.vectorStoredFiles.map((file) => file.id),
   });
   return createResponse;

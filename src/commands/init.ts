@@ -10,6 +10,7 @@ import { isDirUnsafe } from '../helpers/security';
 import { Configuration } from '../utils/types';
 import { createAgent } from '../helpers/api';
 import { DISCORD_LINK } from '../utils/messaging';
+import execa from 'execa';
 
 axios.defaults.baseURL = `${API_HOST}${API_VERSION}`;
 axios.defaults.timeout = 120 * 1000;
@@ -102,14 +103,43 @@ export async function initCommand(options?: InitCommandOptions) {
       setValue('join_discord_shown', true);
     }
 
+    logger.log('22222');
     logger.start('Creating agent');
-    const configKey = options?.config || 'CODING_AGENT';
+    const configKey = options?.config || 'CLI_AGENT';
     const configuration = await getConfiguration(configKey);
+
+    // Get brew packages list if available
+    let workspaceSummary = '';
+    try {
+      const { stdout } = await execa('sw_vers');
+      if (stdout) {
+        workspaceSummary += `System information: ${stdout}`.replace(/\n/g, ' ');
+      }
+    } catch (error) {
+      // If brew command fails, keep the default summary
+      Logger.debug('sw_vers command failed');
+    }
+
+    try {
+      const { stdout } = await execa('brew', ['list']);
+      if (stdout) {
+        workspaceSummary += `Installed brew packages: ${stdout}`.replace(
+          /\n/g,
+          ' '
+        );
+      }
+    } catch (error) {
+      // If brew command fails, keep the default summary
+      Logger.debug('Brew list command failed');
+    }
+
+    Logger.debug(workspaceSummary);
 
     const createResponse = await createAgent(
       workspace,
       configuration,
-      config?.engine
+      config?.engine,
+      workspaceSummary
     );
     Logger.debug('Agent created:', createResponse);
 

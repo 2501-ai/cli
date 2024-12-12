@@ -97,7 +97,7 @@ const synchronizeWorkspace = async (
     Logger.debug('Agent : Workspace has changes, synchronizing...');
     await updateWorkspaceState(workspace);
     // TODO: improve and send only changed files ?
-    const files = await generatePDFs(workspace);
+    const files = await generatePDFs(workspace); // here we generate the PDF
 
     if (process.env.NODE_ENV !== 'dev') {
       // Don't pollute the filesystem with temporary files
