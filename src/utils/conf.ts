@@ -121,12 +121,23 @@ export function addAgent(newAgent: AgentConfig): void {
 }
 
 /**
- * Clears all agents from the configuration.
+ * Clears current agent or all agents from the configuration.
+ * @param workspaceUrl - The workspace to be flushed
+ * @param [all] - If true, clears all agents on the machine.
  */
-export async function flushAgents(): Promise<void> {
+export async function flushAgents(
+  workspaceUrl: string,
+  all?: boolean
+): Promise<void> {
   try {
     const config = readConfig();
-    if (config) {
+
+    if (config && !all) {
+      config.agents = config.agents.filter(
+        (agent) => agent.workspace !== workspaceUrl
+      );
+      writeConfig(config);
+    } else if (config && all) {
       config.agents = []; // Empty the agents array
       writeConfig(config);
     }
