@@ -121,7 +121,9 @@ export function addAgent(newAgent: AgentConfig): void {
 }
 
 /**
- * Clears all agents from the configuration.
+ * Clears current agent or all agents from the configuration.
+ * @param workspaceUrl - The workspace to be flushed
+ * @param [all] - If true, clears all agents on the machine.
  */
 export async function flushAgents(
   workspaceUrl: string,
