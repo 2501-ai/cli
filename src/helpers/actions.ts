@@ -5,9 +5,9 @@ import execa from 'execa';
 import * as cheerio from 'cheerio';
 
 import Logger from '../utils/logger';
-
 import { modifyCodeSections } from '../utils/sectionUpdate';
 import { getIgnoredFiles } from '../utils/files';
+import { ShellManager } from '../managers/shellManager';
 
 /**
  * Directory to store logs
@@ -76,13 +76,29 @@ export function update_file({
     ${content}`;
 }
 
-export async function run_shell(args: {
-  command: string;
-  shell?: boolean | string;
-  env?: { [key: string]: string };
-}): Promise<string> {
-  let output: string = '';
-  Logger.debug(`    Running shell command: ${args.command}`);
+export async function run_shell(
+  args: {
+    command: string;
+    shell?: boolean | string;
+    env?: { [key: string]: string };
+    sync?: boolean;
+  },
+  context?: { workspace: string }
+): Promise<string> {
+  Logger.debug(`Running shell command: ${args.command}`);
+
+  // Commands should be synchronous by default. Default value is undefined.
+  if (args.sync === false) {
+    if (!context?.workspace) {
+      return `Error: Background process can only be run in a workspace context`;
+    }
+    const process = await ShellManager.instance.executeAsync(args.command);
+
+    // Store the running process in the workspace state.
+    ShellManager.instance.addProcessToWorkspace(process, context.workspace);
+
+    return `Process started with PID: ${process.pid}`;
+  }
 
   try {
     const { stderr, stdout } = await execa(args.command, {
@@ -92,6 +108,7 @@ export async function run_shell(args: {
       timeout: 1000 * 60,
     });
 
+    let output = '';
     if (stdout) output += stdout;
     if (stderr) output += stderr;
 
@@ -102,12 +119,10 @@ export async function run_shell(args: {
 
     return output;
   } catch (error) {
-    return `${ERROR_BOL} I failed to run ${args.command}, please fix the situation, errors below.\n ${(error as Error).message}
-     \`\`\`
-     ${error}
-     \`\`\``;
+    return `Error running command: ${args.command}\n${error}`;
   }
 }
+
 export const ERROR_BOL = `ERROR :`; // beginning of line
 export const hasError = (output: string) => {
   return output.startsWith(ERROR_BOL);
@@ -133,4 +148,50 @@ export async function browse_url(args: { url: string }) {
     Result of content of page :
     ${md.replace(/\s+/g, '')}
   `;
+}
+
+export async function check_process_status(
+  args: {
+    processId?: string;
+  },
+  context: {
+    workspace: string;
+  }
+): Promise<string> {
+  if (args.processId) {
+    const status = await ShellManager.instance.getShellprocess(
+      args.processId,
+      context.workspace
+    );
+    if (!status) {
+      return `No process found with ID: ${args.processId}`;
+    }
+    return JSON.stringify(
+      {
+        command: status.command,
+        status: status.status,
+        pid: status.pid,
+        startTime: status.startTime,
+        output: status.output,
+      },
+      null,
+      2
+    );
+  }
+
+  const processes = ShellManager.instance.getAllProcesses();
+  if (processes.length === 0) {
+    return 'No running processes found';
+  }
+
+  return JSON.stringify(
+    processes.map((proc) => ({
+      command: proc.command,
+      status: proc.status,
+      pid: proc.pid,
+      startTime: proc.startTime,
+    })),
+    null,
+    2
+  );
 }

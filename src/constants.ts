@@ -1,5 +1,7 @@
 import axios from 'axios';
 import { StreamEvent } from './utils/types';
+import path from 'path';
+import os from 'os';
 
 if (process.env.AUTH_JWT) {
   axios.defaults.headers.common['Cookie'] =
@@ -87,3 +89,5 @@ export const DEFAULT_ACTIONS_REPONSE: StreamEvent = {
   actions: [],
   usage: null,
 };
+
+export const DEFAULT_PROCESS_LOG_DIR = path.join(os.homedir(), '.2501/logs');

@@ -7,7 +7,7 @@ import Logger from '../utils/logger';
 import { getDirectoryMd5Hash } from '../utils/files';
 import { WorkspaceDiff, WorkspaceState } from '../utils/types';
 
-export function getWorkspaceConfName(workspace: string): string {
+function getWorkspaceConfName(workspace: string): string {
   // md5 hash of workspace path (better than to use the path in the config name...)
   const hash = crypto.createHash('md5').update(workspace).digest('hex');
   return path.join(
@@ -24,17 +24,15 @@ export function readWorkspaceState(workspace: string): WorkspaceState {
       fs.mkdirSync(path.dirname(filePath), {
         recursive: true,
       });
+      const defaultWorkspaceState: WorkspaceState = {
+        file_hashes: new Map(),
+        state_hash: '',
+        path: workspace,
+        running_processes: [],
+      };
       fs.writeFileSync(
         filePath,
-        JSON.stringify(
-          <WorkspaceState>{
-            file_hashes: new Map(),
-            state_hash: '',
-            path: workspace,
-          },
-          null,
-          2
-        ),
+        JSON.stringify(defaultWorkspaceState, null, 2),
         'utf8'
       );
     }

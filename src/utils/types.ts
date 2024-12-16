@@ -1,12 +1,17 @@
+import { ShellProcess } from '../managers/shellManager';
+
 /**
+ * Represents the stored state of a workspace in the user's 2501 configuration directory.
  * @property {string} path - workspace path
  * @property {string} state_hash - hash of the workspace state
  * @property {Map<string, string>} file_hashes - Mappings of file paths to their md5 hashes
+ * @property {ShellProcess[]} running_processes - List of running processes enriched with the command.
  */
 export interface WorkspaceState {
   path: string;
   state_hash: string;
   file_hashes: Map<string, string>;
+  running_processes?: ShellProcess[];
 }
 
 export interface Configuration {
