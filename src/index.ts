@@ -110,6 +110,7 @@ program
     'Unsubscribe to the API for new jobs on the current workspace'
   )
   .option('--listen', 'Listen for new jobs from the API and execute them')
+  .hook('preAction', authMiddleware)
   .action(jobSubscriptionCommand);
 
 program
