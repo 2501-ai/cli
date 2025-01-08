@@ -13,9 +13,23 @@
     "unlink": "npm unlink -g @2501-ai/cli",
     "start": "node .",
     "lint": "tsc --noEmit && eslint . --ext .ts,.tsx --fix",
+    "package": "rm -rf build bin dist && tsc && ncc build dist/index.js -o build && pkg package.json --compress GZip",
     "prepare": "husky",
     "test": "jest --silent",
     "dev": "ts-node ./src/index.ts"
+  },
+  "pkg": {
+    "scripts": "build/**/*.js",
+    "assets": [
+      "build/**/*.afm",
+      "build/**/*.icc",
+      "node_modules/**/*",
+      "package.json"
+    ],
+    "targets": [
+      "node18-macos-arm64"
+    ],
+    "outputPath": "bin"
   },
   "keywords": [
     "AI",
@@ -58,9 +72,11 @@
     "@types/turndown": "^5.0.5",
     "@typescript-eslint/eslint-plugin": "^7.18.0",
     "@typescript-eslint/parser": "^7.18.0",
+    "@vercel/ncc": "^0.38.3",
     "eslint": "^8.57.0",
     "husky": "^9.1.5",
     "jest": "^29.7.0",
+    "pkg": "^5.8.1",
     "prettier": "^3.3.3",
     "ts-jest": "^29.2.4",
     "ts-node": "^10.9.2",
