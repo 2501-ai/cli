@@ -13,6 +13,7 @@
     "unlink": "npm unlink -g @2501-ai/cli",
     "start": "node .",
     "lint": "tsc --noEmit && eslint . --ext .ts,.tsx --fix",
+    "build:es": "npx esbuild src/index.ts --bundle --platform=node --outfile=dist/index.js",
     "package": "rm -rf build bin dist && tsc && npx ncc build dist/index.js -o build && npm i --omit=dev && npx pkg package.json --compress GZip",
     "postpackage": "npm i",
     "test": "jest --silent",

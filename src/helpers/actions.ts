@@ -8,6 +8,7 @@ import Logger from '../utils/logger';
 
 import { modifyCodeSections } from '../utils/sectionUpdate';
 import { getIgnoredFiles } from '../utils/files';
+import axios from 'axios';
 
 /**
  * Directory to store logs
@@ -114,7 +115,7 @@ export const hasError = (output: string) => {
 };
 
 export async function browse_url(args: { url: string }) {
-  const html = await fetch(args.url).then((res) => res.text());
+  const html = await axios.get(args.url).then((res) => res.data);
   const $ = cheerio.load(html);
 
   // Remove script and style elements

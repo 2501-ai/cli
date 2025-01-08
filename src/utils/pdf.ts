@@ -1,7 +1,6 @@
 import PDFDocument from 'pdfkit';
 import path from 'path';
 import fs from 'fs';
-import { isText } from 'istextorbinary';
 
 import { getDirectoryFiles, getIgnoredFiles, toReadableSize } from './files';
 import Logger from './logger';
@@ -43,7 +42,7 @@ function createPDFFromFiles(
           underline: true,
         })
         .moveDown(0.5);
-      if (isText(file) && fs.statSync(file).size < 1024 * 1024) {
+      if (fs.statSync(file).size < 1024 * 1024) {
         const fileContent = fs.readFileSync(
           path.join(targetFolder, file),
           'utf8'

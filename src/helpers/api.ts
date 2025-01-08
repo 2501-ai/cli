@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { Blob } from 'node:buffer';
 
 import { API_HOST, API_VERSION, QueryStatus } from '../constants';
 import { readConfig } from '../utils/conf';
