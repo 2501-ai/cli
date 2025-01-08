@@ -18,6 +18,9 @@
     "test": "jest --silent",
     "dev": "ts-node ./src/index.ts"
   },
+  "engines": {
+    "node": ">=18.16.0"
+  },
   "pkg": {
     "scripts": "build/**/*.js",
     "assets": [
@@ -76,6 +79,7 @@
     "eslint": "^8.57.0",
     "husky": "^9.1.5",
     "jest": "^29.7.0",
+    "ncc": "^0.3.6",
     "pkg": "^5.8.1",
     "prettier": "^3.3.3",
     "ts-jest": "^29.2.4",
