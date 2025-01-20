@@ -70,7 +70,7 @@ export async function updateWorkspaceState(
 ): Promise<boolean> {
   Logger.debug('Syncing workspace state:', workspace);
   const currentState = readWorkspaceState(workspace);
-  const { md5, fileHashes } = await getDirectoryMd5Hash({
+  const { md5, fileHashes } = getDirectoryMd5Hash({
     directoryPath: workspace,
   });
   const hasChanged = currentState.state_hash !== md5;
@@ -82,7 +82,7 @@ export async function updateWorkspaceState(
 
 export async function getWorkspaceChanges(workspace: string) {
   const oldState = readWorkspaceState(workspace);
-  const newState = await getDirectoryMd5Hash({
+  const newState = getDirectoryMd5Hash({
     directoryPath: workspace,
   });
 

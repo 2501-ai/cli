@@ -44,14 +44,16 @@ const initializeAgentConfig = async (
   skipWarmup: boolean
 ): Promise<AgentConfig | null> => {
   let eligible = getEligibleAgent(workspace);
+  let force = false;
   if (!eligible && !skipWarmup) {
     await initCommand({ workspace });
     eligible = getEligibleAgent(workspace);
+    force = true;
   }
 
   // Ensure workspace is always synchronized after initialization
   if (eligible && !skipWarmup) {
-    await synchronizeWorkspace(eligible.id, workspace, true);
+    await synchronizeWorkspace(eligible.id, workspace, force);
   }
 
   return eligible;
@@ -89,6 +91,7 @@ const synchronizeWorkspace = async (
   force: boolean = false
 ): Promise<boolean> => {
   const workspaceDiff = await getWorkspaceChanges(workspace);
+  Logger.debug('Workspace diff:', { workspaceDiff });
   if (workspaceDiff.isEmpty) return false;
 
   if (workspaceDiff.hasChanges || force) {
