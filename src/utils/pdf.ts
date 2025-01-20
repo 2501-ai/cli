@@ -75,7 +75,6 @@ export async function generatePDFs(workspace: string): Promise<
   const fileId = Math.floor(Math.random() * 100000);
   const outputFilePath = `/tmp/2501/_files/workspace_${fileId}.pdf`;
 
-  console.log('---- generatePDFs');
   const ignoreManager = IgnoreManager.getInstance();
 
   const workspaceFiles = getDirectoryFiles({

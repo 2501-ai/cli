@@ -153,7 +153,6 @@ export function getDirectoryMd5Hash({
   // const ignoreSet = getIgnoredFiles(directoryPath);
 
   // Initialize ignore manager at root level
-  console.log('---- getDirectoryMd5Hash');
   const ignoreManager = IgnoreManager.getInstance();
 
   // Start processing from the base directory with an initial depth of 0
