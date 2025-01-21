@@ -30,7 +30,6 @@ export class IgnoreManager {
     this.exactMatches = new Set();
     this.regexPatterns = [];
     this.gitignoreCache = new Map();
-    console.log('Loading patterns constructor.');
     this.addPatterns(basePatterns);
   }
 
@@ -107,12 +106,7 @@ export class IgnoreManager {
         .replace(process.cwd(), '') // Remove the current working directory
         .replace(/^\//, ''); // Remove leading slash
 
-      console.log('Loading patterns from .gitignore:', gitignorePath);
       this.addPatterns(patterns, relativePath);
-      console.log('Patterns loaded from .gitignore:', {
-        regexPatterns: this.regexPatterns,
-        exactMatches: this.exactMatches,
-      });
     } catch (e) {
       Logger.error(`Error reading .gitignore at ${gitignorePath}:`, e);
     }
