@@ -90,15 +90,15 @@ const synchronizeWorkspace = async (
   workspace: string,
   force: boolean = false
 ): Promise<boolean> => {
-  const workspaceDiff = await getWorkspaceChanges(workspace);
+  const workspaceDiff = await getWorkspaceChanges(workspace, agentId);
   Logger.debug('Workspace diff:', { workspaceDiff });
   if (workspaceDiff.isEmpty) return false;
 
   if (workspaceDiff.hasChanges || force) {
     logger.start('Synchronizing workspace');
 
-    Logger.debug('Agent : Workspace has changes, synchronizing...');
-    await updateWorkspaceState(workspace);
+    Logger.debug('Agent Workspace has changes, synchronizing...');
+    await updateWorkspaceState(workspace, agentId);
     // TODO: improve and send only changed files ?
     const files = await generatePDFs(workspace);
 

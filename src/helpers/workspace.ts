@@ -1,24 +1,32 @@
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
-import crypto from 'crypto';
 
 import Logger from '../utils/logger';
 import { getDirectoryMd5Hash } from '../utils/files';
 import { WorkspaceDiff, WorkspaceState } from '../utils/types';
 
-export function getWorkspaceConfName(workspace: string): string {
-  // md5 hash of workspace path (better than to use the path in the config name...)
-  const hash = crypto.createHash('md5').update(workspace).digest('hex');
+export function getWorkspaceConfName(agentId: string): string {
   return path.join(
     path.join(os.homedir(), '.2501'),
-    `workspace_state_${hash}.conf`
+    `workspace_state_${agentId}.conf`
   );
 }
 
-export function readWorkspaceState(workspace: string): WorkspaceState {
+export function clearWorkspaceState(agentId: string): void {
+  const filePath = getWorkspaceConfName(agentId);
+  if (fs.existsSync(filePath)) {
+    Logger.debug('Clearing workspace state:', filePath);
+    fs.unlinkSync(filePath);
+  }
+}
+
+export function readWorkspaceState(
+  workspace: string,
+  agentId: string
+): WorkspaceState {
   try {
-    const filePath = getWorkspaceConfName(workspace);
+    const filePath = getWorkspaceConfName(agentId);
 
     if (!fs.existsSync(filePath)) {
       fs.mkdirSync(path.dirname(filePath), {
@@ -31,6 +39,7 @@ export function readWorkspaceState(workspace: string): WorkspaceState {
             file_hashes: new Map(),
             state_hash: '',
             path: workspace,
+            agent_id: agentId,
           },
           null,
           2
@@ -50,7 +59,7 @@ export function readWorkspaceState(workspace: string): WorkspaceState {
 
 export function writeWorkspaceState(state: WorkspaceState): void {
   try {
-    const filePath = getWorkspaceConfName(state.path);
+    const filePath = getWorkspaceConfName(state.agent_id);
     const entries = Object.fromEntries(state.file_hashes);
     const data = JSON.stringify({ ...state, file_hashes: entries }, null, 2);
     fs.writeFileSync(filePath, data, 'utf8');
@@ -66,10 +75,11 @@ export function writeWorkspaceState(state: WorkspaceState): void {
  * This function will update the hash and files properties of the workspace state.
  */
 export async function updateWorkspaceState(
-  workspace: string
+  workspace: string,
+  agentId: string
 ): Promise<boolean> {
   Logger.debug('Syncing workspace state:', workspace);
-  const currentState = readWorkspaceState(workspace);
+  const currentState = readWorkspaceState(workspace, agentId);
   const { md5, fileHashes } = getDirectoryMd5Hash({
     directoryPath: workspace,
   });
@@ -80,8 +90,8 @@ export async function updateWorkspaceState(
   return hasChanged;
 }
 
-export async function getWorkspaceChanges(workspace: string) {
-  const oldState = readWorkspaceState(workspace);
+export async function getWorkspaceChanges(workspace: string, agentId: string) {
+  const oldState = readWorkspaceState(workspace, agentId);
   const newState = getDirectoryMd5Hash({
     directoryPath: workspace,
   });
@@ -90,6 +100,7 @@ export async function getWorkspaceChanges(workspace: string) {
     state_hash: newState.md5,
     file_hashes: newState.fileHashes,
     path: workspace,
+    agent_id: agentId,
   });
 }
 
