@@ -179,7 +179,6 @@ export class AgentManager {
       }
 
       if (output.length > 20000) {
-        Logger.log('Output too long, truncating...');
         output =
           'Content is too big, if you need this content, please find an alternative method to retrieve the relevant information (for example grep and sample the content first).';
       }
