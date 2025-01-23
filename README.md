@@ -103,10 +103,6 @@ That’s precisely why the MoM approach shines and 2501’s autonomy does not st
   - `--unsubscribe`: Unsubscribe the current workspace for new jobs.
   - `--listen`: Listen for new jobs from the API and execute them.
 
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
 ## 🤝 Contributing
 
 We welcome contributions! Have questions or suggestions? Reach out to us:
@@ -119,3 +115,7 @@ We welcome contributions! Have questions or suggestions? Reach out to us:
 ## 🔒 Security
 
 Found a security issue? Please email security@2501.ai
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
