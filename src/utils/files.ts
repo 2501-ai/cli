@@ -4,8 +4,11 @@ import path from 'path';
 import { Dirent } from 'node:fs';
 
 import Logger from '../utils/logger';
-import { DEFAULT_MAX_DEPTH, DEFAULT_MAX_DIR_SIZE } from '../constants';
-import { IgnoreManager } from './ignore';
+import {
+  DEFAULT_MAX_DEPTH,
+  DEFAULT_MAX_DIR_SIZE,
+  IGNORED_FILE_PATTERNS,
+} from '../constants';
 
 /**
  * Options for computing the MD5 hash of a directory and its contents.
@@ -33,6 +36,27 @@ export const toReadableSize = (bytes: number) => {
 };
 
 /**
+ * Get the list of files to ignore in the workspace, enriched with patterns from .gitignore if present.
+ */
+export function getIgnoredFiles(workspace: string): Set<string> {
+  const ignorePatterns = new Set(IGNORED_FILE_PATTERNS);
+
+  const hasGitIgnore = fs.existsSync(path.join(workspace, '.gitignore'));
+  if (hasGitIgnore) {
+    const gitIgnore = fs.readFileSync(
+      path.join(workspace, '.gitignore'),
+      'utf8'
+    );
+    gitIgnore
+      .split('\n')
+      .filter((line) => line.trim() !== '' && !line.startsWith('#'))
+      .map((v) => ignorePatterns.add(v));
+  }
+
+  return ignorePatterns;
+}
+
+/**
  * Check if the total size of the directory has reached the threshold.
  */
 function hasReachedThreshold(totalSize: number, maxSize: number) {
@@ -45,9 +69,8 @@ export function getDirectoryFiles(params: {
   maxDirSize: number;
   currentPath: string;
   currentDepth: number;
-  // ignoreSet: Set<string>;
+  ignoreSet: Set<string>;
   currentTotalSize: number;
-  ignoreManager: IgnoreManager;
 }): { totalSize: number; fileHashes: Map<string, string> } {
   // Limit the depth of directory traversal to avoid excessive resource usage
   if (params.currentDepth > params.maxDepth) {
@@ -78,25 +101,19 @@ export function getDirectoryFiles(params: {
   for (const item of items) {
     const itemPath = path.join(params.currentPath, item.name);
 
-    // Handle .gitignore files
-    if (item.isFile() && item.name === '.gitignore') {
-      params.ignoreManager.loadGitignore(
-        path.join(params.directoryPath, itemPath)
-      );
-      continue;
-    }
-
-    // Check if file/directory should be ignored
-    if (params.ignoreManager.isIgnored(itemPath)) {
-      continue;
+    if (params.ignoreSet.has(item.name)) {
+      continue; // Skip the item if it matches any of the ignore patterns
     }
 
     if (item.isDirectory()) {
       // Recursively process subdirectories
       const result = getDirectoryFiles({
-        ...params,
         currentPath: itemPath,
         currentDepth: params.currentDepth + 1,
+        ignoreSet: params.ignoreSet,
+        maxDepth: params.maxDepth,
+        maxDirSize: params.maxDirSize,
+        directoryPath: params.directoryPath,
         currentTotalSize: totalSize + params.currentTotalSize,
       });
       totalSize += result.totalSize;
@@ -145,16 +162,12 @@ export function getDirectoryFiles(params: {
  * Performance: Takes around 350ms on large codebases, 125ms on average.
  * @param options - Object containing the directory path and optional maxDepth for security.
  */
-export function getDirectoryMd5Hash({
+export async function getDirectoryMd5Hash({
   directoryPath,
   maxDepth = DEFAULT_MAX_DEPTH,
   maxDirSize = DEFAULT_MAX_DIR_SIZE, // 10MB
 }: DirectoryMd5HashOptions) {
-  // const ignoreSet = getIgnoredFiles(directoryPath);
-
-  // Initialize ignore manager at root level
-  const ignoreManager = IgnoreManager.getInstance();
-
+  const ignoreSet = getIgnoredFiles(directoryPath);
   // Start processing from the base directory with an initial depth of 0
   const result = getDirectoryFiles({
     directoryPath,
@@ -162,9 +175,8 @@ export function getDirectoryMd5Hash({
     maxDirSize,
     currentPath: '',
     currentDepth: 0,
-    // ignoreSet,
+    ignoreSet,
     currentTotalSize: 0,
-    ignoreManager,
   });
 
   Logger.debug(

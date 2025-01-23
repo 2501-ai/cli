@@ -44,16 +44,14 @@ const initializeAgentConfig = async (
   skipWarmup: boolean
 ): Promise<AgentConfig | null> => {
   let eligible = getEligibleAgent(workspace);
-  let force = false;
   if (!eligible && !skipWarmup) {
     await initCommand({ workspace });
     eligible = getEligibleAgent(workspace);
-    force = true;
   }
 
   // Ensure workspace is always synchronized after initialization
   if (eligible && !skipWarmup) {
-    await synchronizeWorkspace(eligible.id, workspace, force);
+    await synchronizeWorkspace(eligible.id, workspace, true);
   }
 
   return eligible;
@@ -90,14 +88,14 @@ const synchronizeWorkspace = async (
   workspace: string,
   force: boolean = false
 ): Promise<boolean> => {
-  const workspaceDiff = await getWorkspaceChanges(workspace, agentId);
-  Logger.debug('Workspace diff:', { workspaceDiff });
+  const workspaceDiff = await getWorkspaceChanges(workspace);
   if (workspaceDiff.isEmpty) return false;
 
   if (workspaceDiff.hasChanges || force) {
     logger.start('Synchronizing workspace');
 
-    Logger.debug('Agent Workspace has changes, synchronizing...');
+    Logger.debug('Agent : Workspace has changes, synchronizing...');
+    await updateWorkspaceState(workspace);
     // TODO: improve and send only changed files ?
     const files = await generatePDFs(workspace);
 
@@ -108,8 +106,6 @@ const synchronizeWorkspace = async (
     }
 
     await indexFiles(agentId, files);
-    // Update the new state of the workspace
-    await updateWorkspaceState(workspace, agentId);
     await new Promise((resolve) => setTimeout(resolve, 2000));
     logger.stop('Workspace synchronized');
     return true;

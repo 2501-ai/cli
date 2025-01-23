@@ -7,7 +7,7 @@ import * as cheerio from 'cheerio';
 import Logger from '../utils/logger';
 
 import { modifyCodeSections } from '../utils/sectionUpdate';
-import { IgnoreManager } from '../utils/ignore';
+import { getIgnoredFiles } from '../utils/files';
 
 /**
  * Directory to store logs
@@ -24,6 +24,9 @@ export const LOGFILE_PATH = `${LOG_DIR}/test.log`;
  */
 export const ERRORFILE_PATH = `${LOG_DIR}/error.log`;
 
+const isIgnoredFile = (filePath: string) =>
+  getIgnoredFiles(path.dirname(filePath)).has(filePath);
+
 export function read_file(args: { path: string }): string | null {
   Logger.debug(`Reading file at "${args.path}"`);
   if (!fs.existsSync(args.path)) return null;
@@ -35,8 +38,7 @@ export async function write_file(args: { path: string; content: string }) {
   Logger.debug(`Writing file at "${args.path}"`);
   fs.mkdirSync(path.dirname(args.path), { recursive: true });
   fs.writeFileSync(args.path, args.content);
-  const ignoreManager = IgnoreManager.getInstance();
-  const content = ignoreManager.isIgnored(args.path)
+  const content = isIgnoredFile(args.path)
     ? ''
     : `Content :
     ${args.content}`;
@@ -60,8 +62,7 @@ export function update_file({
     diffSections: sectionsDiff,
   });
 
-  const ignoreManager = IgnoreManager.getInstance();
-  const content = ignoreManager.isIgnored(path)
+  const content = isIgnoredFile(path)
     ? ''
     : `New file Content :
     \`\`\`

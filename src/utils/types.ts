@@ -7,7 +7,6 @@ export interface WorkspaceState {
   path: string;
   state_hash: string;
   file_hashes: Map<string, string>;
-  agent_id: string;
 }
 
 export interface Configuration {

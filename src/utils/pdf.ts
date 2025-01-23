@@ -3,10 +3,9 @@ import path from 'path';
 import fs from 'fs';
 import { isText } from 'istextorbinary';
 
-import { getDirectoryFiles, toReadableSize } from './files';
+import { getDirectoryFiles, getIgnoredFiles, toReadableSize } from './files';
 import Logger from './logger';
 import { DEFAULT_MAX_DEPTH, DEFAULT_MAX_DIR_SIZE } from '../constants';
-import { IgnoreManager } from './ignore';
 
 /**
  * Create a PDF document from a list of files in a directory.
@@ -75,16 +74,16 @@ export async function generatePDFs(workspace: string): Promise<
   const fileId = Math.floor(Math.random() * 100000);
   const outputFilePath = `/tmp/2501/_files/workspace_${fileId}.pdf`;
 
-  const ignoreManager = IgnoreManager.getInstance();
+  const ignorePatterns = getIgnoredFiles(workspace);
 
   const workspaceFiles = getDirectoryFiles({
     currentPath: '',
     currentDepth: 0,
+    ignoreSet: ignorePatterns,
     maxDepth: DEFAULT_MAX_DEPTH,
     maxDirSize: DEFAULT_MAX_DIR_SIZE,
     directoryPath: workspace,
     currentTotalSize: 0,
-    ignoreManager,
   });
 
   // no files, no workspace PDF
