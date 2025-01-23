@@ -30,7 +30,7 @@ npm install -g @2501-ai/cli
 3. **Start coding faster:**
 
 ```bash
-@2501 "How do I implement authentication in Express?"
+@2501 Implement authentication in my express app
 ```
 
 ## 🛠️ Our approach
