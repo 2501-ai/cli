@@ -33,14 +33,6 @@ npm install -g @2501-ai/cli
 @2501 Implement authentication in my express app
 ```
 
-## 🛠️ Our approach
-
-At the heart of 2501 is an orchestration of multiple of the top-performing models on the market today. Our approach, referenced as MoM (or Mixture of Models) going forward, is designed to maximize the successful execution of coding projects derived from natural language instructions.
-
-With no one-size-fits-all model available, output quality is highly task-dependent. Our approach is to decompose any complex software development requirements into bite-sized tasks that can then be assigned to the most suitable model for resolution.
-
-That’s precisely why the MoM approach shines and 2501’s autonomy does not stop here. On top of that, we continually evaluate the resolution of each task with a second model to improve or fix potential hallucinations.
-
 ## 🎯 Why 2501?
 
 - 🎯 **Unmatched Accuracy**: 96.95% success rate on HumanEval, setting a new industry standard. Check out our [benchmark](https://2501-ai.webflow.io/blog/full-humaneval-benchmark) for more details
@@ -50,27 +42,27 @@ That’s precisely why the MoM approach shines and 2501’s autonomy does not st
 - ⚡ **Fast & Efficient** - Get answers directly in your terminal
 - 🛠️ **Workspace Aware** - Understands your project context
 
-## 💻 System Requirements
-
-- Node.js 16.x or higher
-
 ## 🧠 How It Works
 
-2501 uses a sophisticated Mixture of Models (MoM) approach to deliver exceptional results:
+At the heart of 2501 is an orchestration of multiple of the top-performing models on the market today. Our approach, referenced as MoM (or Mixture of Models) going forward, is designed to maximize the successful execution of coding projects derived from natural language instructions.
 
-1. **Task Decomposition** - Breaks down complex requirements into manageable tasks
-2. **Model Selection** - Assigns each task to the most suitable AI model
-3. **Quality Assurance** - Validates solutions with a secondary model
+With no one-size-fits-all model available, output quality is highly task-dependent. Our approach is to decompose any complex software development requirements into bite-sized tasks that can then be assigned to the most suitable model for resolution.
+
+That’s precisely why the MoM approach shines and 2501’s autonomy does not stop here. On top of that, we continually evaluate the resolution of each task with a second model to improve or fix potential hallucinations.
 
 ## 📊 Comparison with Other Solutions
 
-| Feature              | 2501   | GitHub Copilot | Other AI Assistants |
-| -------------------- | ------ | -------------- | ------------------- |
-| HumanEval Score      | 96.95% | ~85%           | ~80%                |
-| Multi-Model Approach | ✅     | ❌             | ❌                  |
-| Self-Validation      | ✅     | ❌             | ❌                  |
-| Workspace Awareness  | ✅     | ✅             | ❌                  |
-| Terminal Integration | ✅     | ❌             | Varies              |
+| Feature              | 2501   | GitHub Copilot                                    | Other AI Assistants                                       |
+| -------------------- | ------ | ------------------------------------------------- | --------------------------------------------------------- |
+| HumanEval Score      | 96.95% | [~48.1%](https://cdn.openai.com/papers/gpt-4.pdf) | [~90%](https://artificialanalysis.ai/leaderboards/models) |
+| Multi-Model Approach | ✅     | ❌                                                | ❌                                                        |
+| Self-Validation      | ✅     | ❌                                                | ❌                                                        |
+| Workspace Awareness  | ✅     | ✅                                                | Varies                                                    |
+| Terminal Integration | ✅     | ❌                                                | Varies                                                    |
+
+## 💻 System Requirements
+
+- Node.js 16.x or higher
 
 ## Commands
 
