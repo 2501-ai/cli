@@ -178,6 +178,12 @@ export class AgentManager {
         output += `\n\n NOTE: your original content for ${args.path} was corrected with the new version below before running the function: \n\n${args.content}`;
       }
 
+      if (output.length > 20000) {
+        Logger.log('Output too long, truncating...');
+        output =
+          'Content is too big, if you need this content, please find an alternative method to retrieve the relevant information (for example grep and sample the content first).';
+      }
+
       return {
         tool_call_id: action.id,
         output,
