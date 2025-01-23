@@ -98,7 +98,6 @@ const synchronizeWorkspace = async (
     logger.start('Synchronizing workspace');
 
     Logger.debug('Agent Workspace has changes, synchronizing...');
-    await updateWorkspaceState(workspace, agentId);
     // TODO: improve and send only changed files ?
     const files = await generatePDFs(workspace);
 
@@ -109,6 +108,8 @@ const synchronizeWorkspace = async (
     }
 
     await indexFiles(agentId, files);
+    // Update the new state of the workspace
+    await updateWorkspaceState(workspace, agentId);
     await new Promise((resolve) => setTimeout(resolve, 2000));
     logger.stop('Workspace synchronized');
     return true;
