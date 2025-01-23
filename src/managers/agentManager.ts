@@ -180,7 +180,8 @@ export class AgentManager {
 
       if (output.length > 20000) {
         output =
-          'Content is too big, if you need this content, please find an alternative method to retrieve the relevant information (for example grep and sample the content first).';
+          'Content is too big, if you need this content, please find an alternative method to retrieve the relevant information (for example grep and sample the content first). Below are two samples of the content:';
+        output += `\n\nFirst 150 chars:\n${args.content.slice(0, 150)}\n\nLast 150 chars:\n${args.content.slice(-150)}`;
       }
 
       return {
