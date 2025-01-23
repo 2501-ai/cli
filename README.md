@@ -110,7 +110,7 @@ We welcome contributions! Have questions or suggestions? Reach out to us:
 - 🌐 Website: [2501.ai](https://2501.ai)
 - 📧 Email: [contact@2501.ai](mailto:contact@2501.ai)
 - 📚 Documentation: [docs.2501.ai](https://docs.2501.ai)
-- 💬 Discord: [Join our community](https://discord.gg/2501ai)
+- 💬 Discord: [Join our community](https://discord.gg/DYC8ryeC7e)
 
 ## 🔒 Security
 
