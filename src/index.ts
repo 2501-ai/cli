@@ -81,7 +81,7 @@ program
     '--no-workspace',
     'Will not sync the current workspace and will create a temporary one in /tmp/2501/'
   )
-  .option('--config <config_id>', 'Specify the configuration ID')
+  .option('--config <configKey>', 'Specify the configuration Key to use')
   .hook('preAction', authMiddleware)
   .action(initCommand);
 

@@ -33,7 +33,7 @@ npm install -g @2501-ai/cli
 @2501 Implement authentication in my express app
 ```
 
-## 🎯 Why 2501?
+## 🤔 Why 2501?
 
 - 🎯 **Unmatched Accuracy**: 96.95% success rate on HumanEval, setting a new industry standard. Check out our [benchmark](https://2501-ai.webflow.io/blog/full-humaneval-benchmark) for more details
 - 🧠 **Multi-Model Intelligence**: Unlike single-model solutions, 2501 leverages multiple specialized models
@@ -74,18 +74,20 @@ That’s precisely why the MoM approach shines and 2501’s autonomy does not st
 
 ### Config Command
 
-- Description: Fetches configuration data from the API.
+- Description: Fetches available agentic configurations from the API.
 - Usage: `@2501 config`
 
 ### Query Command
 
 - Description: Execute a query using the specified agent.
-- Usage: `@2501 query <query> [--workspace <path>] [--agentId <id>]`
+- Common usage: `@2501 Implement authentication in my express app`
+  - This will execute the query using the agent assigned to the current workspace.
+- Custom Usage: `@2501 query <query> [--workspace <path>] [--agentId <id>]`
 
 ### Init Command
 
 - Description: Initializes a new agent.
-- Usage: `@2501 init [--name <name>] [--workspace <path>] [--config <config_id>]`
+- Usage: `@2501 init [--name <name>] [--workspace <path>] [--config <configKey>]`
 
 ### Agents Command
 
