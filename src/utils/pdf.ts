@@ -35,6 +35,7 @@ function createPDFFromFiles(
     doc.pipe(stream);
 
     fileList.forEach((file, index) => {
+      const filePath = path.join(targetFolder, file);
       if (index > 0) {
         doc.addPage();
       }
@@ -44,11 +45,8 @@ function createPDFFromFiles(
           underline: true,
         })
         .moveDown(0.5);
-      if (isText(file) && fs.statSync(file).size < 1024 * 1024) {
-        const fileContent = fs.readFileSync(
-          path.join(targetFolder, file),
-          'utf8'
-        );
+      if (isText(filePath) && fs.statSync(filePath).size < 1024 * 1024) {
+        const fileContent = fs.readFileSync(filePath, 'utf8');
         const lines = fileContent.split(/\r?\n/);
         lines.forEach((line) => {
           doc.fontSize(10).text(line).moveDown(0.2);

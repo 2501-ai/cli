@@ -60,12 +60,11 @@ export function getDirectoryFiles(params: {
 
   const fileHashes = new Map<string, string>();
 
+  const currentPath = path.join(params.directoryPath, params.currentPath);
+
   let items: Dirent[] = [];
   try {
-    items = fs.readdirSync(
-      path.join(params.directoryPath, params.currentPath),
-      { withFileTypes: true }
-    );
+    items = fs.readdirSync(currentPath, { withFileTypes: true });
   } catch (e) {
     Logger.error(`Error reading directory: ${(e as Error).message}`);
     return {
@@ -76,7 +75,7 @@ export function getDirectoryFiles(params: {
 
   let totalSize = 0;
   for (const item of items) {
-    const itemPath = path.join(params.currentPath, item.name);
+    const itemPath = path.join(currentPath, item.name);
 
     // Handle .gitignore files
     if (item.isFile() && item.name === '.gitignore') {
