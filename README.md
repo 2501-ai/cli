@@ -27,7 +27,7 @@ npm install -g @2501-ai/cli
 @2501 set api_key YOUR_API_KEY
 ```
 
-3. **Start coding faster:**
+3. **Supercharge your terminal:**
 
 ```bash
 @2501 Implement authentication in my express app
