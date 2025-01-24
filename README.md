@@ -2,7 +2,7 @@
 
 [![npm version](https://img.shields.io/npm/v/@2501-ai/cli.svg)](https://www.npmjs.com/package/@2501-ai/cli)
 [![HumanEval Score](https://img.shields.io/badge/HumanEval-96.95%25-brightgreen.svg)](https://www.2501.ai/research/full-humaneval-benchmark)
-[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![License](https://img.shields.io/badge/license-ISC-blue.svg)](LICENSE)
 [![Discord](https://img.shields.io/badge/chat-on%20discord-7289DA.svg)](https://discord.gg/DYC8ryeC7e)
 
 Your AI-powered autonomous agent that codes, interacts with your infrastructure and development workflows.
