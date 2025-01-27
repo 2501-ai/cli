@@ -3,7 +3,13 @@ import { Readable } from 'stream';
 import { marked, MarkedExtension } from 'marked';
 import { markedTerminal } from 'marked-terminal';
 import chalk from 'chalk';
-import { indexFiles, queryAgent, submitToolOutputs } from '../helpers/api';
+
+import {
+  getPuppetMasterPlans,
+  indexFiles,
+  queryAgent,
+  submitToolOutputs,
+} from '../helpers/api';
 import {
   getActionPostfix,
   getSubActionMessage,
@@ -16,7 +22,6 @@ import {
   resolveWorkspacePath,
   updateWorkspaceState,
 } from '../helpers/workspace';
-import { initCommand } from './init';
 import {
   AgentConfig,
   FunctionAction,
@@ -31,6 +36,9 @@ import { generatePDFs } from '../utils/pdf';
 import { isLooping } from '../utils/loopDetection';
 import { generateTree } from '../utils/tree';
 import { getDirectoryMd5Hash } from '../utils/files';
+
+import { agentsCommand } from './agents';
+import { initCommand } from './init';
 
 marked.use(markedTerminal() as MarkedExtension);
 
@@ -115,7 +123,7 @@ const synchronizeWorkspace = async (
   return false;
 };
 
-export const queryCommand = async (
+const runAgent = async (
   query: string,
   options: {
     workspace?: string;
@@ -270,5 +278,42 @@ export const queryCommand = async (
     if (options.callback) await options.callback(finalResponse);
   } catch (error) {
     logger.handleError(error as Error);
+  }
+};
+
+export const queryCommand = async (
+  query: string,
+  options: {
+    workspace?: string;
+    agentId?: string;
+    skipWarmup?: boolean;
+    stream?: boolean;
+    callback?: (...args: any[]) => Promise<void>;
+    noPersistentAgent?: boolean;
+  }
+) => {
+  const workspace = options.workspace || process.cwd();
+
+  if (process.env.PUPPET_ALPHA === 'true') {
+    Logger.log('Info - Puppet Alpha is enabled.\n\n');
+    const { steps } = await getPuppetMasterPlans(query);
+    Logger.log(
+      'Plan:',
+      steps
+        .map(
+          (step: any, idx: number) =>
+            `Agent ${idx + 1} - ${step.task} (${step.configuration_key})`
+        )
+        .join('\n')
+    );
+    Logger.log('\n');
+
+    for await (const step of steps) {
+      await agentsCommand({ flush: true });
+      await initCommand({ config: step.configuration_key, workspace });
+      await runAgent(step.task, options);
+    }
+  } else {
+    await runAgent(query, options);
   }
 };
