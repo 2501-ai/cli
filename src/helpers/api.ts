@@ -26,6 +26,13 @@ export const initAxios = async () => {
   axios.defaults.timeout = FIVE_MINUTES_MILLIS;
 };
 
+export const getPuppetMasterPlans = async (query: string) => {
+  const { data: planResponse } = await axios.post('/puppetmaster/plan', {
+    query,
+  });
+  return planResponse;
+};
+
 export const createAgent = async (
   workspace: string,
   selected_config: Configuration,
