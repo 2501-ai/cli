@@ -3,68 +3,55 @@ type ModifyCodeSectionsParams = {
   diffSections: string[];
 };
 
+// Normalize escaped newlines
+const normalizeEscapes = (content: string) => {
+  return content
+    .replace(/\\\\n/g, '\n') // Handle double escaped newlines
+    .replace(/\\n/g, '\n'); // Handle single escaped newlines
+};
 export function modifyCodeSections({
   originalContent,
   diffSections,
 }: ModifyCodeSectionsParams): string {
-  // Split the existing content into lines
-  const existingLines = originalContent.split('\n');
-  let currentIndex = 0;
+  let result = originalContent;
 
   for (const diffSection of diffSections) {
-    const oldContent = diffSection
-      .match(/<PREVIOUS_SECTION>([\s\S]*?)<\/PREVIOUS_SECTION>/)?.[1]
-      .split('\n');
-    const newContent = diffSection
-      .match(/<NEW_SECTION>([\s\S]*?)<\/NEW_SECTION>/)?.[1]
-      .split('\n');
+    // Extract old and new content using regex
+    const oldContentMatch = diffSection.match(
+      /<PREVIOUS_SECTION>([\s\S]*?)<\/PREVIOUS_SECTION>/
+    );
+    const newContentMatch = diffSection.match(
+      /<NEW_SECTION>([\s\S]*?)<\/NEW_SECTION>/
+    );
 
-    if (!oldContent) {
-      throw new Error(
-        'Old content not found maybe empty file or wrong diff section format.'
-      );
-    }
-    if (!newContent) {
-      throw new Error(
-        'New content not found maybe empty file or wrong diff section format.'
-      );
+    if (!oldContentMatch || !newContentMatch) {
+      throw new Error('Invalid diff section format');
     }
 
-    const isOldContentEmpty = oldContent.every((line) => line.trim() === '');
-    if (isOldContentEmpty) {
-      // Append newContent to the end of the existing content
-      existingLines.push(...newContent);
-      // No need to update currentIndex since we're appending at the end
-    } else {
-      const index = existingLines.findIndex((line, i) => {
-        if (i < currentIndex) {
-          return false;
-        }
-        const allMatch = oldContent.every((oldLine, j) => {
-          // HACK : To avoid hallucinations impacts, skip empty lines at the beginning and end of the oldContent
-          // @TODO : may be removed later
-          if (
-            j === 0 ||
-            (j === oldContent.length - 1 && oldLine.trim() === '')
-          ) {
-            return true;
-          }
-          return existingLines[i + j] === oldLine;
-        });
+    const oldContent = oldContentMatch[1];
+    const newContent = newContentMatch[1];
 
-        return allMatch;
-      });
-
-      if (index !== -1) {
-        // Replace oldContent with newContent in existingLines
-        existingLines.splice(index, oldContent.length, ...newContent);
-        // Update currentIndex to prevent matching the same content again
-        currentIndex = index + newContent.length;
-      } else {
-        throw new Error('Old content not found in existing content.');
-      }
+    // Handle empty previous content case (append to end)
+    if (oldContent.trim() === '') {
+      result = newContent + result;
+      continue;
     }
+
+    const normalizedOldContent = normalizeEscapes(oldContent);
+    const normalizedNewContent = normalizeEscapes(newContent);
+
+    // Find and replace the content
+    const index = result.indexOf(normalizedOldContent);
+    if (index === -1) {
+      throw new Error('Old content not found in existing content');
+    }
+
+    // Replace the old content with new content
+    result =
+      result.slice(0, index) +
+      normalizedNewContent +
+      result.slice(index + normalizedOldContent.length);
   }
 
-  return existingLines.join('\n');
+  return result;
 }
