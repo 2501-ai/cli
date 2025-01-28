@@ -1,7 +1,6 @@
 import axios from 'axios';
 import fs from 'fs';
 import { terminal } from 'terminal-kit';
-import os from 'os';
 
 // Local imports
 import Logger from '../utils/logger';
@@ -11,6 +10,7 @@ import { isDirUnsafe } from '../helpers/security';
 import { Configuration } from '../utils/types';
 import { createAgent } from '../helpers/api';
 import { DISCORD_LINK } from '../utils/messaging';
+import { getSystemInfo } from '../utils/systemInfo';
 
 axios.defaults.baseURL = `${API_HOST}${API_VERSION}`;
 axios.defaults.timeout = 120 * 1000;
@@ -82,38 +82,12 @@ async function getWorkspacePath(options?: InitCommandOptions): Promise<string> {
   return finalPath;
 }
 
-/**
- * Collect system and CLI metrics, while respecting user privacy.
- */
-function collectmetrics() {
-  const sysInfo = {
-    cores: os.cpus().length,
-    mem: os.totalmem() / 1024 / 1024,
-    platform: os.platform(),
-    type: os.type(),
-    release: os.release(),
-    arch: os.arch(),
-    hostname: os.hostname(),
-  };
-
-  const nodeInfo = {
-    version: process.version,
-    config: process.config,
-    // Collect packages installed globally
-    packages: [],
-  };
-  return {
-    sysInfo,
-    nodeInfo,
-  }
-}
-
 // This function will be called when the `init` command is executed
 export async function initCommand(options?: InitCommandOptions) {
   try {
     const workspace = await getWorkspacePath(options);
     const config = readConfig();
-    const metrics = collectmetrics();;
+    const metrics = getSystemInfo();
 
     if (!config?.join_discord_shown) {
       const term = terminal;
@@ -137,7 +111,8 @@ export async function initCommand(options?: InitCommandOptions) {
     const createResponse = await createAgent(
       workspace,
       configuration,
-      config?.engine
+      config?.engine,
+      metrics
     );
     Logger.debug('Agent created:', createResponse);
 

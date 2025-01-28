@@ -64,6 +64,30 @@ export type QueryResponseDTO = {
   prompt?: string;
 };
 
+/**
+ * Collect system info while respecting privacy.
+ */
+export type SystemInfo = {
+  sysInfo: {
+    cpu: {
+      speed: number;
+      model: string;
+      cores: number;
+    };
+    mem: number;
+    platform: NodeJS.Platform;
+    type: string;
+    release: string;
+    arch: string;
+    // hostname: string;
+  };
+  nodeInfo: {
+    version: string;
+    config: NodeJS.ProcessConfig;
+    packages: string[];
+  };
+};
+
 export type StreamEvent = {
   status: StreamEventStatus | null;
   message: string;
