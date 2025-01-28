@@ -1,11 +1,49 @@
-# 2501 CLI
+# 2501 CLI 🤖
 
-Welcome in 2501 Command Line ! Use 2501's autonomous agents in your shell to get instant answers to your coding questions,
-take action on your machine(s), and more !
+[![npm version](https://img.shields.io/npm/v/@2501-ai/cli.svg)](https://www.npmjs.com/package/@2501-ai/cli)
+[![HumanEval Score](https://img.shields.io/badge/HumanEval-96.95%25-brightgreen.svg)](https://www.2501.ai/research/full-humaneval-benchmark)
+[![License](https://img.shields.io/badge/license-ISC-blue.svg)](LICENSE)
+[![Discord](https://img.shields.io/badge/chat-on%20discord-7289DA.svg)](https://discord.gg/DYC8ryeC7e)
 
-![2501.ai](https://cdn.prod.website-files.com/66d85488f50fa8bc7faa2cfd/66eabbe4bb94bd481b3d44b0_cli%20use%20case.gif)
+Your AI-powered autonomous agent that codes, interacts with your infrastructure and development workflows.
 
-### Our approach
+Whether you're debugging production issues, automating DevOps tasks, or seeking coding assistance, 2501 CLI brings the power of multiple specialized autonomous agents directly to your terminal.
+
+![2501.ai](https://2501-cli.s3.us-east-1.amazonaws.com/demo-2501-accelerated-1.gif)
+
+## 🚀 Getting Started
+
+1. **Install the CLI:**
+
+```bash
+npm install -g @2501-ai/cli
+```
+
+2. **Set up your API key:**
+
+- Get your API key at [accounts.2501.ai](https://accounts.2501.ai)
+- Configure the CLI:
+
+```bash
+@2501 set api_key YOUR_API_KEY
+```
+
+3. **Supercharge your terminal:**
+
+```bash
+@2501 Implement authentication in my express app
+```
+
+## 🤔 Why 2501?
+
+- 🎯 **Unmatched Accuracy**: 96.95% success rate on HumanEval, setting a new industry standard. Check out our [benchmark](https://2501-ai.webflow.io/blog/full-humaneval-benchmark) for more details
+- 🧠 **Multi-Model Intelligence**: Unlike single-model solutions, 2501 leverages multiple specialized models
+- 🔍 **Context-Aware**: Understands your project structure and coding patterns
+- ✅ **Self-Validating**: Eliminates hallucinations through multi-model verification
+- ⚡ **Fast & Efficient** - Get answers directly in your terminal
+- 🛠️ **Workspace Aware** - Understands your project context
+
+## 🧠 How It Works
 
 At the heart of 2501 is an orchestration of multiple of the top-performing models on the market today. Our approach, referenced as MoM (or Mixture of Models) going forward, is designed to maximize the successful execution of coding projects derived from natural language instructions.
 
@@ -13,82 +51,72 @@ With no one-size-fits-all model available, output quality is highly task-depende
 
 That’s precisely why the MoM approach shines and 2501’s autonomy does not stop here. On top of that, we continually evaluate the resolution of each task with a second model to improve or fix potential hallucinations.
 
-### Performance
+## 📊 Comparison with Other Solutions
 
-2501’s performance on the full HumanEval, has scored 96.951 after the most recent core updates.
-Check out our [benchmark](https://2501-ai.webflow.io/blog/full-humaneval-benchmark) for more details.
+| Feature              | 2501   | GitHub Copilot                                    | Other AI Assistants                                       |
+| -------------------- | ------ | ------------------------------------------------- | --------------------------------------------------------- |
+| HumanEval Score      | 96.95% | [~48.1%](https://cdn.openai.com/papers/gpt-4.pdf) | [~90%](https://artificialanalysis.ai/leaderboards/models) |
+| Multi-Model Approach | ✅     | ❌                                                | ❌                                                        |
+| Self-Validation      | ✅     | ❌                                                | ❌                                                        |
+| Workspace Awareness  | ✅     | ✅                                                | Varies                                                    |
+| Terminal Integration | ✅     | ❌                                                | Varies                                                    |
 
-## Installation
+## 💻 System Requirements
 
-This tool is available as an npm package. To install, run the following command:
-
-```
-npm install -g @2501-ai/cli
-```
-
-![2501.ai](https://cdn.prod.website-files.com/66d85488f50fa8bc7faa2cfd/66eaa71b01bd176d8e1de4d1_cli%20install.png)
-
-This will install the 2501 CLI globally on your system, making it available from anywhere in your terminal.
-
-Next, set your API key retrieved from the 2501 accounts.
-
-If you're not yet a 2501 user, register here and get your API key : https://accounts.2501.ai/pay
-
-```
-@2501 set api_key YOUR_API_KEY
-```
-
-Now you can use the 2501 CLI commands:
-
-```
-@2501 <query>
-```
+- Node.js 16.x or higher
 
 ## Commands
 
 ### Set Command
 
-- Command: `set`
 - Description: Set configuration values.
 - Usage: `@2501 set <key> <value>`
-
   - `api_key`: Set the API key retrieved from the 2501 desktop app.
 
 ### Config Command
 
-- Command: `config`
-- Description: Fetches configuration data from the API.
+- Description: Fetches available agentic configurations from the API.
 - Usage: `@2501 config`
 
 ### Query Command
 
-- Command: `query`
 - Description: Execute a query using the specified agent.
-- Usage: `@2501 query <query> [--workspace <path>] [--agentId <id>]`
+- Common usage: `@2501 Implement authentication in my express app`
+  - This will execute the query using the agent assigned to the current workspace.
+- Custom Usage: `@2501 query <query> [--workspace <path>] [--agentId <id>]`
 
 ### Init Command
 
-- Command: `init`
 - Description: Initializes a new agent.
-- Usage: `@2501 init [--name <name>] [--workspace <path>] [--config <config_id>]`
+- Usage: `@2501 init [--name <name>] [--workspace <path>] [--config <configKey>]`
 
 ### Agents Command
 
-- Command: `agents`
 - Description: List agents in the current workspace or all agents on the machine.
 - Usage: `@2501 agents [--workspace <path>] [--all] [--flush]`
 
 ### Jobs Command
 
-- Command: `jobs`
 - Description: Fetch jobs from API.
 - Usage: `@2501 jobs [--workspace <path>] [--subscribe] [--listen]`
-
   - `--workspace <path>`: Specify a different workspace path.
   - `--subscribe`: Subscribe every minute to the API for new jobs on the current workspace.
   - `--unsubscribe`: Unsubscribe the current workspace for new jobs.
   - `--listen`: Listen for new jobs from the API and execute them.
 
-## Contributing
+## 🤝 Contributing
 
-Contributions to this project are welcome. For any questions or requests, please visit our website [2501.ai](https://2501.ai) or contact us at [contact@2501.ai](mailto:contact@2501.ai).
+We welcome contributions! Have questions or suggestions? Reach out to us:
+
+- 🌐 Website: [2501.ai](https://2501.ai)
+- 📧 Email: [contact@2501.ai](mailto:contact@2501.ai)
+- 📚 Documentation: [docs.2501.ai](https://docs.2501.ai)
+- 💬 Discord: [Join our community](https://discord.gg/DYC8ryeC7e)
+
+## 🔒 Security
+
+Found a security issue? Please email security@2501.ai
+
+## 📄 License
+
+This project is licensed under the ISC License - see the [LICENSE](LICENSE) file for details.

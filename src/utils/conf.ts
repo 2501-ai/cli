@@ -4,6 +4,7 @@ import * as path from 'path';
 
 import Logger from '../utils/logger';
 import { AgentConfig, LocalConfig } from './types';
+import { clearWorkspaceState } from '../helpers/workspace';
 
 const CONFIG_FILE_PATH = path.join(
   path.join(os.homedir(), '.2501'),
@@ -121,15 +122,38 @@ export function addAgent(newAgent: AgentConfig): void {
 }
 
 /**
- * Clears all agents from the configuration.
+ * Clears current agent or all agents from the configuration.
+ * @param workspacePath - The workspace to be flushed
+ * @param [all] - If true, clears all agents on the machine.
  */
-export async function flushAgents(): Promise<void> {
+export async function flushAgents(
+  workspacePath: string,
+  all?: boolean
+): Promise<void> {
   try {
     const config = readConfig();
-    if (config) {
-      config.agents = []; // Empty the agents array
-      writeConfig(config);
+    if (!config) {
+      return;
     }
+
+    if (!all) {
+      // Flush agents associated with the specified workspace
+      config.agents = config.agents.filter((agent) => {
+        const isInWorkspace = agent.workspace === workspacePath;
+        if (isInWorkspace) {
+          Logger.debug('Flushing agent:', agent.id);
+          clearWorkspaceState(agent.id);
+        }
+        return !isInWorkspace;
+      });
+      writeConfig(config);
+      return;
+    }
+
+    // Flush all agents and workspace states.
+    config.agents.forEach((agent) => clearWorkspaceState(agent.id));
+    config.agents = []; // Empty the agents array
+    writeConfig(config);
   } catch (error) {
     Logger.error('Error flushing agents:', error);
   }

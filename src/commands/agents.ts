@@ -11,8 +11,10 @@ export async function agentsCommand(options: {
   flush?: boolean;
   workspace?: string;
 }): Promise<void> {
+  const workspaceUrl = options.workspace || process.cwd();
+
   if (options.flush) {
-    await flushAgents();
+    await flushAgents(workspaceUrl, options.all);
     terminal('All agents have been flushed from the configuration.\n');
     return;
   }
@@ -21,7 +23,6 @@ export async function agentsCommand(options: {
   if (options.all) {
     agents = listAgents();
   } else {
-    const workspaceUrl = options.workspace || process.cwd();
     agents = listAgentsFromWorkspace(workspaceUrl);
   }
 

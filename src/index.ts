@@ -81,7 +81,7 @@ program
     '--no-workspace',
     'Will not sync the current workspace and will create a temporary one in /tmp/2501/'
   )
-  .option('--config <config_id>', 'Specify the configuration ID')
+  .option('--config <configKey>', 'Specify the configuration Key to use')
   .hook('preAction', authMiddleware)
   .action(initCommand);
 
@@ -92,7 +92,7 @@ program
     'List agents in the current workspace or all agents on the machine'
   )
   .option('--workspace <path>', 'Specify a different workspace path')
-  .option('--all', 'List all agents on the machine')
+  .option('--all', 'Parameter to target all agents during list or flush action')
   .option('--flush', 'Flush all agents from the configuration')
   .action(agentsCommand);
 

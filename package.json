@@ -1,6 +1,6 @@
 {
   "name": "@2501-ai/cli",
-  "version": "0.0.52",
+  "version": "0.1.1",
   "description": "",
   "main": "dist/index.js",
   "bin": {
@@ -18,10 +18,15 @@
     "dev": "ts-node ./src/index.ts"
   },
   "keywords": [
-    "AI",
+    "ai",
+    "agents",
+    "ai-agents",
+    "bots",
     "devops",
     "automation",
-    "CLI"
+    "cli",
+    "command-line",
+    "code"
   ],
   "files": [
     "dist",
