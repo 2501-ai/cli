@@ -10,6 +10,7 @@ import { isDirUnsafe } from '../helpers/security';
 import { Configuration } from '../utils/types';
 import { createAgent } from '../helpers/api';
 import { DISCORD_LINK } from '../utils/messaging';
+import { resolveWorkspacePath } from '../helpers/workspace';
 
 axios.defaults.baseURL = `${API_HOST}${API_VERSION}`;
 axios.defaults.timeout = 120 * 1000;
@@ -47,7 +48,9 @@ async function getConfiguration(configKey: string): Promise<Configuration> {
   return selectedConfig;
 }
 
-async function getWorkspacePath(options?: InitCommandOptions): Promise<string> {
+export async function getWorkspacePath(
+  options?: InitCommandOptions
+): Promise<string> {
   if (options?.workspace === false) {
     const path = `/tmp/2501/${Date.now()}`;
     fs.mkdirSync(path, { recursive: true });
@@ -57,7 +60,8 @@ async function getWorkspacePath(options?: InitCommandOptions): Promise<string> {
 
   let finalPath;
   if (typeof options?.workspace === 'string' && !!options.workspace) {
-    finalPath = options.workspace;
+    // Convert relative path to absolute path if necessary
+    finalPath = resolveWorkspacePath({ workspace: options.workspace });
   } else {
     finalPath = process.cwd();
   }
