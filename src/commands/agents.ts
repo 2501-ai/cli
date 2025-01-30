@@ -5,13 +5,14 @@ import {
   listAgentsFromWorkspace,
   flushAgents,
 } from '../utils/conf';
+import { resolveWorkspacePath } from '../helpers/workspace';
 
 export async function agentsCommand(options: {
   all?: boolean;
   flush?: boolean;
   workspace?: string;
 }): Promise<void> {
-  const workspaceUrl = options.workspace || process.cwd();
+  const workspaceUrl = resolveWorkspacePath({ workspace: options.workspace });
 
   if (options.flush) {
     await flushAgents(workspaceUrl, options.all);

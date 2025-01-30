@@ -91,6 +91,7 @@ const synchronizeWorkspace = async (
   workspace: string,
   force: boolean = false
 ): Promise<boolean> => {
+  Logger.debug('Synchronizing workspace:', workspace);
   const workspaceDiff = await getWorkspaceChanges(workspace, agentId);
   Logger.debug('Workspace diff:', { workspaceDiff });
   if (workspaceDiff.isEmpty) return false;
@@ -134,6 +135,7 @@ export const queryCommand = async (
   try {
     const config = readConfig();
     const workspace = resolveWorkspacePath(options);
+    Logger.debug('Workspace:', workspace);
 
     const skipWarmup = !!options.skipWarmup;
     const stream = options.stream ?? config?.stream ?? true;
