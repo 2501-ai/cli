@@ -140,7 +140,7 @@ export class AgentManager {
             proposal: args.content,
           },
           {
-            timeout: 600_000,
+            timeout: 150_000,
             headers: {
               Authorization: `Bearer ${config?.api_key}`,
             },

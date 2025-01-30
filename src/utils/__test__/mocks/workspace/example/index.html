@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Updated Title</title>
+  </head>
+  <body>
+    <div>
+      <div id="card">
+        <div class="container">
+          <noscript>
+            <meta
+              http-equiv="refresh"
+              content="1; URL=https://vercel.com/sso-api?url=https%3A%2F%2Fstaging.engine.2501.ai%2Fapi%2Fv1%2Fconfigurations&nonce=cc98ef9192efe74166ae7c7eeb745cbfe93308b0326bb57fa2bec0fad2046d61"
+            />
+          </noscript>
+          <div>
+            <div id="spinner">
+              <div></div>
+              <div></div>
+              <div></div>
+              <div></div>
+              <div></div>
+              <div></div>
+              <div></div>
+              <div></div>
+              <div></div>
+              <div></div>
+              <div></div>
+              <div></div>
+            </div>
+            <div id="check">
+              <svg
+                height="30"
+                width="30"
+                viewBox="0 0 24 24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M12 2C6.47715 2 2 6.47715 2 12c0 5.5228 4.47715 10 10 10 5.5228.0 10-4.4772 10-10C22 6.47715 17.5228 2 12 2z"
+                />
+                <path d="M8 11.8571 10.5 14.3572 15.8572 9" />
+              </svg>
+            </div>
+            <h1>Authenticating</h1>
+          </div>
+        </div>
+        <div id="bottom-section">
+          <div>
+            <p>
+              If you aren't automatically redirected,
+              <a
+                href="https://vercel.com/sso-api?url=https%3A%2F%2Fstaging.engine.2501.ai%2Fapi%2Fv1%2Fconfigurations&nonce=cc98ef9192efe74166ae7c7eeb745cbfe93308b0326bb57fa2bec0fad2046d61"
+                >click here</a
+              >
+            </p>
+          </div>
+        </div>
+      </div>
+      <div class="footer">
+        <a href="https://vercel.com" target="_blank" rel="noopener noreferrer">
+          Powered by Vercel
+        </a>
+      </div>
+    </div>
+    <script>
+      document.addEventListener('DOMContentLoaded', function () {
+        window.location.href =
+          'https://vercel.com/sso-api?url=https%3A%2F%2Fstaging.engine.2501.ai%2Fapi%2Fv1%2Fconfigurations&nonce=cc98ef9192efe74166ae7c7eeb745cbfe93308b0326bb57fa2bec0fad2046d61';
+
+        function showCheckIconWhenVercelJwtIsSet() {
+          fetch('/.well-known/vercel-user-meta').then((response) => {
+            if (response.status === 200) {
+              document.getElementById('spinner').style.display = 'none';
+              document.getElementById('check').style.display = 'block';
+            } else {
+              showCheckIconWhenVercelJwtIsSet();
+            }
+          });
+        }
+
+        showCheckIconWhenVercelJwtIsSet();
+      });
+    </script>
+  </body>
+</html>

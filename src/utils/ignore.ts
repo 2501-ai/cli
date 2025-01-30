@@ -1,4 +1,3 @@
-import path from 'path';
 import fs from 'fs';
 
 import { IGNORED_FILE_PATTERNS } from '../constants';
@@ -89,22 +88,21 @@ export class IgnoreManager {
         }
       }
     });
+    Logger.debug('Unique ignore patterns:', uniquePatterns);
   }
 
-  public loadGitignore(gitignorePath: string): void {
+  /**
+   * Load .gitignore file and add patterns to the ignore manager.
+   * @param gitignorePath - Full path to .gitignore file
+   * @param relativePath - Relative directory path to the .gitignore file.
+   */
+  public loadGitignore(gitignorePath: string, relativePath: string): void {
     try {
       const content = fs.readFileSync(gitignorePath, 'utf8');
       const patterns = content
         .split('\n')
         .map((line) => line.trim())
         .filter((line) => line !== '' && !line.startsWith('#'));
-
-      // Get the relative path from the gitignore location
-      // Use relative path instead of absolute path
-      const relativePath = path
-        .dirname(gitignorePath)
-        .replace(process.cwd(), '') // Remove the current working directory
-        .replace(/^\//, ''); // Remove leading slash
 
       this.addPatterns(patterns, relativePath);
     } catch (e) {
