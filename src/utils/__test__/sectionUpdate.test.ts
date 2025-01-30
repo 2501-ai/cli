@@ -34,7 +34,7 @@ const originalContentMock = `{
 describe('sectionUpdate', () => {
   it('should update json content correctly', () => {
     const sectionsDiff = [
-      '<<<<<\n    "build": "tsc"\n  =====\n    "build": "tsc",\n    "test": "jest",\n    "lint": "eslint . --ext .ts"\n  >>>>>',
+      '<PREVIOUS_SECTION>\n    "build": "tsc"\n  </PREVIOUS_SECTION><NEW_SECTION>\n    "build": "tsc",\n    "test": "jest",\n    "lint": "eslint . --ext .ts"\n  </NEW_SECTION>',
     ];
 
     const res = modifyCodeSections({
@@ -77,7 +77,9 @@ describe('sectionUpdate', () => {
   });
 
   it('should update json with empty previous content', () => {
-    const sectionsDiff = ['<<<<<====={newContent}>>>>>'];
+    const sectionsDiff = [
+      '<PREVIOUS_SECTION></PREVIOUS_SECTION><NEW_SECTION>{newContent}</NEW_SECTION>',
+    ];
 
     const res = modifyCodeSections({
       originalContent: originalContentMock,
@@ -88,7 +90,9 @@ describe('sectionUpdate', () => {
   });
 
   it('should update json with empty newContent', () => {
-    const sectionsDiff = ['<<<<<\n  "keywords": [],=====>>>>>'];
+    const sectionsDiff = [
+      '<PREVIOUS_SECTION>\n  "keywords": [],</PREVIOUS_SECTION><NEW_SECTION></NEW_SECTION>',
+    ];
 
     const res = modifyCodeSections({
       originalContent: originalContentMock,
@@ -126,8 +130,10 @@ describe('sectionUpdate', () => {
 }`);
   });
 
-  it('should ', () => {
-    const sectionsDiff = ['<<<<<\n    "build": "tsc"\n  =====\n  >>>>>'];
+  it('should remove content', () => {
+    const sectionsDiff = [
+      '<PREVIOUS_SECTION>\n    "build": "tsc"\n  </PREVIOUS_SECTION><NEW_SECTION>\n  </NEW_SECTION>',
+    ];
 
     const res = modifyCodeSections({
       originalContent: originalContentMock,
@@ -163,5 +169,47 @@ describe('sectionUpdate', () => {
     "jsonwebtoken": "^9.0.2"
   }
 }`);
+  });
+
+  it('should add new content', () => {
+    const originalcontent =
+      "\napp.get('/', (req, res) => {\n  res.send('Hello World!');\n});\n\napp.get('/about', (req, res) => {\n  res.send('About Page');\n});\n\napp.post('/submit', (req, res) => {\n  res.send('Data Submitted');\n});\n\napp.put('/update', (req, res) => {\n  res.send('Data Updated');\n});\n\napp.delete('/delete', (req, res) => {\n  res.send('Data Deleted');\n});\n\napp.use((err, req, res, next) => {\n  console.error(err.stack);\n  res.status(500).send('Something broke!');\n});\n\nconst PORT = process.env.PORT || 3000;\napp.listen(PORT, () => {\n  console.log(`Server is running on port ${PORT}`);\n});";
+    const diffSections = [
+      "<PREVIOUS_SECTION>app.post('/submit', (req, res) => {\\n  res.send('Data Submitted');\\n});\\n</PREVIOUS_SECTION><NEW_SECTION></NEW_SECTION>",
+    ];
+
+    const res = modifyCodeSections({
+      originalContent: originalcontent,
+      diffSections: diffSections,
+    });
+    expect(res).toEqual(
+      `
+app.get('/', (req, res) => {
+  res.send('Hello World!');
+});
+
+app.get('/about', (req, res) => {
+  res.send('About Page');
+});
+
+
+app.put('/update', (req, res) => {
+  res.send('Data Updated');
+});
+
+app.delete('/delete', (req, res) => {
+  res.send('Data Deleted');
+});
+
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).send('Something broke!');
+});
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(\`Server is running on port \${PORT}\`);
+});`
+    );
   });
 });

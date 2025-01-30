@@ -6,12 +6,14 @@ yarn-debug.log*
 yarn-error.log*
 lerna-debug.log*
 *.log.husky/
-.vscode
 pnpm-lock.yaml
 .idea
 .DS_Store
 
-#Jetbrains IDE
+# local debug workspaces
+debug-workspace*
+
+# Jetbrains IDE
 .idea/
 
 # Dependency directories

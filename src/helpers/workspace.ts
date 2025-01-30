@@ -6,6 +6,16 @@ import Logger from '../utils/logger';
 import { getDirectoryMd5Hash } from '../utils/files';
 import { WorkspaceDiff, WorkspaceState } from '../utils/types';
 
+export function resolveWorkspacePath(options: { workspace?: string }): string {
+  let finalPath = options.workspace || process.cwd();
+  // Convert relative path to absolute path if necessary
+  finalPath = path.isAbsolute(finalPath)
+    ? finalPath
+    : path.resolve(process.cwd(), finalPath);
+
+  return finalPath;
+}
+
 export function getWorkspaceConfName(agentId: string): string {
   return path.join(
     path.join(os.homedir(), '.2501'),

@@ -76,7 +76,11 @@ export function getDirectoryFiles(params: {
 
   let totalSize = 0;
   for (const item of items) {
-    const itemPath = path.join(params.currentPath, item.name);
+    const itemPath = path.join(
+      params.directoryPath,
+      params.currentPath,
+      item.name
+    );
 
     // Handle .gitignore files
     if (item.isFile() && item.name === '.gitignore') {
@@ -200,6 +204,7 @@ export function computeFileMetadataHash(filePath: string): {
   hash: string;
   size: number;
 } {
+  // Logger.debug(`Hashing metadata for file: ${filePath}`);
   const stats = fs.statSync(filePath);
   const metaHash = crypto.createHash('md5');
   metaHash.update(`${stats.size}:${stats.mtimeMs}`);
