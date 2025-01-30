@@ -19,6 +19,7 @@ import {
 } from '../helpers/streams';
 import {
   getWorkspaceChanges,
+  resolveWorkspacePath,
   updateWorkspaceState,
 } from '../helpers/workspace';
 import { initCommand } from './init';
@@ -132,7 +133,8 @@ export const queryCommand = async (
 
   try {
     const config = readConfig();
-    const workspace = options.workspace || process.cwd();
+    const workspace = resolveWorkspacePath(options);
+
     const skipWarmup = !!options.skipWarmup;
     const stream = options.stream ?? config?.stream ?? true;
 
