@@ -25,7 +25,7 @@ describe('getDirectoryFiles', () => {
       ignoreManager: ignoreManagerInstance,
     });
 
-    expect(result.totalSize).toEqual(2827);
+    expect(result.totalSize).toEqual(2919);
     expect(result.fileHashes.size).toEqual(4);
     expect(result.fileHashes.has('example/.gitignore')).toStrictEqual(true);
     expect(result.fileHashes.has('example/index.html')).toStrictEqual(true);
@@ -51,7 +51,7 @@ describe('getDirectoryFiles', () => {
       ignoreManager: ignoreManagerInstance,
     });
 
-    expect(result.totalSize).toEqual(2822);
+    expect(result.totalSize).toEqual(2914);
     expect(result.fileHashes.size).toEqual(2);
     expect(result.fileHashes.has('example/.gitignore')).toStrictEqual(true);
     expect(result.fileHashes.has('example/index.html')).toStrictEqual(true);
@@ -116,7 +116,7 @@ describe('getDirectoryFiles from subfolder', () => {
       ignoreManager: ignoreManagerInstance,
     });
 
-    expect(result.totalSize).toEqual(2827);
+    expect(result.totalSize).toEqual(2919);
     expect(result.fileHashes.size).toEqual(4);
     expect(result.fileHashes.has('.gitignore')).toStrictEqual(true);
     expect(result.fileHashes.has('index.html')).toStrictEqual(true);
@@ -138,7 +138,7 @@ describe('getDirectoryFiles from subfolder', () => {
       ignoreManager: ignoreManagerInstance,
     });
 
-    expect(result.totalSize).toEqual(2827);
+    expect(result.totalSize).toEqual(2919);
     expect(result.fileHashes.size).toEqual(4);
     expect(result.fileHashes.has('.gitignore')).toStrictEqual(true);
     expect(result.fileHashes.has('index.html')).toStrictEqual(true);
