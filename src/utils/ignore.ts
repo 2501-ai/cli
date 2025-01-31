@@ -88,7 +88,6 @@ export class IgnoreManager {
         }
       }
     });
-    Logger.debug('Unique ignore patterns:', uniquePatterns);
   }
 
   /**
