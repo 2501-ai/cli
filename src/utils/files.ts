@@ -152,7 +152,6 @@ export function getDirectoryMd5Hash({
   maxDepth = DEFAULT_MAX_DEPTH,
   maxDirSize = DEFAULT_MAX_DIR_SIZE, // 10MB
 }: DirectoryMd5HashOptions) {
-  Logger.debug('Computing MD5 hash for directory:', directoryPath);
   // Initialize ignore manager at root level
   const ignoreManager = IgnoreManager.getInstance();
 

@@ -11,7 +11,7 @@ import {
 
 import { queryCommand } from './query';
 
-import { listAgentsFromWorkspace, readConfig } from '../utils/conf';
+import { listAgentsFromWorkspace } from '../utils/conf';
 import { unixSourceCommand } from '../utils/shellCommands';
 import Logger from '../utils/logger';
 
@@ -72,7 +72,6 @@ export async function jobSubscriptionCommand(options: {
   if (options.listen) {
     try {
       const workspace = options.workspace || process.cwd();
-      const config = readConfig();
 
       const [agent] = listAgentsFromWorkspace(workspace);
 
@@ -83,8 +82,7 @@ export async function jobSubscriptionCommand(options: {
       logger.start(`Listening for new jobs on ${workspace}`);
 
       const response = await axios.get(
-        `${API_HOST}${API_VERSION}/agents/${agent.id}/jobs?status=todo`,
-        { headers: { Authorization: `Bearer ${config?.api_key}` } }
+        `${API_HOST}${API_VERSION}/agents/${agent.id}/jobs?status=todo`
       );
 
       const jobs = response.data;
@@ -98,21 +96,16 @@ export async function jobSubscriptionCommand(options: {
 
       logger.stop(`Found ${jobs.length} jobs to execute`);
       for (const idx in jobs) {
-        await axios.put(
-          `${API_HOST}${API_VERSION}/jobs/${jobs[idx].id}`,
-          {
-            status: 'in_progress',
-            host: `${shell_user.trim()}@${localIP.trim()}`,
-          },
-          { headers: { Authorization: `Bearer ${config?.api_key}` } }
-        );
+        await axios.put(`${API_HOST}${API_VERSION}/jobs/${jobs[idx].id}`, {
+          status: 'in_progress',
+          host: `${shell_user.trim()}@${localIP.trim()}`,
+        });
         await queryCommand(jobs[idx].brief, {
           callback: async (response: unknown) => {
-            await axios.put(
-              `${API_HOST}${API_VERSION}/jobs/${jobs[idx].id}`,
-              { status: 'completed', result: response },
-              { headers: { Authorization: `Bearer ${config?.api_key}` } }
-            );
+            await axios.put(`${API_HOST}${API_VERSION}/jobs/${jobs[idx].id}`, {
+              status: 'completed',
+              result: response,
+            });
           },
         });
       }
