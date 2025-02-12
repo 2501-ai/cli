@@ -3,90 +3,56 @@ type ModifyCodeSectionsParams = {
   diffSections: string[];
 };
 
+// Normalize escaped newlines
+const normalizeEscapes = (content: string) => {
+  return content
+    .replace(/\r\n/g, '\n') // Normalize line endings
+    .replace(/\\\\n/g, '\n') // Handle double escaped newlines
+    .replace(/\\n/g, '\n'); // Handle single escaped newlines
+};
 export function modifyCodeSections({
   originalContent,
   diffSections,
 }: ModifyCodeSectionsParams): string {
-  let modifiedContent = originalContent;
+  let result = originalContent;
 
-  function applyDiff(existingContent: string, diffSections: string[]) {
-    // Split the existing content into lines
-    const existingLines = existingContent.split('\n');
-    let currentIndex = 0;
+  for (const diffSection of diffSections) {
+    // Extract old and new content using regex
+    const oldContentMatch = diffSection.match(
+      /<PREVIOUS_SECTION>([\s\S]*?)<\/PREVIOUS_SECTION>/
+    );
+    const newContentMatch = diffSection.match(
+      /<NEW_SECTION>([\s\S]*?)<\/NEW_SECTION>/
+    );
 
-    for (const diffSection of diffSections) {
-      // Parse the diffSection to get old content and new content
-      const [oldContent, newContent] = ['<<<<<', '====='].map(
-        (startMarker, index) => {
-          const endMarker = index === 0 ? '=====' : '>>>>>';
-          const regex = new RegExp(`${startMarker}([\\s\\S]*?)${endMarker}`);
-          const match = diffSection.match(regex);
-          return match
-            ? match[1].replace(/^\r?\n+|\r?\n+$/g, '').split('\n')
-            : [];
-        }
-      );
-
-      const isOldContentEmpty = oldContent.every((line) => line.trim() === '');
-
-      if (isOldContentEmpty) {
-        // Append newContent to the end of the existing content
-        existingLines.push(...newContent);
-        // No need to update currentIndex since we're appending at the end
-      } else {
-        // Find the index in existingLines where oldContent matches, starting from currentIndex
-        const index = findIndexOfSequence(
-          existingLines,
-          oldContent,
-          currentIndex
-        );
-
-        if (index !== -1) {
-          // Replace oldContent with newContent in existingLines
-          existingLines.splice(index, oldContent.length, ...newContent);
-          // Update currentIndex to prevent matching the same content again
-          currentIndex = index + newContent.length;
-        } else {
-          throw new Error('Old content not found in existing content.');
-        }
-      }
+    if (!oldContentMatch || !newContentMatch) {
+      throw new Error('Invalid diff section format');
     }
 
-    // Join the existingLines back into a string
-    const updatedContent = existingLines.join('\n');
-    return updatedContent;
+    const oldContent = oldContentMatch[1];
+    const newContent = newContentMatch[1];
+
+    // Handle empty previous content case (append to end)
+    if (oldContent.trim() === '') {
+      result = newContent + result;
+      continue;
+    }
+
+    const normalizedOldContent = normalizeEscapes(oldContent);
+    const normalizedNewContent = normalizeEscapes(newContent);
+
+    // Find and replace the content
+    const index = result.indexOf(normalizedOldContent);
+    if (index === -1) {
+      throw new Error('Old content not found in existing content');
+    }
+
+    // Replace the old content with new content
+    result =
+      result.slice(0, index) +
+      normalizedNewContent +
+      result.slice(index + normalizedOldContent.length);
   }
 
-  // @TODO : refacto this function
-  function findIndexOfSequence(
-    haystack: string[],
-    needle: string[],
-    startIndex = 0
-  ) {
-    if (!Array.isArray(haystack) || !Array.isArray(needle)) {
-      throw new TypeError('findIndexOfSequence - Need array of string.');
-    }
-
-    // Handle empty needle (oldContent)
-    if (needle.length === 0) {
-      return -1;
-    }
-
-    for (let i = startIndex; i <= haystack.length - needle.length; i++) {
-      let match = true;
-      for (let j = 0; j < needle.length; j++) {
-        if (haystack[i + j] !== needle[j]) {
-          match = false;
-          break;
-        }
-      }
-      if (match) {
-        return i;
-      }
-    }
-    return -1;
-  }
-
-  modifiedContent = applyDiff(modifiedContent, diffSections);
-  return modifiedContent;
+  return result;
 }

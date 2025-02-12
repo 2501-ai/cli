@@ -58,6 +58,16 @@ export function getDirectoryFiles(params: {
     };
   }
 
+  // Check this first to avoid unnecessary processing.
+  const gitignorePath = path.join(
+    params.directoryPath,
+    params.currentPath,
+    '.gitignore'
+  );
+  if (fs.existsSync(gitignorePath)) {
+    params.ignoreManager.loadGitignore(gitignorePath, params.currentPath);
+  }
+
   const fileHashes = new Map<string, string>();
 
   let items: Dirent[] = [];
@@ -67,7 +77,7 @@ export function getDirectoryFiles(params: {
       { withFileTypes: true }
     );
   } catch (e) {
-    Logger.error(`Error reading directory: ${(e as Error).message}`);
+    Logger.error(`Error reading directory: ${(e as Error).message}`, e);
     return {
       totalSize: 0,
       fileHashes: new Map<string, string>(),
@@ -76,18 +86,11 @@ export function getDirectoryFiles(params: {
 
   let totalSize = 0;
   for (const item of items) {
-    const itemPath = path.join(params.currentPath, item.name);
-
-    // Handle .gitignore files
-    if (item.isFile() && item.name === '.gitignore') {
-      params.ignoreManager.loadGitignore(
-        path.join(params.directoryPath, itemPath)
-      );
-      continue;
-    }
+    const itemRelativePath = path.join(params.currentPath, item.name);
+    const itemFullPath = path.join(params.directoryPath, itemRelativePath);
 
     // Check if file/directory should be ignored
-    if (params.ignoreManager.isIgnored(itemPath)) {
+    if (params.ignoreManager.isIgnored(itemRelativePath)) {
       continue;
     }
 
@@ -95,7 +98,7 @@ export function getDirectoryFiles(params: {
       // Recursively process subdirectories
       const result = getDirectoryFiles({
         ...params,
-        currentPath: itemPath,
+        currentPath: itemRelativePath,
         currentDepth: params.currentDepth + 1,
         currentTotalSize: totalSize + params.currentTotalSize,
       });
@@ -106,7 +109,7 @@ export function getDirectoryFiles(params: {
     } else if (item.isFile()) {
       // Use streaming to read file and compute MD5 hash
       const { hash: fileHash, size: fileSize } =
-        computeFileMetadataHash(itemPath);
+        computeFileMetadataHash(itemFullPath);
 
       const sizeWithFile = totalSize + params.currentTotalSize + fileSize;
       if (sizeWithFile >= params.maxDirSize) {
@@ -123,10 +126,9 @@ export function getDirectoryFiles(params: {
         // in case the current file size is exceedingly large but other files might be lighter.
         continue;
       }
-      // params.currentTotalSize += fileSize;
+
       // Include the relative file path in the hash to ensure unique content
-      const relativePath = path.relative(params.directoryPath, itemPath);
-      fileHashes.set(relativePath, fileHash);
+      fileHashes.set(itemRelativePath, fileHash);
       totalSize += fileSize;
     }
   }
@@ -150,8 +152,6 @@ export function getDirectoryMd5Hash({
   maxDepth = DEFAULT_MAX_DEPTH,
   maxDirSize = DEFAULT_MAX_DIR_SIZE, // 10MB
 }: DirectoryMd5HashOptions) {
-  // const ignoreSet = getIgnoredFiles(directoryPath);
-
   // Initialize ignore manager at root level
   const ignoreManager = IgnoreManager.getInstance();
 
@@ -162,7 +162,6 @@ export function getDirectoryMd5Hash({
     maxDirSize,
     currentPath: '',
     currentDepth: 0,
-    // ignoreSet,
     currentTotalSize: 0,
     ignoreManager,
   });
@@ -200,6 +199,7 @@ export function computeFileMetadataHash(filePath: string): {
   hash: string;
   size: number;
 } {
+  // Logger.debug(`Hashing metadata for file: ${filePath}`);
   const stats = fs.statSync(filePath);
   const metaHash = crypto.createHash('md5');
   metaHash.update(`${stats.size}:${stats.mtimeMs}`);

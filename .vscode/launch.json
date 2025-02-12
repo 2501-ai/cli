@@ -1,0 +1,40 @@
+{
+  "configurations": [
+    {
+      "name": "run query",
+      "type": "node",
+      "request": "launch",
+      "cwd": "${workspaceFolder}",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "run",
+        "dev",
+        "--",
+        "query",
+        "--workspace",
+        "${workspaceFolder}/debug-workspace",
+        //"create a simple nodejs proj, dont install node_modules"
+        "add comments at the end of indexjs that it was creatd with 2501 and add required nodejs version to package.json"
+      ],
+      "console": "integratedTerminal",
+      "envFile": "${workspaceFolder}/.env"
+    },
+    {
+      "name": "run init",
+      "type": "node",
+      "request": "launch",
+      "cwd": "${workspaceFolder}",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "run",
+        "dev",
+        "--",
+        "init",
+        "--workspace",
+        "${workspaceFolder}/debug-workspace"
+      ],
+      "console": "integratedTerminal",
+      "envFile": "${workspaceFolder}/.env"
+    }
+  ]
+}
