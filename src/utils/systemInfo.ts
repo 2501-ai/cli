@@ -45,7 +45,7 @@ export async function getSystemInfo(): Promise<SystemInfo> {
     nodeInfo: {
       version: process.version,
       config: process.config,
-      packages: await getGlobalPackages(),
+      global_packages: await getGlobalPackages(),
     },
   };
 }

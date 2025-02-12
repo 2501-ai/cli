@@ -79,7 +79,7 @@ export type SystemInfo = {
   nodeInfo: {
     version: string;
     config: NodeJS.ProcessConfig;
-    packages: string[];
+    global_packages: string[];
   };
 };
 
