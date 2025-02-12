@@ -12,6 +12,8 @@ import { createAgent } from '../helpers/api';
 import { DISCORD_LINK } from '../utils/messaging';
 import { resolveWorkspacePath } from '../helpers/workspace';
 import { getSystemInfo } from '../utils/systemInfo';
+import { generateTree } from '../utils/tree';
+import { getDirectoryMd5Hash } from '../utils/files';
 
 axios.defaults.baseURL = `${API_HOST}${API_VERSION}`;
 axios.defaults.timeout = 120 * 1000;
@@ -27,7 +29,7 @@ interface InitCommandOptions {
 
 const logger = new Logger();
 
-async function getConfiguration(configKey: string): Promise<Configuration> {
+async function fetchConfiguration(configKey: string): Promise<Configuration> {
   const config = readConfig();
   const { data: configurations } = await axios.get<Configuration[]>(
     `/configurations`,
@@ -89,11 +91,8 @@ export async function getWorkspacePath(
 // This function will be called when the `init` command is executed
 export async function initCommand(options?: InitCommandOptions) {
   try {
-    const workspace = await getWorkspacePath(options);
-    const config = readConfig();
-    const metrics = getSystemInfo();
-
-    if (!config?.join_discord_shown) {
+    const localConfig = readConfig();
+    if (!localConfig?.join_discord_shown) {
       const term = terminal;
 
       term('\n');
@@ -110,13 +109,29 @@ export async function initCommand(options?: InitCommandOptions) {
 
     logger.start('Creating agent');
     const configKey = options?.config || 'CODING_AGENT';
-    const configuration = await getConfiguration(configKey);
+
+    const parallelPromises = [
+      getWorkspacePath(options),
+      getSystemInfo(),
+      fetchConfiguration(configKey),
+    ] as const;
+
+    const [workspacePath, systemInfo, agentConfig] =
+      await Promise.all(parallelPromises);
+
+    const workspaceData = getDirectoryMd5Hash({
+      directoryPath: workspacePath,
+    });
+    const workspaceTree = generateTree(
+      Array.from(workspaceData.fileHashes.keys())
+    );
 
     const createResponse = await createAgent(
-      workspace,
-      configuration,
-      config?.engine,
-      metrics
+      workspacePath,
+      workspaceTree,
+      agentConfig,
+      localConfig?.engine,
+      systemInfo
     );
     Logger.debug('Agent created:', createResponse);
 
@@ -125,9 +140,9 @@ export async function initCommand(options?: InitCommandOptions) {
       id: createResponse.id,
       name: createResponse.name,
       capabilities: createResponse.capabilities,
-      workspace,
-      configuration: configuration.id,
-      engine: config?.engine || DEFAULT_ENGINE,
+      workspace: workspacePath,
+      configuration: agentConfig.id,
+      engine: localConfig?.engine || DEFAULT_ENGINE,
     });
 
     logger.stop(`Agent ${createResponse.id} created`);

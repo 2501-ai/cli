@@ -69,17 +69,12 @@ export type QueryResponseDTO = {
  */
 export type SystemInfo = {
   sysInfo: {
-    cpu: {
-      speed: number;
-      model: string;
-      cores: number;
-    };
-    mem: number;
     platform: NodeJS.Platform;
     type: string;
     release: string;
     arch: string;
-    // hostname: string;
+    package_manager: string;
+    installed_packages: string[];
   };
   nodeInfo: {
     version: string;
