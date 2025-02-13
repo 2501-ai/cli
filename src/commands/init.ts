@@ -119,6 +119,8 @@ export async function initCommand(options?: InitCommandOptions) {
     const [workspacePath, systemInfo, agentConfig] =
       await Promise.all(parallelPromises);
 
+    Logger.debug('systemInfo results:', { systemInfo });
+
     const workspaceData = getDirectoryMd5Hash({
       directoryPath: workspacePath,
     });

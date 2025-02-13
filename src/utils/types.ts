@@ -69,17 +69,19 @@ export type QueryResponseDTO = {
  */
 export type SystemInfo = {
   sysInfo: {
-    platform: NodeJS.Platform;
-    type: string;
-    release: string;
-    arch: string;
-    package_manager: string;
-    installed_packages: string[];
+    platform: string;
+    os_info: string;
+    installed_packages: Record<string, string>;
   };
   nodeInfo: {
     version: string;
-    config: NodeJS.ProcessConfig;
     global_packages: string[];
+  };
+  pythonInfo?: {
+    version: string;
+  };
+  phpInfo?: {
+    version: string;
   };
 };
 
