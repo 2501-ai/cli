@@ -13,6 +13,7 @@
     "unlink": "npm unlink -g @2501-ai/cli",
     "start": "node .",
     "lint": "tsc --noEmit && eslint . --ext .ts,.tsx --fix",
+    "prepare": "husky",
     "test": "jest --silent",
     "dev": "ts-node ./src/index.ts"
   },
