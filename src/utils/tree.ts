@@ -3,5 +3,5 @@
  * This appears to be the optimal format for an LLM agent to process.
  */
 export function generateTree(fileList: string[]): string {
-  return fileList.join('\n');
+  return fileList.join(' \n ');
 }

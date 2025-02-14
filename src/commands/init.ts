@@ -12,8 +12,6 @@ import { createAgent } from '../helpers/api';
 import { DISCORD_LINK } from '../utils/messaging';
 import { resolveWorkspacePath } from '../helpers/workspace';
 import { getSystemInfo } from '../utils/systemInfo';
-import { generateTree } from '../utils/tree';
-import { getDirectoryMd5Hash } from '../utils/files';
 
 axios.defaults.baseURL = `${API_HOST}${API_VERSION}`;
 axios.defaults.timeout = 120 * 1000;
@@ -121,16 +119,8 @@ export async function initCommand(options?: InitCommandOptions) {
 
     Logger.debug('systemInfo results:', { systemInfo });
 
-    const workspaceData = getDirectoryMd5Hash({
-      directoryPath: workspacePath,
-    });
-    const workspaceTree = generateTree(
-      Array.from(workspaceData.fileHashes.keys())
-    );
-
     const createResponse = await createAgent(
       workspacePath,
-      workspaceTree,
       agentConfig,
       localConfig?.engine,
       systemInfo

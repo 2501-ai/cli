@@ -29,7 +29,6 @@ export const initAxios = async () => {
 
 export const createAgent = async (
   workspace: string,
-  workspaceFileTree: string,
   selected_config: Configuration,
   engine?: EngineType | undefined,
   sysinfo?: SystemInfo
@@ -40,7 +39,6 @@ export const createAgent = async (
     prompt: selected_config.prompt,
     engine: engine || DEFAULT_ENGINE,
     sysinfo,
-    workspaceFileTree,
     // files: workspaceResponse.vectorStoredFiles.map((file) => file.id),
   });
   return createResponse;
@@ -53,11 +51,12 @@ export const queryAgent = async (
   agentId: string,
   changed: boolean,
   query: string,
+  workspaceTree: string,
   stream: boolean
 ) => {
   const { data } = await axios.post<QueryResponseDTO | AsyncIterable<Buffer>>(
     `/agents/${agentId}/query`,
-    { query, changed, stream },
+    { query, changed, workspaceTree, stream },
     {
       responseType: stream ? 'stream' : 'json',
       timeout: stream ? TEN_MINUTES_MILLIS : FIVE_MINUTES_MILLIS,
