@@ -309,9 +309,16 @@ export const queryCommand = async (
     Logger.log('\n');
 
     for await (const step of steps) {
+      const task = `
+        You are about to run the following task:
+        ${step.task}
+
+        Original query:
+        ${query}
+      `;
       await agentsCommand({ flush: true });
       await initCommand({ config: step.configuration_key, workspace });
-      await runAgent(step.task, options);
+      await runAgent(task, options);
     }
   } else {
     await runAgent(query, options);
