@@ -30,8 +30,8 @@ export const initAxios = async () => {
 export const createAgent = async (
   workspace: string,
   selected_config: Configuration,
-  engine?: EngineType | undefined,
-  sysinfo?: SystemInfo
+  sysinfo: SystemInfo,
+  engine?: EngineType | undefined
 ) => {
   const { data: createResponse } = await axios.post('/agents', {
     workspace,

@@ -122,8 +122,8 @@ export async function initCommand(options?: InitCommandOptions) {
     const createResponse = await createAgent(
       workspacePath,
       agentConfig,
-      localConfig?.engine,
-      systemInfo
+      systemInfo,
+      localConfig?.engine
     );
     Logger.debug('Agent created:', createResponse);
 
