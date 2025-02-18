@@ -1,9 +1,9 @@
 import { terminal } from 'terminal-kit';
 
 import {
+  flushAgents,
   listAgents,
   listAgentsFromWorkspace,
-  flushAgents,
 } from '../utils/conf';
 import { resolveWorkspacePath } from '../helpers/workspace';
 

@@ -1,13 +1,12 @@
 import axios from 'axios';
 
-import { API_HOST, API_VERSION, QueryStatus } from '../constants';
+import { API_HOST, API_VERSION } from '../constants';
 import { readConfig } from '../utils/conf';
 import { FormData } from 'formdata-node';
 import { DEFAULT_ENGINE } from '../commands/init';
 import {
   Configuration,
   EngineType,
-  FunctionAction,
   QueryResponseDTO,
   SystemInfo,
 } from '../utils/types';
@@ -66,20 +65,6 @@ export const queryAgent = async (
   return data;
 };
 
-export const getAgentStatus = async (
-  agentId: string
-): Promise<{
-  status: QueryStatus;
-  answer?: string;
-  error?: string;
-  actions?: FunctionAction[];
-} | null> => {
-  const { data } = await axios.get(
-    `${API_HOST}${API_VERSION}/agents/${agentId}/status`
-  );
-  return data;
-};
-
 /**
  * Submit tool outputs to the agent
  */
@@ -99,11 +84,6 @@ export const submitToolOutputs = async (
       responseType: stream ? 'stream' : 'json',
     }
   );
-  return data;
-};
-
-export const cancelQuery = async (agentId: string) => {
-  const { data } = await axios.post(`/agents/${agentId}/cancel`);
   return data;
 };
 

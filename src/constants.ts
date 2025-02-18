@@ -30,14 +30,6 @@ export enum QueryStatus {
   Expired = 'expired',
 }
 
-export const ASYNC_TERMINAL_STATUSES: QueryStatus[] = [
-  QueryStatus.Completed,
-  QueryStatus.Failed,
-  QueryStatus.Expired,
-  QueryStatus.Incomplete,
-  QueryStatus.Cancelled,
-];
-
 export const IGNORED_FILE_PATTERNS = [
   '.env',
   '.git',
