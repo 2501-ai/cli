@@ -9,6 +9,7 @@ import {
   EngineType,
   FunctionAction,
   QueryResponseDTO,
+  SystemInfo,
 } from '../utils/types';
 
 // const ONE_MINUTES_MILLIS = 60 * 1000;
@@ -29,6 +30,7 @@ export const initAxios = async () => {
 export const createAgent = async (
   workspace: string,
   selected_config: Configuration,
+  sysinfo: SystemInfo,
   engine?: EngineType | undefined
 ) => {
   const { data: createResponse } = await axios.post('/agents', {
@@ -36,6 +38,7 @@ export const createAgent = async (
     configuration: selected_config.id,
     prompt: selected_config.prompt,
     engine: engine || DEFAULT_ENGINE,
+    sysinfo,
     // files: workspaceResponse.vectorStoredFiles.map((file) => file.id),
   });
   return createResponse;
@@ -48,11 +51,12 @@ export const queryAgent = async (
   agentId: string,
   changed: boolean,
   query: string,
+  workspaceTree: string,
   stream: boolean
 ) => {
   const { data } = await axios.post<QueryResponseDTO | AsyncIterable<Buffer>>(
     `/agents/${agentId}/query`,
-    { query, changed, stream },
+    { query, changed, workspaceTree, stream },
     {
       responseType: stream ? 'stream' : 'json',
       timeout: stream ? TEN_MINUTES_MILLIS : FIVE_MINUTES_MILLIS,

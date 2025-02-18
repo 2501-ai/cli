@@ -64,6 +64,27 @@ export type QueryResponseDTO = {
   prompt?: string;
 };
 
+/**
+ * Collect system info while respecting privacy.
+ */
+export type SystemInfo = {
+  sysInfo: {
+    platform: string;
+    os_info: string;
+    installed_packages: Record<string, string>;
+  };
+  nodeInfo: {
+    version: string;
+    global_packages: string[];
+  };
+  pythonInfo?: {
+    version: string;
+  };
+  phpInfo?: {
+    version: string;
+  };
+};
+
 export type StreamEvent = {
   status: StreamEventStatus | null;
   message: string;

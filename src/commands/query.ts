@@ -35,6 +35,8 @@ import { getEligibleAgent, readConfig } from '../utils/conf';
 import Logger, { getTerminalWidth } from '../utils/logger';
 import { generatePDFs } from '../utils/pdf';
 import { isLooping } from '../utils/loopDetection';
+import { generateTree } from '../utils/tree';
+import { getDirectoryMd5Hash } from '../utils/files';
 
 marked.use(markedTerminal() as MarkedExtension);
 
@@ -231,11 +233,19 @@ export const queryCommand = async (
       await cancelPrevious();
     }
 
+    const workspaceData = getDirectoryMd5Hash({
+      directoryPath: workspace,
+    });
+    const workspaceTree = generateTree(
+      Array.from(workspaceData.fileHashes.keys())
+    );
+
     logger.start('Thinking');
     const agentResponse = await queryAgent(
       agentManager.id,
       workspaceChanged,
       query,
+      workspaceTree,
       stream
     );
 

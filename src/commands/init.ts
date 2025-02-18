@@ -1,16 +1,17 @@
 import axios from 'axios';
 import fs from 'fs';
 import { terminal } from 'terminal-kit';
-import { addAgent, readConfig, setValue } from '../utils/conf';
 
+// Local imports
 import Logger from '../utils/logger';
-
+import { addAgent, readConfig, setValue } from '../utils/conf';
 import { API_HOST, API_VERSION } from '../constants';
 import { isDirUnsafe } from '../helpers/security';
 import { Configuration } from '../utils/types';
 import { createAgent } from '../helpers/api';
 import { DISCORD_LINK } from '../utils/messaging';
 import { resolveWorkspacePath } from '../helpers/workspace';
+import { getSystemInfo } from '../utils/systemInfo';
 
 axios.defaults.baseURL = `${API_HOST}${API_VERSION}`;
 axios.defaults.timeout = 120 * 1000;
@@ -26,7 +27,7 @@ interface InitCommandOptions {
 
 const logger = new Logger();
 
-async function getConfiguration(configKey: string): Promise<Configuration> {
+async function fetchConfiguration(configKey: string): Promise<Configuration> {
   const config = readConfig();
   const { data: configurations } = await axios.get<Configuration[]>(
     `/configurations`,
@@ -88,10 +89,8 @@ export async function getWorkspacePath(
 // This function will be called when the `init` command is executed
 export async function initCommand(options?: InitCommandOptions) {
   try {
-    const workspace = await getWorkspacePath(options);
-    const config = readConfig();
-
-    if (!config?.join_discord_shown) {
+    const localConfig = readConfig();
+    if (!localConfig?.join_discord_shown) {
       const term = terminal;
 
       term('\n');
@@ -108,12 +107,23 @@ export async function initCommand(options?: InitCommandOptions) {
 
     logger.start('Creating agent');
     const configKey = options?.config || 'CODING_AGENT';
-    const configuration = await getConfiguration(configKey);
+
+    const parallelPromises = [
+      getWorkspacePath(options),
+      getSystemInfo(),
+      fetchConfiguration(configKey),
+    ] as const;
+
+    const [workspacePath, systemInfo, agentConfig] =
+      await Promise.all(parallelPromises);
+
+    Logger.debug('systemInfo results:', { systemInfo });
 
     const createResponse = await createAgent(
-      workspace,
-      configuration,
-      config?.engine
+      workspacePath,
+      agentConfig,
+      systemInfo,
+      localConfig?.engine
     );
     Logger.debug('Agent created:', createResponse);
 
@@ -122,9 +132,9 @@ export async function initCommand(options?: InitCommandOptions) {
       id: createResponse.id,
       name: createResponse.name,
       capabilities: createResponse.capabilities,
-      workspace,
-      configuration: configuration.id,
-      engine: config?.engine || DEFAULT_ENGINE,
+      workspace: workspacePath,
+      configuration: agentConfig.id,
+      engine: localConfig?.engine || DEFAULT_ENGINE,
     });
 
     logger.stop(`Agent ${createResponse.id} created`);

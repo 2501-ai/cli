@@ -10,12 +10,13 @@ import { IgnoreManager } from './ignore';
 /**
  * Options for computing the MD5 hash of a directory and its contents.
  * @property {string} directoryPath - The path of the directory to hash
- * @property {number} [maxDepth=10] - The maximum depth to traverse for directory contents
+ * @property {number} [maxDepth=5] - The maximum depth to traverse for directory contents
+ * @property {number} [maxDirSize=50MB] - The maximum directory size to hash
  */
 interface DirectoryMd5HashOptions {
   directoryPath: string;
-  maxDepth?: number; // Optional parameter to limit directory depth
-  maxDirSize?: number; // Optional parameter to limit directory size (in bytes)
+  maxDepth?: number;
+  maxDirSize?: number;
 }
 
 /**
@@ -150,7 +151,7 @@ export function getDirectoryFiles(params: {
 export function getDirectoryMd5Hash({
   directoryPath,
   maxDepth = DEFAULT_MAX_DEPTH,
-  maxDirSize = DEFAULT_MAX_DIR_SIZE, // 10MB
+  maxDirSize = DEFAULT_MAX_DIR_SIZE, // 50MB
 }: DirectoryMd5HashOptions) {
   // Initialize ignore manager at root level
   const ignoreManager = IgnoreManager.getInstance();
