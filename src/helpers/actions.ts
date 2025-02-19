@@ -88,7 +88,7 @@ export async function run_shell(args: {
       shell: args.shell ?? true,
       env: args.env,
       preferLocal: true,
-      timeout: 1000 * 60,
+      timeout: 1000 * 60 * 3, // 3 minutes
     });
 
     if (stdout) output += stdout;
