@@ -6,6 +6,7 @@ import chalk from 'chalk';
 
 import {
   getPuppetMasterPlans,
+  getPuppetMasterAgentMemory,
   indexFiles,
   queryAgent,
   submitToolOutputs,
@@ -309,6 +310,7 @@ export const queryCommand = async (
     Logger.log('\n');
 
     for await (const step of steps) {
+      console.log('Running step:', step);
       const task = `
         You are about to run the following task:
         ${step.task}
@@ -317,8 +319,13 @@ export const queryCommand = async (
         ${query}
       `;
       await agentsCommand({ flush: true });
-      await initCommand({ config: step.configuration_key, workspace });
+      const agent = await initCommand({
+        config: step.configuration_key,
+        workspace,
+      });
       await runAgent(task, options);
+      const memory = await getPuppetMasterAgentMemory(agent.id);
+      console.log('Memory', memory);
     }
   } else {
     await runAgent(query, options);

@@ -138,6 +138,7 @@ export async function initCommand(options?: InitCommandOptions) {
     });
 
     logger.stop(`Agent ${createResponse.id} created`);
+    return createResponse;
   } catch (e: unknown) {
     logger.handleError(e as Error, (e as Error).message);
   }
