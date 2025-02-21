@@ -88,7 +88,7 @@ export async function run_shell(args: {
       shell: args.shell ?? true,
       env: args.env,
       preferLocal: true,
-      timeout: 1000 * 60 * 3, // 3 minutes
+      timeout: 1000 * 60,
     });
 
     if (stdout) output += stdout;
@@ -107,7 +107,9 @@ export async function run_shell(args: {
      \`\`\``;
   }
 }
+
 export const ERROR_BOL = `ERROR :`; // beginning of line
+
 export const hasError = (output: string) => {
   return output.startsWith(ERROR_BOL);
 };
