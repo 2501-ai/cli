@@ -1,6 +1,5 @@
 import axios from 'axios';
 import fs from 'fs';
-import { ASYNC_TERMINAL_STATUSES, QueryStatus } from '../constants';
 
 import {
   browse_url,
@@ -13,7 +12,6 @@ import {
 import Logger from '../utils/logger';
 import { readConfig } from '../utils/conf';
 
-import { getAgentStatus } from '../helpers/api';
 import {
   AgentCallbackType,
   EngineCapability,
@@ -22,8 +20,6 @@ import {
   FunctionExecutionResult,
 } from '../utils/types';
 import { getFunctionName } from '../utils/actions';
-
-const MAX_RETRY = 3;
 
 export const ACTION_FNS = {
   browse_url,
@@ -38,7 +34,6 @@ export class AgentManager {
   name: string;
   engine: EngineType;
   workspace: string;
-  errorRetries = 0;
   capabilities: EngineCapability[];
 
   constructor(options: {
@@ -54,56 +49,6 @@ export class AgentManager {
     this.engine = options.engine;
     this.workspace = options.workspace;
     this.capabilities = options.capabilities;
-  }
-
-  async checkStatus(): Promise<void | {
-    actions: FunctionAction[];
-    answer?: string;
-  }> {
-    try {
-      const data = await getAgentStatus(this.id);
-      if (!data) {
-        return;
-      }
-
-      if (data.status === QueryStatus.Completed) {
-        return {
-          answer: data.answer,
-          actions: data.actions ?? [],
-        };
-      }
-
-      if (data.status === QueryStatus.Failed) {
-        Logger.error('Query failed:', data.error);
-      }
-
-      if (ASYNC_TERMINAL_STATUSES.includes(data.status)) {
-        Logger.debug('Unhandled status', data.status);
-        Logger.debug('Data', data);
-        Logger.log('TODO: Implement action required');
-        return process.exit(1);
-      }
-
-      if (data.actions) {
-        return { actions: data.actions };
-      }
-    } catch (error: any) {
-      Logger.error(
-        'Error checking query status:',
-        error.message,
-        '\n Retrying...'
-      );
-      this.errorRetries++;
-
-      // Prevent infinite loop
-      if (this.errorRetries > MAX_RETRY) {
-        Logger.error('Max retries reached, exiting...');
-        process.exit(1);
-      }
-    }
-
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-    return this.checkStatus();
   }
 
   async executeAction(

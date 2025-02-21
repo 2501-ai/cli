@@ -3,13 +3,7 @@ import { Readable } from 'stream';
 import { marked, MarkedExtension } from 'marked';
 import { markedTerminal } from 'marked-terminal';
 import chalk from 'chalk';
-import {
-  cancelQuery,
-  getAgentStatus,
-  indexFiles,
-  queryAgent,
-  submitToolOutputs,
-} from '../helpers/api';
+import { indexFiles, queryAgent, submitToolOutputs } from '../helpers/api';
 import {
   getActionPostfix,
   getSubActionMessage,
@@ -157,19 +151,6 @@ export const queryCommand = async (
       workspace,
     });
 
-    const cancelPrevious = async (): Promise<void> => {
-      const statusResponse = await getAgentStatus(agentManager.id);
-      Logger.debug('Agent status:', statusResponse?.status);
-      if (
-        !!statusResponse &&
-        ['in_progress', 'requires_action'].includes(statusResponse.status)
-      ) {
-        logger.message('Cancelling previous task');
-        await cancelQuery(agentManager.id);
-        logger.stop('Previous task cancelled');
-      }
-    };
-
     const handleAgentResponse = async (
       agentResponse: any
     ): Promise<[FunctionAction[], string]> => {
@@ -177,18 +158,13 @@ export const queryCommand = async (
       let queryResponse = '';
 
       if (isStreamingContext(stream, agentResponse)) {
+        // TODO: stream doesnt bring any benefit here since we wait for the whole stream to be processed.
         const res = await processStreamedResponse(agentResponse);
         if (res.actions.length) actions = res.actions;
         if (res.message) queryResponse = res.message;
       } else {
-        if (agentResponse.asynchronous) {
-          const status = await agentManager.checkStatus();
-          if (status?.actions.length) actions = status.actions;
-          queryResponse = queryResponse || status?.answer || '';
-        } else {
-          if (agentResponse.actions) actions = agentResponse.actions;
-          if (agentResponse.response) queryResponse = agentResponse.response;
-        }
+        if (agentResponse.actions) actions = agentResponse.actions;
+        if (agentResponse.response) queryResponse = agentResponse.response;
       }
 
       return [actions, queryResponse];
@@ -201,23 +177,15 @@ export const queryCommand = async (
       let finalResponse = '';
 
       if (isStreamingContext(stream, submitResponse)) {
+        // TODO: stream doesnt bring any benefit here since we wait for the whole stream to be processed.
         const res = await processStreamedResponse(submitResponse);
         if (res.actions.length) actions = res.actions;
         if (res.message) finalResponse = res.message;
       } else if (submitResponse) {
-        const {
-          actions: responseActions,
-          asynchronous,
-          response: responseAnswer,
-        } = submitResponse;
-        if (asynchronous) {
-          const statusResponse = await agentManager.checkStatus();
-          if (statusResponse?.actions?.length) actions = statusResponse.actions;
-          if (statusResponse?.answer) finalResponse = statusResponse.answer;
-        } else {
-          if (responseActions?.length) actions = responseActions;
-          if (responseAnswer) finalResponse = responseAnswer;
-        }
+        const { actions: responseActions, response: responseAnswer } =
+          submitResponse;
+        if (responseActions?.length) actions = responseActions;
+        if (responseAnswer) finalResponse = responseAnswer;
       }
 
       return [actions, finalResponse];
@@ -228,9 +196,6 @@ export const queryCommand = async (
 
     if (!skipWarmup) {
       workspaceChanged = await synchronizeWorkspace(agentConfig.id, workspace);
-    }
-    if (agentManager.capabilities.includes('async')) {
-      await cancelPrevious();
     }
 
     const workspaceData = getDirectoryMd5Hash({
