@@ -84,11 +84,11 @@ export async function run_shell(args: {
   Logger.debug(`    Running shell command: ${args.command}`);
 
   try {
-    const { stderr, stdout } = await execa(args.command, {
+    const cmd = `trap '' SIGINT && ${args.command}`;
+    const { stderr, stdout } = await execa(cmd, {
       shell: args.shell ?? true,
       env: args.env,
       preferLocal: true,
-      timeout: 1000 * 60,
     });
 
     if (stdout) output += stdout;
