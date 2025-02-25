@@ -40,3 +40,5 @@ typings/
 # Build output
 dist/
 out/
+bin/
+build/
