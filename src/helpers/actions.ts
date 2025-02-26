@@ -123,7 +123,9 @@ export async function run_shell(args: {
      \`\`\``;
   }
 }
+
 export const ERROR_BOL = `ERROR :`; // beginning of line
+
 export const hasError = (output: string) => {
   return output.startsWith(ERROR_BOL);
 };

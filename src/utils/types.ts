@@ -54,11 +54,10 @@ export type FunctionAction = {
   args: any;
 };
 
-export type EngineCapability = 'stream' | 'async';
+export type EngineCapability = 'stream';
 
 export type QueryResponseDTO = {
-  asynchronous: boolean;
-  capabilities: EngineCapability[]; // async, stream, submit_output
+  capabilities: EngineCapability[]; // stream
   response?: string;
   actions?: FunctionAction[];
   prompt?: string;
