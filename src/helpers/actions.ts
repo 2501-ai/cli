@@ -84,11 +84,27 @@ export async function run_shell(args: {
   Logger.debug(`    Running shell command: ${args.command}`);
 
   try {
-    const { stderr, stdout } = await execa(args.command, {
+    // Wrap command with proper signal handling and cleanup
+    const cmd = `
+      # Set up cleanup trap for multiple signals
+      cleanup() {
+        trap - EXIT SIGINT SIGTERM SIGQUIT
+        # Add any specific cleanup commands here if needed
+        exit 0
+      }
+      
+      # Set up traps
+      trap cleanup EXIT SIGINT SIGTERM SIGQUIT
+      
+      # Execute the actual command
+      ${args.command}
+    `;
+
+    const { stderr, stdout } = await execa(cmd, {
       shell: args.shell ?? true,
       env: args.env,
       preferLocal: true,
-      timeout: 1000 * 60,
+      cleanup: true, // execa's own cleanup
     });
 
     if (stdout) output += stdout;
