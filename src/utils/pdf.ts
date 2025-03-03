@@ -46,10 +46,7 @@ function createPDFFromFiles(
         })
         .moveDown(0.5);
 
-      // Check if the file is a text file and is less than 10MB
-      const MAX_SIZE = 1024 * 1024 * 10;
-
-      if (isText(filePath) && fs.statSync(filePath).size < MAX_SIZE) {
+      if (isText(filePath)) {
         const fileContent = fs.readFileSync(filePath, 'utf8');
         const lines = fileContent.split(/\r?\n/);
         lines.forEach((line) => {
