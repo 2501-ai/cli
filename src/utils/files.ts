@@ -4,7 +4,11 @@ import path from 'path';
 import { Dirent } from 'node:fs';
 
 import Logger from '../utils/logger';
-import { DEFAULT_MAX_DEPTH, DEFAULT_MAX_DIR_SIZE } from '../constants';
+import {
+  DEFAULT_MAX_DEPTH,
+  DEFAULT_MAX_DIR_SIZE,
+  DEFAULT_MAX_FILE_SIZE,
+} from '../constants';
 import { IgnoreManager } from './ignore';
 
 /**
@@ -111,6 +115,11 @@ export function getDirectoryFiles(params: {
       // Use streaming to read file and compute MD5 hash
       const { hash: fileHash, size: fileSize } =
         computeFileMetadataHash(itemFullPath);
+
+      // Put a limit to the file size
+      if (fileSize > DEFAULT_MAX_FILE_SIZE) {
+        continue;
+      }
 
       const sizeWithFile = totalSize + params.currentTotalSize + fileSize;
       if (sizeWithFile >= params.maxDirSize) {
