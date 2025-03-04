@@ -8,6 +8,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -32,8 +35,8 @@ jobs:
 
       - name: Create Git tag
         run: |
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
           git tag -a v${{ steps.package-version.outputs.version }} -m "Release v${{ steps.package-version.outputs.version }}"
           git push origin v${{ steps.package-version.outputs.version }}
 
