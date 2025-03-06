@@ -45,7 +45,8 @@ function createPDFFromFiles(
           underline: true,
         })
         .moveDown(0.5);
-      if (isText(filePath) && fs.statSync(filePath).size < 1024 * 1024) {
+
+      if (isText(filePath)) {
         const fileContent = fs.readFileSync(filePath, 'utf8');
         const lines = fileContent.split(/\r?\n/);
         lines.forEach((line) => {
