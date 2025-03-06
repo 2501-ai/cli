@@ -5,8 +5,27 @@ import { isText } from 'istextorbinary';
 
 import { getDirectoryFiles, toReadableSize } from './files';
 import Logger from './logger';
-import { DEFAULT_MAX_DEPTH, DEFAULT_MAX_DIR_SIZE } from '../constants';
+import {
+  DEFAULT_MAX_DEPTH,
+  DEFAULT_MAX_DIR_SIZE,
+  IGNORED_FILE_EXTENSIONS,
+} from '../constants';
 import { IgnoreManager } from './ignore';
+
+function isTextExtension(filePath: string): boolean | null {
+  try {
+    // Check for ignored extensions first
+    const ext = path.extname(filePath).slice(1).toLowerCase();
+    if (IGNORED_FILE_EXTENSIONS.includes(ext)) {
+      return true; // Consider ignored extensions as text files
+    }
+
+    // Use existing isText check with size limit
+    return isText(filePath) && fs.statSync(filePath).size < 1024 * 1024;
+  } catch (error) {
+    return null;
+  }
+}
 
 /**
  * Create a PDF document from a list of files in a directory.
@@ -46,7 +65,7 @@ function createPDFFromFiles(
         })
         .moveDown(0.5);
 
-      if (isText(filePath)) {
+      if (isTextExtension(filePath)) {
         const fileContent = fs.readFileSync(filePath, 'utf8');
         const lines = fileContent.split(/\r?\n/);
         lines.forEach((line) => {
