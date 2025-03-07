@@ -70,6 +70,9 @@ export const IGNORED_FILE_PATTERNS = [
   '(?:^|/).[^/]*$', // Ignore directories starting with .
 ];
 
+// We don't want to include Microsot files, as these are proprietary binary files.
+export const INCLUDED_FILE_EXTENSIONS = ['tf'];
+
 export const DEFAULT_MAX_DEPTH = 5;
 export const DEFAULT_MAX_DIR_SIZE = 50 * 1024 * 1024; // 50 MB
 
