@@ -1,0 +1,19 @@
+{
+  "2501 api": {
+    "type": "curl",
+    "commands": [
+      {
+        "description": "Create a new AI agent",
+        "url": "https://engine.2501.ai/api/v1/agents",
+        "method": "POST",
+        "auth": "Bearer {2501_bearer_token}",
+        "body": {
+          "workspace": "string",
+          "configuration": "string",
+          "prompt": "string",
+          "engine": "string"
+        }
+      }
+    ]
+  }
+}

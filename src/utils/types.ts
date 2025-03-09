@@ -132,3 +132,26 @@ export interface FunctionExecutionResult {
   tool_call_id: string;
   success: boolean;
 }
+
+export interface PluginCommand {
+  url: string;
+  method: string;
+  description: string;
+  auth?: string;
+  body?: Record<string, any>;
+}
+
+export interface Plugin {
+  type: string;
+  commands: PluginCommand[];
+}
+
+export interface PluginsConfig {
+  [key: string]: Plugin;
+}
+
+export interface CredentialsConfig {
+  [key: string]: {
+    [key: string]: string;
+  };
+}

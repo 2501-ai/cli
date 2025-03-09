@@ -13,8 +13,11 @@
         "query",
         "--workspace",
         "${workspaceFolder}/debug-workspace",
-        //"create a simple nodejs proj, dont install node_modules"
-        "add comments at the end of indexjs that it was creatd with 2501 and add required nodejs version to package.json"
+        "--credentials",
+        "${workspaceFolder}/conf/credentials.json",
+        "--plugins",
+        "${workspaceFolder}/conf/plugins.json",
+        "create a new AI agent on 2501 with engine: 'deepseek/deepseek-v3-together|deepseek/deepseek-v3-together' and configuration: '5a0333ab-a1ff-4362-bde5-346853b9deea' and prompt: 'yoyoyoyoyoyoyoyoyooyoy'"
       ],
       "console": "integratedTerminal",
       "envFile": "${workspaceFolder}/.env"
