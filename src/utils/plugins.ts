@@ -41,10 +41,6 @@ class PluginService {
   public getPlugins(): any {
     return this.plugins;
   }
-
-  public getPluginsPath(): string | null {
-    return this.pluginsPath;
-  }
 }
 
 export default PluginService.getInstance();
