@@ -10,6 +10,7 @@ import {
   QueryResponseDTO,
   SystemInfo,
 } from '../utils/types';
+import pluginService from '../utils/plugins';
 
 // const ONE_MINUTES_MILLIS = 60 * 1000;
 const FIVE_MINUTES_MILLIS = 5 * 60 * 1000;
@@ -53,9 +54,18 @@ export const queryAgent = async (
   workspaceTree: string,
   stream: boolean
 ) => {
+  const plugins = pluginService.getPlugins();
+
   const { data } = await axios.post<QueryResponseDTO | AsyncIterable<Buffer>>(
     `/agents/${agentId}/query`,
-    { query, changed, workspaceTree, stream },
+    {
+      query,
+      changed,
+      workspaceTree,
+      stream,
+      plugins:
+        Object.keys(plugins).length > 0 ? JSON.stringify(plugins) : undefined,
+    },
     {
       responseType: stream ? 'stream' : 'json',
       timeout: stream ? TEN_MINUTES_MILLIS : FIVE_MINUTES_MILLIS,

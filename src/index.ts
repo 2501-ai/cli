@@ -13,6 +13,8 @@ import { authMiddleware } from './middleware/auth';
 import { isLatestVersion } from './utils/versioning';
 import Logger from './utils/logger';
 import { DISCORD_LINK } from './utils/messaging';
+import credentialsService from './utils/credentials';
+import pluginService from './utils/plugins';
 
 process.on('SIGINT', () => {
   console.log('Process interrupted with Ctrl+C');
@@ -68,8 +70,21 @@ program
   .option('--workspace <path>', 'Specify a different workspace path')
   .option('--agentId <id>', 'Specify the agent ID')
   .option('--stream [stream]', 'Stream the output of the query', true)
+  .option('--plugins <path>', 'Path to plugins configuration file')
+  .option('--credentials <path>', 'Path to credentials file')
   .hook('preAction', authMiddleware)
-  .action(queryCommand);
+  .action(async (query, options) => {
+    // Initialize plugins and credentials if provided
+    if (options.plugins) {
+      pluginService.initialize(options.plugins);
+    }
+
+    if (options.credentials) {
+      credentialsService.initialize(options.credentials);
+    }
+
+    await queryCommand(query, options);
+  });
 
 // Init command
 program
