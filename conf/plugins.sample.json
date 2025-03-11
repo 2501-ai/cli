@@ -1,0 +1,145 @@
+{
+  "aws_cloud": {
+    "type": "cli",
+    "name": "AWS CLI",
+    "description": "Execute AWS CLI commands",
+    "version": "aws-cli/2.24.19",
+    "auth": {
+      "type": "aws_profile",
+      "credentials": {
+        "profile": "2501"
+      }
+    },
+    "actions": [
+      {
+        "id": "run_command",
+        "name": "Run AWS CLI Command",
+        "description": "Execute an AWS CLI command",
+        "method": "EXEC",
+        "endpoint": "aws",
+        "parameters": [
+          {
+            "name": "command",
+            "type": "string",
+            "description": "The AWS CLI command to execute",
+            "required": true
+          }
+        ],
+        "examples": [
+          {
+            "description": "List S3 buckets",
+            "parameters": {
+              "command": "s3 ls"
+            },
+            "result": "List of S3 buckets"
+          }
+        ]
+      }
+    ],
+    "metadata": {
+      "cli_type": "aws"
+    }
+  },
+  "rtms": {
+    "type": "http",
+    "name": "RTMS",
+    "description": "Interact with the RTMS",
+    "version": "1.0.0",
+    "auth": {
+      "type": "bearer",
+      "credentials": {
+        "token": "{rtms.bearer_token}"
+      }
+    },
+    "actions": [
+      {
+        "id": "notify",
+        "name": "Notify",
+        "description": "Notify the RTMS System",
+        "method": "POST",
+        "endpoint": "http://localhost:3000/api/notify",
+        "parameters": [
+          {
+            "name": "ticket_id",
+            "type": "string",
+            "description": "The ticket id",
+            "required": true
+          },
+          {
+            "name": "message",
+            "type": "string",
+            "description": "The message to notify the RTMS System",
+            "required": true
+          },
+          {
+            "name": "status",
+            "type": "string",
+            "description": "The status of the ticket",
+            "required": true
+          }
+        ]
+      }
+    ]
+  },
+  "2501_api": {
+    "type": "http",
+    "name": "2501 API",
+    "description": "Interact with the 2501 API",
+    "version": "1.0.0",
+    "auth": {
+      "type": "bearer",
+      "credentials": {
+        "token": "{2501_api.bearer_token}"
+      }
+    },
+    "actions": [
+      {
+        "id": "create_agent",
+        "name": "Create Agent",
+        "description": "Create a new AI agent",
+        "method": "POST",
+        "endpoint": "https://engine.2501.ai/api/v1/agents",
+        "parameters": [
+          {
+            "name": "workspace",
+            "type": "string",
+            "description": "Workspace identifier",
+            "required": true
+          },
+          {
+            "name": "configuration",
+            "type": "string",
+            "description": "Agent configuration",
+            "required": true
+          },
+          {
+            "name": "prompt",
+            "type": "string",
+            "description": "Agent prompt",
+            "required": true
+          },
+          {
+            "name": "engine",
+            "type": "string",
+            "description": "Engine to use",
+            "required": true
+          }
+        ],
+        "examples": [
+          {
+            "description": "Create a basic agent",
+            "parameters": {
+              "workspace": "my-workspace",
+              "configuration": "default",
+              "prompt": "You are a helpful assistant",
+              "engine": "gpt-4"
+            }
+          }
+        ]
+      }
+    ],
+    "metadata": {
+      "content_type": "application/json"
+    }
+  }
+}
