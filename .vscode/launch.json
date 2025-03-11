@@ -17,7 +17,7 @@
         "${workspaceFolder}/conf/credentials.json",
         "--plugins",
         "${workspaceFolder}/conf/plugins.json",
-        "Event: A new RTMS ticket has been received. Incident Description: The local Redis Stack container is down. Expected State: The Redis Stack container should be running. Resolve the incident."
+        "Event: A new RTMS ticket has been received. Incident Description: The local Redis Stack container is down. Expected State: The Redis Stack container should be running. Resolve the incident and notify the RTMS System."
       ],
       "console": "integratedTerminal",
       "envFile": "${workspaceFolder}/.env"

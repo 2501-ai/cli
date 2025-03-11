@@ -67,6 +67,7 @@ const executeActions = async (
     const args = getFunctionArgs(action);
 
     // Replace credential placeholders in args
+    // This is exclusively for the run_shell action
     if (args.command) {
       args.command = credentialsService.replaceCredentialPlaceholders(
         args.command

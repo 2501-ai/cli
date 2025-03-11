@@ -57,23 +57,30 @@ class CredentialsService {
     return credential;
   }
 
+  /**
+   * Replaces credential placeholders in a command string.
+   * Supports both {plugin.key} and {key} formats with a single pattern.
+   */
   public replaceCredentialPlaceholders(command: string): string {
-    if (!this.credentials || Object.keys(this.credentials).length === 0) {
-      return command;
-    }
+    // Quick validation
+    if (!command?.trim() || !this.credentials) return command;
 
-    let result = command;
+    // First pass: Handle {plugin.key} format
+    const namespacedPattern = /{([a-zA-Z0-9_]+)\.([a-zA-Z0-9_]+)}/g;
+    return command.replace(namespacedPattern, (match, plugin, credKey) => {
+      // Safe credential retrieval
+      const value = this.credentials[plugin]?.[credKey];
 
-    Object.keys(this.credentials).forEach((pluginName) => {
-      Object.keys(this.credentials[pluginName]).forEach((credentialKey) => {
-        result = result.replace(
-          `{${credentialKey}}`,
-          this.getCredential(pluginName, credentialKey) || ''
-        );
+      // Monitoring log
+      Logger.debug('credential_usage', {
+        plugin,
+        key: credKey,
+        found: !!value,
+        timestamp: Date.now(),
       });
-    });
 
-    return result;
+      return value || match; // Keep placeholder if not found
+    });
   }
 }
 
