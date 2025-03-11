@@ -11,7 +11,7 @@ export const getFunctionName = (
   action: FunctionAction
 ): keyof typeof ACTION_FNS =>
   typeof action.function === 'object'
-    ? action.function.name
+    ? (action.function as any).name
     : (action.function as any);
 
 /**

@@ -12,12 +12,12 @@
         "--",
         "query",
         "--workspace",
-        "${workspaceFolder}/debug-workspace",
+        "/tmp/2501/workspace",
         "--credentials",
         "${workspaceFolder}/conf/credentials.json",
         "--plugins",
         "${workspaceFolder}/conf/plugins.json",
-        "create a new AI agent on 2501 with engine: 'deepseek/deepseek-v3-together|deepseek/deepseek-v3-together' and configuration: '5a0333ab-a1ff-4362-bde5-346853b9deea' and prompt: 'yoyoyoyoyoyoyoyoyooyoy'"
+        "Event: A new RTMS ticket has been received. Incident Description: The local Redis Stack container is down. Expected State: The Redis Stack container should be running. Resolve the incident."
       ],
       "console": "integratedTerminal",
       "envFile": "${workspaceFolder}/.env"

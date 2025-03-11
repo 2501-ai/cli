@@ -15,5 +15,22 @@
         }
       }
     ]
+  },
+  "rtms": {
+    "type": "curl",
+    "commands": [
+      {
+        "description": "Send a notification",
+        "url": "http://localhost:3000/api/notify",
+        "method": "POST",
+        "auth": "Bearer {2501_rtms_token}",
+        "body": {
+          "ticketid": "string",
+          "message": "string",
+          "status": "string",
+          "source": "string"
+        }
+      }
+    ]
   }
 }

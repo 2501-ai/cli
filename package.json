@@ -15,6 +15,7 @@
     "lint": "tsc --noEmit && eslint . --ext .ts,.tsx --fix",
     "prepare": "husky",
     "test": "jest --silent",
+    "watch": "tsc --watch",
     "dev": "ts-node ./src/index.ts"
   },
   "keywords": [
