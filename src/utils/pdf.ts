@@ -5,8 +5,22 @@ import { isText } from 'istextorbinary';
 
 import { getDirectoryFiles, toReadableSize } from './files';
 import Logger from './logger';
-import { DEFAULT_MAX_DEPTH, DEFAULT_MAX_DIR_SIZE } from '../constants';
+import {
+  DEFAULT_MAX_DEPTH,
+  DEFAULT_MAX_DIR_SIZE,
+  INCLUDED_FILE_EXTENSIONS,
+} from '../constants';
 import { IgnoreManager } from './ignore';
+
+function isTextExtended(filePath: string): boolean | null {
+  const extension = path.extname(filePath).toLowerCase();
+
+  if (INCLUDED_FILE_EXTENSIONS.includes(extension)) {
+    return true;
+  }
+
+  return isText(filePath);
+}
 
 /**
  * Create a PDF document from a list of files in a directory.
@@ -46,7 +60,7 @@ function createPDFFromFiles(
         })
         .moveDown(0.5);
 
-      if (isText(filePath)) {
+      if (isTextExtended(filePath)) {
         const fileContent = fs.readFileSync(filePath, 'utf8');
         const lines = fileContent.split(/\r?\n/);
         lines.forEach((line) => {
