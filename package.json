@@ -1,6 +1,6 @@
 {
   "name": "@2501-ai/cli",
-  "version": "0.1.13",
+  "version": "0.1.14-beta.0",
   "description": "",
   "main": "dist/index.js",
   "bin": {
@@ -16,7 +16,8 @@
     "prepare": "husky",
     "test": "jest --silent",
     "watch": "tsc --watch",
-    "dev": "ts-node ./src/index.ts"
+    "dev": "ts-node ./src/index.ts",
+    "version:beta:bump": "yarn version --prerelease --preid beta"
   },
   "keywords": [
     "ai",
