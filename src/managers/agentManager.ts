@@ -27,7 +27,7 @@ export const ACTION_FNS = {
   run_shell,
   write_file,
   update_file,
-};
+} as const;
 
 export class AgentManager {
   id: string;

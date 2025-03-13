@@ -31,6 +31,7 @@ import { generatePDFs } from '../utils/pdf';
 import { isLooping } from '../utils/loopDetection';
 import { generateTree } from '../utils/tree';
 import { getDirectoryMd5Hash } from '../utils/files';
+import credentialsService from '../utils/credentials';
 
 marked.use(markedTerminal() as MarkedExtension);
 
@@ -64,6 +65,15 @@ const executeActions = async (
   for (const action of actions) {
     Logger.debug('Action:', action);
     const args = getFunctionArgs(action);
+
+    // Replace credential placeholders in args
+    // This is exclusively for the run_shell action
+    if (args.command) {
+      args.command = credentialsService.replaceCredentialPlaceholders(
+        args.command
+      );
+    }
+
     const taskTitle =
       args.answer || args.command || (args.url ? `Browsing: ${args.url}` : '');
 
@@ -124,6 +134,8 @@ export const queryCommand = async (
     stream?: boolean;
     callback?: (...args: any[]) => Promise<void>;
     noPersistentAgent?: boolean;
+    plugins?: string;
+    credentials?: string;
   }
 ) => {
   Logger.debug('Options:', options);

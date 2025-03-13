@@ -40,3 +40,7 @@ typings/
 # Build output
 dist/
 out/
+
+# Plugins and credentials
+conf/
+

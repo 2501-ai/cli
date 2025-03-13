@@ -12,9 +12,12 @@
         "--",
         "query",
         "--workspace",
-        "${workspaceFolder}/debug-workspace",
-        //"create a simple nodejs proj, dont install node_modules"
-        "add comments at the end of indexjs that it was creatd with 2501 and add required nodejs version to package.json"
+        "/tmp/2501/workspace",
+        "--credentials",
+        "${workspaceFolder}/conf/credentials.json",
+        "--plugins",
+        "${workspaceFolder}/conf/plugins.json",
+        "Event: A new RTMS ticket has been received. Incident Description: The local Redis Stack container is down. Expected State: The Redis Stack container should be running. Resolve the incident and notify the RTMS System."
       ],
       "console": "integratedTerminal",
       "envFile": "${workspaceFolder}/.env"
