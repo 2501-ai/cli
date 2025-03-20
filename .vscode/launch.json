@@ -12,7 +12,7 @@
         "--",
         "query",
         "--workspace",
-        "/tmp/2501/workspace",
+        "${workspaceFolder}/debug-workspace",
         "--credentials",
         "${workspaceFolder}/conf/credentials.json",
         "--plugins",
