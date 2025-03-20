@@ -1,45 +1,4 @@
 {
-  "aws_cloud": {
-    "type": "cli",
-    "name": "AWS CLI",
-    "description": "Execute AWS CLI commands",
-    "version": "aws-cli/2.24.19",
-    "auth": {
-      "type": "aws_profile",
-      "credentials": {
-        "profile": "2501"
-      }
-    },
-    "actions": [
-      {
-        "id": "run_command",
-        "name": "Run AWS CLI Command",
-        "description": "Execute an AWS CLI command",
-        "method": "EXEC",
-        "endpoint": "aws",
-        "parameters": [
-          {
-            "name": "command",
-            "type": "string",
-            "description": "The AWS CLI command to execute",
-            "required": true
-          }
-        ],
-        "examples": [
-          {
-            "description": "List S3 buckets",
-            "parameters": {
-              "command": "s3 ls"
-            },
-            "result": "List of S3 buckets"
-          }
-        ]
-      }
-    ],
-    "metadata": {
-      "cli_type": "aws"
-    }
-  },
   "rtms": {
     "type": "http",
     "name": "RTMS",
