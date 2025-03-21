@@ -6,7 +6,7 @@ if (process.env.AUTH_JWT) {
     `_vercel_jwt=${process.env.AUTH_JWT}`;
 }
 
-let API_HOST_VALUE;
+let API_HOST_VALUE = 'https://engine.2501.ai';
 
 if (process.env.API_HOST) {
   API_HOST_VALUE = process.env.API_HOST;
@@ -14,8 +14,6 @@ if (process.env.API_HOST) {
   API_HOST_VALUE = 'http://localhost:1337';
 } else if (process.env.NODE_ENV === 'staging') {
   API_HOST_VALUE = 'https://staging.engine.2501.ai';
-} else {
-  API_HOST_VALUE = 'https://engine.2501.ai';
 }
 
 export const API_HOST = API_HOST_VALUE;
