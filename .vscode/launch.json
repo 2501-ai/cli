@@ -12,7 +12,7 @@
         "--",
         "query",
         "--workspace",
-        "${workspaceFolder}/workspace",
+        "${workspaceFolder}/.debug-workspace",
         "--credentials",
         "${workspaceFolder}/conf/credentials.json",
         "--plugins",
@@ -34,7 +34,7 @@
         "--",
         "init",
         "--workspace",
-        "${workspaceFolder}/workspace"
+        "${workspaceFolder}/.debug-workspace"
       ],
       "console": "integratedTerminal",
       "envFile": "${workspaceFolder}/.env"
