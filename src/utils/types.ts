@@ -40,7 +40,6 @@ export type StreamEventStatus =
   | 'message'
   | 'chunked_message'
   | 'failed'
-  | 'metadata'
   | 'requires_action';
 
 export type FunctionAction = {

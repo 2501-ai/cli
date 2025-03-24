@@ -172,28 +172,6 @@ const parseAgentResponse = async (
   return [actions, queryResponse];
 };
 
-// const handleSubmitResponse = async (
-//   submitResponse: QueryResponseDTO | undefined,
-//   stream: boolean
-// ): Promise<[FunctionAction[], string]> => {
-//   let actions: FunctionAction[] = [];
-//   let finalResponse = '';
-
-//   if (isStreamingContext(stream, submitResponse)) {
-//     // TODO: stream doesnt bring any benefit here since we wait for the whole stream to be processed.
-//     const res = await parseStreamedResponse(submitResponse);
-//     if (res.actions.length) actions = res.actions;
-//     if (res.message) finalResponse = res.message;
-//   } else if (submitResponse) {
-//     const { actions: responseActions, response: responseAnswer } =
-//       submitResponse;
-//     if (responseActions?.length) actions = responseActions;
-//     if (responseAnswer) finalResponse = responseAnswer;
-//   }
-
-//   return [actions, finalResponse];
-// };
-
 export const queryCommand = async (
   query: string,
   options: {
