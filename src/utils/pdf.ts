@@ -34,7 +34,17 @@ function createPDFFromFiles(
   fileList: string[]
 ): Promise<string> {
   return new Promise((resolve, reject) => {
-    const doc = new PDFDocument();
+    const doc = new PDFDocument({
+      margins: {
+        top: 0,
+        bottom: 0,
+        left: 0,
+        right: 0,
+      },
+    });
+
+    // Use monospace font for better whitespace handling
+    doc.font('Courier');
 
     const dir = path.dirname(outputFilePath);
     if (!fs.existsSync(dir)) {
@@ -65,6 +75,9 @@ function createPDFFromFiles(
         const lines = fileContent.split(/\r?\n/);
         lines.forEach((line) => {
           doc.fontSize(10).text(line).moveDown(0.2);
+          // Logger.debug('Doc: ', {
+          //   widthOfString: doc.widthOfString(' '),
+          // });
         });
       } else {
         doc
