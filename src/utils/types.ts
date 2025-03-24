@@ -40,6 +40,7 @@ export type StreamEventStatus =
   | 'message'
   | 'chunked_message'
   | 'failed'
+  | 'metadata'
   | 'requires_action';
 
 export type FunctionAction = {
@@ -89,6 +90,7 @@ export type StreamEvent = {
   message: string;
   actions?: FunctionAction[];
   usage: UsageData | null;
+  task_id?: string;
 };
 
 export type UsageData = {

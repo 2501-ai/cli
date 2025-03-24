@@ -15,9 +15,7 @@
         "${workspaceFolder}/.debug-workspace",
         "--credentials",
         "${workspaceFolder}/conf/credentials.json",
-        "--plugins",
-        "${workspaceFolder}/conf/plugins.json",
-        "Event: A new RTMS ticket has been received. Incident Description: The local Redis Stack container is down. Expected State: The Redis Stack container should be running. Resolve the incident and notify the RTMS System."
+        "Create a sample NodeJS Express backend AIP, with a health check endpoint. Apply best practices in API Design and coding standards. Install the node modules with yarn, and stop there."
       ],
       "console": "integratedTerminal",
       "envFile": "${workspaceFolder}/.env"
