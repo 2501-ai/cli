@@ -87,7 +87,11 @@ const executeActions = async (
     const toolOutput = await agentManager.executeAction(action, args);
     Logger.debug('Tool output:', toolOutput);
 
-    const subActionMessage = getSubActionMessage(taskTitle, action);
+    const subActionMessage = getSubActionMessage(
+      taskTitle,
+      action,
+      toolOutput.success
+    );
     toolOutput.success
       ? logger.stop(subActionMessage, 0)
       : logger.stop(`(failed) ${subActionMessage}`, 1);
