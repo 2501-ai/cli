@@ -29,7 +29,7 @@ import credentialsService from '../utils/credentials';
 import { getDirectoryMd5Hash } from '../utils/files';
 import Logger, { getTerminalWidth } from '../utils/logger';
 import { isLooping } from '../utils/loopDetection';
-import { generatePDFs } from '../utils/pdf';
+import { generateWorkspaceZip } from '../utils/workspace';
 import { generateTree } from '../utils/tree';
 import {
   AgentConfig,
@@ -115,13 +115,12 @@ const synchronizeWorkspace = async (
     logger.start('Synchronizing workspace');
 
     Logger.debug('Agent Workspace has changes, synchronizing...');
-    // TODO: improve and send only changed files ?
-    const files = await generatePDFs(workspace);
+    const files = await generateWorkspaceZip(workspace);
 
     if (process.env.NODE_ENV !== 'dev') {
       // Don't pollute the filesystem with temporary files
       fs.unlinkSync(files[0].path);
-      Logger.debug('Agent : Workspace PDF deleted:', files[0].path);
+      Logger.debug('Agent : Workspace ZIP deleted:', files[0].path);
     }
 
     await indexFiles(agentId, files);
