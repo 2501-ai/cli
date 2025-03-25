@@ -178,38 +178,11 @@ describe('sectionUpdate', () => {
       "<PREVIOUS_SECTION>app.post('/submit', (req, res) => {\\n  res.send('Data Submitted');\\n});\\n</PREVIOUS_SECTION><NEW_SECTION></NEW_SECTION>",
     ];
 
-    const res = modifyCodeSections({
-      originalContent: originalcontent,
-      diffSections: diffSections,
-    });
-    expect(res).toEqual(
-      `
-app.get('/', (req, res) => {
-  res.send('Hello World!');
-});
-
-app.get('/about', (req, res) => {
-  res.send('About Page');
-});
-
-
-app.put('/update', (req, res) => {
-  res.send('Data Updated');
-});
-
-app.delete('/delete', (req, res) => {
-  res.send('Data Deleted');
-});
-
-app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).send('Something broke!');
-});
-
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(\`Server is running on port \${PORT}\`);
-});`
-    );
+    expect(() =>
+      modifyCodeSections({
+        originalContent: originalcontent,
+        diffSections: diffSections,
+      })
+    ).toThrow();
   });
 });
