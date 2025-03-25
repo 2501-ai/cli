@@ -50,7 +50,7 @@ export const createAgent = async (
 export const queryAgent = async (
   agentId: string,
   changed: boolean,
-  query: string,
+  taskId: string,
   workspaceTree: string,
   stream: boolean
 ) => {
@@ -59,7 +59,7 @@ export const queryAgent = async (
   const { data } = await axios.post<QueryResponseDTO | AsyncIterable<Buffer>>(
     `/agents/${agentId}/query`,
     {
-      query,
+      taskId,
       changed,
       workspaceTree,
       stream,
@@ -80,12 +80,14 @@ export const queryAgent = async (
  */
 export const submitToolOutputs = async (
   agentId: string,
+  taskId: string,
   toolOutputs: any[],
   stream: boolean
 ) => {
   const { data } = await axios.post<AsyncIterable<Buffer> | any>(
     `/agents/${agentId}/submitOutput`,
     {
+      taskId,
       tool_outputs: toolOutputs,
       stream,
     },
@@ -105,7 +107,6 @@ export const submitToolOutputs = async (
 export async function indexFiles(
   agentId: string,
   files: { path: string; data: Buffer }[]
-  // filesIds: { id: string; name: string }[]
 ) {
   const data = new FormData();
   for (let i = 0; i < files.length; i++) {
@@ -115,3 +116,31 @@ export async function indexFiles(
 
   await axios.post(`/agents/${agentId}/files/index`, data);
 }
+
+/**
+ * Create a task for an agent
+ * @param agentId - The ID of the agent
+ * @param description - The task description (user query)
+ * @returns - The task ID
+ */
+export const createTask = async (
+  agentId: string,
+  description: string
+): Promise<{ id: string }> => {
+  if (!agentId) throw new Error('Agent ID is required');
+  const { data } = await axios.post(`/agents/${agentId}/tasks`, {
+    description,
+  });
+  return data;
+};
+
+/**
+ * Get all tasks for an agent
+ * @param agentId - The ID of the agent
+ * @returns - The tasks
+ */
+export const getTasks = async (agentId: string) => {
+  if (!agentId) throw new Error('Agent ID is required');
+  const { data } = await axios.get(`/agents/${agentId}/tasks`);
+  return data;
+};

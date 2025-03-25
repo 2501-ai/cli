@@ -133,7 +133,37 @@ export function getSubActionMessage(
 // Variable will be availble as long as the process is running
 let totalTokens = 0;
 
-export async function processStreamedResponse(
+/**
+ * Parses stream content and handles potential chunked messages
+ * @param content The content to parse
+ * @param currentChunks Optional array of existing chunks
+ * @returns Object containing parsed stream events and remaining chunks
+ */
+function parseStreamContent(
+  content: string,
+  currentChunks: string[] = []
+): {
+  streamEvents: StreamEvent[];
+  chunks: string[];
+} {
+  try {
+    // Try to parse content as complete JSON
+    return {
+      streamEvents: [JSON.parse(content)],
+      chunks: [],
+    };
+  } catch (e) {
+    // Content might be chunked, use specialized parser
+    const { parsed, remaining } = parseChunkedMessages<StreamEvent>(content);
+
+    return {
+      streamEvents: parsed,
+      chunks: remaining ? [remaining, ...currentChunks] : currentChunks,
+    };
+  }
+}
+
+export async function parseStreamedResponse(
   agentResponse: AsyncIterable<Buffer>
 ) {
   const actions: FunctionAction[] = [];
@@ -143,34 +173,17 @@ export async function processStreamedResponse(
 
   for await (const chunk of agentResponse) {
     let content = '';
-    let streamEvents: StreamEvent[];
-    // Logger.debug('Chunk:', chunk.toString('utf-8'));
+    Logger.debug('Chunk:', chunk.toString('utf-8'));
 
     //If there were previous chunks, we need to add them
     chunks.push(chunk.toString('utf-8'));
+    content = chunks.join('');
 
-    if (chunks.length > 0) {
-      content = chunks.join('');
-    } else {
-      content = Buffer.from(chunk).toString('utf8');
-    }
-    try {
-      streamEvents = [JSON.parse(content)];
-      chunks = [];
-    } catch (e) {
-      // Chunks might come in multiple parts
-      const { parsed, remaining } = parseChunkedMessages<StreamEvent>(content);
-
-      // Logger.debug('Parsed:', parsed);
-
-      if (remaining) {
-        // Logger.debug('Remaining:', remaining);
-        chunks = [remaining];
-      } else {
-        chunks = [];
-      }
-      streamEvents = parsed;
-    }
+    const { streamEvents, chunks: remainingChunks } = parseStreamContent(
+      content,
+      chunks
+    );
+    chunks = remainingChunks;
 
     streamEvents.forEach((streamEvent) => {
       if (streamEvent.status !== 'chunked_message') {

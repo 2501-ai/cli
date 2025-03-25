@@ -89,6 +89,7 @@ export type StreamEvent = {
   message: string;
   actions?: FunctionAction[];
   usage: UsageData | null;
+  task_id?: string;
 };
 
 export type UsageData = {
