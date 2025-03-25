@@ -6,9 +6,8 @@ type ModifyCodeSectionsParams = {
 // Normalize escaped newlines
 const normalizeEscapes = (content: string) => {
   return content
-    .replace(/\r\n/g, '\n') // Normalize line endings
-    .replace(/\\\\n/g, '\n') // Handle double escaped newlines
-    .replace(/\\n/g, '\n'); // Handle single escaped newlines
+    .replace(/\r\n/g, '\\n') // Normalize line endings
+    .replace(/\\\\n/g, '\\n'); // Handle double escaped newlines
 };
 export function modifyCodeSections({
   originalContent,
