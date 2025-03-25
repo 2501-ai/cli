@@ -171,6 +171,21 @@ describe('sectionUpdate', () => {
 }`);
   });
 
+  it('should add new content', () => {
+    const originalcontent =
+      "\\napp.get('/', (req, res) => {\\n  res.send('Hello World!');\\n});\\n\\napp.get('/about', (req, res) => {\\n  res.send('About Page');\\n});\\n\\napp.post('/submit', (req, res) => {\\n  res.send('Data Submitted');\\n});\\n\\napp.put('/update', (req, res) => {\\n  res.send('Data Updated');\\n});\\n\\napp.delete('/delete', (req, res) => {\\n  res.send('Data Deleted');\\n});\\n\\napp.use((err, req, res, next) => {\\n  console.error(err.stack);\\n  res.status(500).send('Something broke!');\\n});\\n\\nconst PORT = process.env.PORT || 3000;\\napp.listen(PORT, () => {\\n  console.log(`Server is running on port ${PORT}`);\\n});";
+    const diffSections = [
+      "<PREVIOUS_SECTION>app.post('/submit', (req, res) => {\\n  res.send('Data Submitted');\\n});\\n</PREVIOUS_SECTION><NEW_SECTION></NEW_SECTION>",
+    ];
+
+    expect(() =>
+      modifyCodeSections({
+        originalContent: originalcontent,
+        diffSections: diffSections,
+      })
+    ).not.toThrow();
+  });
+
   it('should not add new content', () => {
     const originalcontent =
       "\napp.get('/', (req, res) => {\n  res.send('Hello World!');\n});\n\napp.get('/about', (req, res) => {\n  res.send('About Page');\n});\n\napp.post('/submit', (req, res) => {\n  res.send('Data Submitted');\n});\n\napp.put('/update', (req, res) => {\n  res.send('Data Updated');\n});\n\napp.delete('/delete', (req, res) => {\n  res.send('Data Deleted');\n});\n\napp.use((err, req, res, next) => {\n  console.error(err.stack);\n  res.status(500).send('Something broke!');\n});\n\nconst PORT = process.env.PORT || 3000;\napp.listen(PORT, () => {\n  console.log(`Server is running on port ${PORT}`);\n});";
