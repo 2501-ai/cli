@@ -75,6 +75,7 @@ function createPDFFromFiles(
         const lines = fileContent.split(/\r?\n/);
         lines.forEach((line) => {
           doc.fontSize(10).text(line).moveDown(0.2);
+          // This value should always be 6.
           // Logger.debug('Doc: ', {
           //   widthOfString: doc.widthOfString(' '),
           // });
