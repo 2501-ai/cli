@@ -32,13 +32,6 @@ Replace current PDF generation with an efficient ZIP-based solution for workspac
 
 ### 2. File Collection Implementation
 
-#### Security Measures
-
-- Max depth limits
-- File size limits
-- Directory size limits
-- Gitignore patterns
-
 #### Processing Pipeline
 
 1. File collection with existing security checks
