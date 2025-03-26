@@ -14,14 +14,14 @@
             "type": "string",
             "description": "The id of the shiva user",
             "required": true,
-            "value": "{shiva.id}"
+            "value": "{SHIVA_ID}"
           },
           {
             "name": "secret",
             "type": "string",
             "description": "The secret of the shiva user",
             "required": true,
-            "value": "{shiva.secret}"
+            "value": "{SHIVA_SECRET}"
           }
         ]
       }

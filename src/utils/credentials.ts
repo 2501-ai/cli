@@ -1,7 +1,7 @@
-import fs from 'fs';
-import path from 'path';
 import Logger from './logger';
 import { CredentialsConfig } from './types';
+import dotenv from 'dotenv';
+import pluginService from './plugins';
 
 class CredentialsService {
   private credentials: CredentialsConfig = {};
@@ -16,40 +16,39 @@ class CredentialsService {
     return CredentialsService.instance;
   }
 
-  public initialize(credentialsPath: string): void {
-    if (!credentialsPath) {
-      Logger.debug('No credentials path provided');
-      return;
+  public initialize(envPath?: string): void {
+    if (envPath) {
+      dotenv.config({ path: envPath });
     }
 
-    const resolvedPath = path.resolve(credentialsPath);
-    if (!fs.existsSync(resolvedPath)) {
-      throw new Error(`Credentials file not found at ${resolvedPath}`);
-    }
+    const plugins = pluginService.getPlugins();
 
-    const credentialsContent = fs.readFileSync(resolvedPath, 'utf-8');
-    this.credentials = JSON.parse(credentialsContent);
-    Logger.debug('Credentials loaded successfully');
-  }
+    // Process environment variables into credentials structure
+    Object.entries(process.env).forEach(([key, value]) => {
+      // Skip if no value
+      if (!value) return;
 
-  public getCredential(
-    pluginName: string,
-    credentialKey: string
-  ): string | null {
-    if (!this.credentials[pluginName]) {
-      Logger.debug(`No credentials found for plugin: ${pluginName}`);
-      return null;
-    }
+      // Extract system and credential key from environment variable name
+      const matches = key.match(/^([A-Z0-9]+)_([A-Z0-9_]+)$/);
+      if (!matches) return;
 
-    const credential = this.credentials[pluginName][credentialKey];
-    if (!credential) {
-      Logger.debug(
-        `Credential ${credentialKey} not found for plugin ${pluginName}`
-      );
-      return null;
-    }
+      const [, system, credKey] = matches;
+      const systemLower = system.toLowerCase();
 
-    return credential;
+      // Only store credentials for systems that exist in plugins
+      if (plugins[systemLower]) {
+        // Initialize system object if needed
+        if (!this.credentials[systemLower]) {
+          this.credentials[systemLower] = {};
+        }
+
+        // Store credential with lowercase key
+        this.credentials[systemLower][credKey.toLowerCase()] = value;
+        Logger.debug(`Loaded credential ${key} for plugin ${systemLower}`);
+      }
+    });
+
+    Logger.debug('Credentials loaded successfully from environment variables');
   }
 
   /**
@@ -57,8 +56,7 @@ class CredentialsService {
    * Supports both {plugin.key} and {key} formats with a single pattern.
    */
   public replaceCredentialPlaceholders(command: string): string {
-    // Quick validation
-    if (!command?.trim() || !this.credentials) return command;
+    if (!command?.trim()) return command;
 
     // First pass: Handle {plugin.key} format
     const namespacedPattern = /{([a-zA-Z0-9_]+)\.([a-zA-Z0-9_]+)}/g;

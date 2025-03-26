@@ -49,6 +49,7 @@
     "cheerio": "^1.0.0",
     "commander": "^12.1.0",
     "consola": "^3.2.3",
+    "dotenv": "^16.4.7",
     "execa": "^5.1.1",
     "formdata-node": "^6.0.3",
     "istextorbinary": "^9.5.0",
