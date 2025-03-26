@@ -3,7 +3,7 @@ import axios, { AxiosError } from 'axios';
 import { marked } from 'marked';
 
 import { terminal } from 'terminal-kit';
-
+import { DISABLE_SPINNER } from '../constants';
 const isDebug = process.env.DEBUG === 'true';
 
 enum Colors {
@@ -59,7 +59,7 @@ export default class Logger {
   #spinnerStarted = false;
   #lastUpdateTime = 0;
 
-  constructor(public spin = p.spinner()) {}
+  constructor(public spin = DISABLE_SPINNER ? null : p.spinner()) {}
 
   intro(message?: string) {
     p.intro(message);
@@ -79,6 +79,11 @@ export default class Logger {
   }
 
   start(message?: string) {
+    if (DISABLE_SPINNER) {
+      console.log(`${message}...`);
+      return;
+    }
+
     const terminalWidth = getTerminalWidth();
     const maxMessageLength = terminalWidth - 10;
     const truncatedMessage = message
@@ -86,19 +91,24 @@ export default class Logger {
       : undefined;
 
     if (this.#spinnerStarted) {
-      this.spin.message(truncatedMessage);
+      this.spin?.message(truncatedMessage);
       return;
     }
 
     if (truncatedMessage && truncatedMessage.length > maxMessageLength) {
-      this.spin.message(truncatedMessage.slice(0, maxMessageLength));
+      this.spin?.message(truncatedMessage.slice(0, maxMessageLength));
     }
 
-    this.spin.start(truncatedMessage);
+    this.spin?.start(truncatedMessage);
     this.#spinnerStarted = true;
   }
 
   message(message: string) {
+    if (DISABLE_SPINNER) {
+      console.log(message);
+      return;
+    }
+
     const now = Date.now();
     if (now - this.#lastUpdateTime < 100) {
       return;
@@ -108,15 +118,20 @@ export default class Logger {
     const terminalWidth = getTerminalWidth();
     const maxMessageLength = terminalWidth - 10;
     const truncatedMessage = message.substring(0, maxMessageLength);
-    this.spin.message(truncatedMessage);
+    this.spin?.message(truncatedMessage);
   }
 
   stop(message?: string, code?: number) {
-    if (!this.#spinnerStarted) {
-      this.spin.message(marked.parse(message || '') as string);
+    if (DISABLE_SPINNER) {
+      console.log(message || '');
       return;
     }
-    this.spin.stop((marked.parse(message || '') as string).trim(), code);
+
+    if (!this.#spinnerStarted) {
+      this.spin?.message(marked.parse(message || '') as string);
+      return;
+    }
+    this.spin?.stop((marked.parse(message || '') as string).trim(), code);
     this.#spinnerStarted = false;
   }
 

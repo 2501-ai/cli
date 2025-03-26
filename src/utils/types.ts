@@ -124,6 +124,7 @@ export type LocalConfig = {
   stream?: boolean;
   agents: AgentConfig[];
   join_discord_shown: boolean;
+  disable_spinner: boolean;
 };
 
 export type AgentCallbackType = (...args: unknown[]) => Promise<void>;

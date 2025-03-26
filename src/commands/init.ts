@@ -5,7 +5,7 @@ import { terminal } from 'terminal-kit';
 // Local imports
 import Logger from '../utils/logger';
 import { addAgent, readConfig, setValue } from '../utils/conf';
-import { API_HOST, API_VERSION } from '../constants';
+import { API_HOST, API_VERSION, DISABLE_SPINNER } from '../constants';
 import { isDirUnsafe } from '../helpers/security';
 import { Configuration } from '../utils/types';
 import { createAgent } from '../helpers/api';
@@ -31,11 +31,7 @@ async function fetchConfiguration(configKey: string): Promise<Configuration> {
   const config = readConfig();
   const { data: configurations } = await axios.get<Configuration[]>(
     `/configurations`,
-    {
-      headers: {
-        Authorization: `Bearer ${config?.api_key}`,
-      },
-    }
+    { headers: { Authorization: `Bearer ${config?.api_key}` } }
   );
 
   const selectedConfig = configurations.find(
@@ -102,6 +98,16 @@ export async function initCommand(options?: InitCommandOptions) {
         );
       term.gray('│ ').gray.underline(`${DISCORD_LINK}\n`);
 
+      setValue('join_discord_shown', true);
+    }
+
+    const shouldDisableSpinner = DISABLE_SPINNER;
+    setValue(
+      'disable_spinner',
+      shouldDisableSpinner || localConfig?.disable_spinner || false
+    );
+
+    if (!shouldDisableSpinner && !localConfig?.disable_spinner) {
       setValue('join_discord_shown', true);
     }
 

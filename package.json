@@ -1,6 +1,6 @@
 {
   "name": "@2501-ai/cli",
-  "version": "0.1.17",
+  "version": "0.1.19",
   "description": "",
   "main": "dist/index.js",
   "bin": {

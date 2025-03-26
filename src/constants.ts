@@ -35,6 +35,8 @@ export enum QueryStatus {
   Expired = 'expired',
 }
 
+export const DISABLE_SPINNER = process.env['2501_DISABLE_SPINNER'] === 'true';
+
 export const IGNORED_FILE_PATTERNS = [
   '.env',
   '.git',
