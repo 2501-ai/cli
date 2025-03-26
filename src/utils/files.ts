@@ -25,7 +25,7 @@ interface DirectoryMd5HashOptions {
   maxDirSize?: number;
 }
 
-export function isTextExtended(filePath: string): boolean | null {
+export function isTextFile(filePath: string): boolean | null {
   const extension = path.extname(filePath).toLowerCase();
 
   if (INCLUDED_FILE_EXTENSIONS.includes(extension)) {

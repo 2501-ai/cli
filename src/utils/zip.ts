@@ -2,7 +2,7 @@ import archiver from 'archiver';
 import { createReadStream, createWriteStream } from 'fs';
 import { Readable } from 'stream';
 
-import { isTextExtended, toReadableSize } from './files';
+import { isTextFile, toReadableSize } from './files';
 import Logger from './logger';
 
 interface ZipOptions {
@@ -34,7 +34,7 @@ export class ZipUtility {
     // 1. Not a text file
     // 2. Large file (> 10MB)
     return (
-      !isTextExtended(file.path) || file.size > ZipUtility.MEDIUM_FILE_THRESHOLD
+      !isTextFile(file.path) || file.size > ZipUtility.MEDIUM_FILE_THRESHOLD
     );
   }
 
@@ -88,7 +88,7 @@ export class ZipUtility {
     }
 
     // Text file check
-    if (!isTextExtended(file.path)) {
+    if (!isTextFile(file.path)) {
       return this.createOmittedEntry(
         file.relativePath,
         'Content omitted. Reason: Not a text file.'
