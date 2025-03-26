@@ -62,25 +62,6 @@ export class ZipUtility {
     files: FileEntry[],
     options: ZipOptions
   ): Promise<string> {
-    // Size validations
-    if (options.maxTotalSize) {
-      const totalSize = files.reduce((sum, file) => sum + file.size, 0);
-      if (totalSize > options.maxTotalSize) {
-        throw new Error('Total size exceeds maximum allowed size');
-      }
-    }
-
-    if (options.maxFileSize) {
-      const oversizedFile = files.find(
-        (file) => file.size > options.maxFileSize!
-      );
-      if (oversizedFile) {
-        throw new Error(
-          `File ${oversizedFile.relativePath} exceeds maximum allowed size`
-        );
-      }
-    }
-
     return new Promise((resolve, reject) => {
       const output = createWriteStream(options.outputPath);
       const archive = archiver('zip', {
@@ -108,22 +89,56 @@ export class ZipUtility {
 
       archive.pipe(output);
 
+      let currentTotalSize = 0;
       // Process files with appropriate compression levels
       files.forEach((file) => {
-        // Omit the content if file is not text
-        if (!isTextExtended(file.path)) {
-          Logger.debug(`Content omitted (not text file or too big):`, {
+        // Check file size limit
+        if (options.maxFileSize && file.size > options.maxFileSize) {
+          Logger.debug(`File size exceeds limit:`, {
             relativePath: file.relativePath,
-            path: file.path,
             size: file.size,
+            limit: options.maxFileSize,
           });
-          archive.append('Content omitted (not text file or too big)', {
+          archive.append('Content omitted. Reason: File too large.', {
             name: file.relativePath,
             store: true,
           });
           return;
         }
 
+        // Check total size limit
+        if (
+          options.maxTotalSize &&
+          currentTotalSize + file.size > options.maxTotalSize
+        ) {
+          Logger.debug(`Total size would exceed limit:`, {
+            relativePath: file.relativePath,
+            currentTotal: currentTotalSize,
+            wouldAdd: file.size,
+            limit: options.maxTotalSize,
+          });
+          archive.append('Content omitted. Reason: Total size limit reached.', {
+            name: file.relativePath,
+            store: true,
+          });
+          return;
+        }
+
+        // Check if file is text
+        if (!isTextExtended(file.path)) {
+          Logger.debug(`Content omitted. Reason: Not a text file.`, {
+            relativePath: file.relativePath,
+            path: file.path,
+            size: file.size,
+          });
+          archive.append('Content omitted. Reason: Not a text file.', {
+            name: file.relativePath,
+            store: true,
+          });
+          return;
+        }
+
+        // Process valid file
         const compressionLevel = this.getCompressionLevel(file.path, file.size);
         const fileStream = createReadStream(file.path);
 
@@ -131,6 +146,8 @@ export class ZipUtility {
           name: file.relativePath,
           store: compressionLevel === 0, // Store without compression if level is 0
         });
+
+        currentTotalSize += file.size;
       });
 
       archive.finalize();
