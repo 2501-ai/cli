@@ -8,8 +8,10 @@ import {
   DEFAULT_MAX_DEPTH,
   DEFAULT_MAX_DIR_SIZE,
   DEFAULT_MAX_FILE_SIZE,
+  INCLUDED_FILE_EXTENSIONS,
 } from '../constants';
 import { IgnoreManager } from './ignore';
+import { isText } from 'istextorbinary';
 
 /**
  * Options for computing the MD5 hash of a directory and its contents.
@@ -23,6 +25,15 @@ interface DirectoryMd5HashOptions {
   maxDirSize?: number;
 }
 
+export function isTextExtended(filePath: string): boolean | null {
+  const extension = path.extname(filePath).toLowerCase();
+
+  if (INCLUDED_FILE_EXTENSIONS.includes(extension)) {
+    return true;
+  }
+
+  return isText(filePath);
+}
 /**
  * Converts a byte size to a human-readable format.
  */

@@ -1,10 +1,10 @@
 import { createWriteStream, createReadStream } from 'fs';
 import archiver from 'archiver';
 import path from 'path';
-import { isText } from 'istextorbinary';
 
 import Logger from './logger';
 import { INCLUDED_FILE_EXTENSIONS } from '../constants';
+import { isTextExtended } from './files';
 
 interface ZipOptions {
   outputPath: string;
@@ -52,7 +52,7 @@ export class ZipUtility {
     }
 
     // Check if file is text-based
-    return isText(filePath) ?? false;
+    return isTextExtended(filePath) ?? false;
   }
 
   /**
@@ -110,6 +110,20 @@ export class ZipUtility {
 
       // Process files with appropriate compression levels
       files.forEach((file) => {
+        // Omit the content if file is not text
+        if (!isTextExtended(file.path)) {
+          Logger.debug(`Content omitted (not text file or too big):`, {
+            relativePath: file.relativePath,
+            path: file.path,
+            size: file.size,
+          });
+          archive.append('Content omitted (not text file or too big)', {
+            name: file.relativePath,
+            store: true,
+          });
+          return;
+        }
+
         const compressionLevel = this.getCompressionLevel(file.path, file.size);
         const fileStream = createReadStream(file.path);
 
