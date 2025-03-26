@@ -17,8 +17,8 @@
     "test": "jest --silent",
     "watch": "tsc --watch",
     "dev": "ts-node ./src/index.ts",
-    "version:beta:bump": "yarn version --prerelease --preid beta",
-    "prepublishOnly": "yarn build:clean"
+    "version:beta:bump": "npm version --prerelease --preid beta",
+    "prepublishOnly": "npm build:clean"
   },
   "keywords": [
     "ai",
