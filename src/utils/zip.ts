@@ -5,7 +5,7 @@ import path from 'path';
 import Logger from './logger';
 import { INCLUDED_FILE_EXTENSIONS } from '../constants';
 import { isTextExtended } from './files';
-
+import { toReadableSize } from './files';
 interface ZipOptions {
   outputPath: string;
   maxFileSize?: number; // in bytes
@@ -99,10 +99,16 @@ export class ZipUtility {
             size: file.size,
             limit: options.maxFileSize,
           });
-          archive.append('Content omitted. Reason: File too large.', {
-            name: file.relativePath,
-            store: true,
-          });
+          archive.append(
+            'Content omitted. Reason: File too large. File size: ' +
+              toReadableSize(file.size) +
+              '. Max file size: ' +
+              toReadableSize(options.maxFileSize),
+            {
+              name: file.relativePath,
+              store: true,
+            }
+          );
           return;
         }
 
@@ -117,10 +123,18 @@ export class ZipUtility {
             wouldAdd: file.size,
             limit: options.maxTotalSize,
           });
-          archive.append('Content omitted. Reason: Total size limit reached.', {
-            name: file.relativePath,
-            store: true,
-          });
+          archive.append(
+            'Content omitted. Reason: Total size would exceed limit. File size: ' +
+              toReadableSize(file.size) +
+              '. Current total size: ' +
+              toReadableSize(currentTotalSize) +
+              '. Max total size: ' +
+              toReadableSize(options.maxTotalSize),
+            {
+              name: file.relativePath,
+              store: true,
+            }
+          );
           return;
         }
 
