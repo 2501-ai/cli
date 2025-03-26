@@ -1,99 +1,85 @@
-# ZIP Implementation Plan
+# ZIP Implementation
 
 ## Overview
 
-Replace current PDF generation with an efficient ZIP-based solution for workspace file handling.
+Replace PDF generation with ZIP-based solution for workspace file handling.
 
-## Implementation Phases
+## Implementation
 
-### 1. ZIP Utility Module
+### ZIP Utility Module
 
 #### Core Features
 
-- Stream-based processing
-- Parallel compression
+- Stream-based processing with archiver
 - Memory-efficient handling
-- Compression level optimization
+- Resource cleanup management
+- Type-safe implementation
 
 #### Compression Strategy
 
-| File Type     | Size   | Level | Reasoning                          |
-| ------------- | ------ | ----- | ---------------------------------- |
-| Text/Code     | <1MB   | 9     | High compression ratio, small size |
-| Mixed Content | 1-10MB | 6     | Balance of speed/size              |
-| Binary/Large  | >10MB  | 0-1   | Already compressed/too large       |
+| File Type      | Condition | Action                 | Reasoning                         |
+| -------------- | --------- | ---------------------- | --------------------------------- |
+| Non-Text Files | Any size  | Store (no compression) | Already compressed/binary         |
+| Text Files     | >10MB     | Store (no compression) | Too large to compress efficiently |
+| Text Files     | ≤10MB     | Compress (level 6)     | Good balance for text content     |
 
-#### Performance Optimizations
+#### Resource Management
 
-- Parallel processing for small files
-- Streaming for large files
-- Compression level caching
-- Resource monitoring
+- Active stream tracking
+- Proper cleanup on errors
+- Memory usage control through streaming
 
-### 2. File Collection Implementation
+### File Processing Pipeline
 
-#### Processing Pipeline
+#### Validation & Checks
 
-1. File collection with existing security checks
-2. Directory structure preservation
-3. Efficient batch processing
-4. Resource-aware streaming
+- Max file size limits
+- Total size limits
+- Text file validation
+- Content type verification
 
-#### Integration Points
+#### Processing Steps
 
-- Replace `generatePDFs()` with `generateZip()`
-- Maintain temporary file structure
-- Preserve error handling
+1. File validation checks
+2. Size limit enforcement
+3. Compression decision (store/compress)
+4. Stream management
+5. Content omission for invalid files
 
-### 3. API Integration
+### Technical Implementation
 
-#### Required Updates
+#### Stream Handling
 
-1. Modify `indexFiles()`
-   - Update file type handling
-   - Adjust content processing
-2. Update API endpoints
-   - Modify content-type headers
-   - Update response handling
+- `createReadStream` for file input
+- `createWriteStream` for ZIP output
+- Stream cleanup on errors or completion
 
-#### Error Handling
+#### Error Management
 
 - ZIP creation failures
-- Compression errors
-- Memory limits
-- File access issues
+- Stream errors
+- Resource cleanup
+- Size limit violations
 
-## Monitoring
+#### Type Definitions
 
-### Performance Metrics
+- `ZipOptions`: Output and size limits
+- `FileEntry`: File metadata
+- `ProcessedFile`: Archive entry data
 
-- Compression time
-- Memory usage
-- File size reduction
-- System resource utilization
+#### Integration
 
-### Security
-
-- File restrictions
-- Content validation
-- ZIP bomb prevention
-- Permission preservation
-
-## Next Steps
-
-1. Implement ZIP utility module
-2. Replace PDF generation
-3. Update API integration
-4. Test performance and security
-5. Deploy and monitor
+- Replaces `generatePDFs()`
+- Maintains temporary file structure
+- Preserves error handling
 
 ## Notes
 
-- Maintain backward compatibility
-- Document API changes
-- Update relevant tests
+- Maintains backward compatibility
+- Preserves file structure
+- Handles errors gracefully
 
-### Why Archiver
+## Why Archiver
 
 I chose `archiver` for these key reasons:
 
@@ -114,9 +100,3 @@ I chose `archiver` for these key reasons:
 - Well-maintained (14M+ weekly downloads)
 - Production-tested by major companies
 - Active community support
-
-4. **Alternatives Considered**:
-
-- `node:zlib`: Too low-level, requires more code
-- `jszip`: Memory-intensive for large files
-- `adm-zip`: Loads entire files into memory
