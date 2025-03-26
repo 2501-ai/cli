@@ -13,11 +13,11 @@
         "query",
         "--workspace",
         "${workspaceFolder}/.debug-workspace",
-        "--credentials",
-        "${workspaceFolder}/conf/credentials.json",
+        "--env",
+        "${workspaceFolder}/.env.test",
         "--plugins",
         "${workspaceFolder}/conf/plugins.json",
-        "List me all recent network activity in Shiva. Do it yourself"
+        "List me all backups in Shiva. You'll also need to fetch the list of virtual machines first."
       ],
       "console": "integratedTerminal",
       "envFile": "${workspaceFolder}/.env"

@@ -71,17 +71,16 @@ program
   .option('--agentId <id>', 'Specify the agent ID')
   .option('--stream [stream]', 'Stream the output of the query', true)
   .option('--plugins <path>', 'Path to plugins configuration file')
-  .option('--credentials <path>', 'Path to credentials file')
+  .option('--env <path>', 'Path to .env file containing credentials')
   .hook('preAction', authMiddleware)
   .action(async (query, options) => {
-    // Initialize plugins and credentials if provided
+    // Initialize plugins if provided
     if (options.plugins) {
       pluginService.initialize(options.plugins);
     }
 
-    if (options.credentials) {
-      credentialsService.initialize(options.credentials);
-    }
+    // Initialize credentials service (will use existing env vars by default)
+    credentialsService.initialize(options.env);
 
     await queryCommand(query, options);
   });
