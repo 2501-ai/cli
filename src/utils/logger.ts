@@ -80,7 +80,7 @@ export default class Logger {
 
   start(message?: string) {
     if (DISABLE_SPINNER) {
-      console.log(`${message}...`);
+      p.log.message(message);
       return;
     }
 
@@ -105,7 +105,7 @@ export default class Logger {
 
   message(message: string) {
     if (DISABLE_SPINNER) {
-      console.log(message);
+      p.log.message(message);
       return;
     }
 
@@ -123,7 +123,7 @@ export default class Logger {
 
   stop(message?: string, code?: number) {
     if (DISABLE_SPINNER) {
-      console.log(message || '');
+      p.log.message(message);
       return;
     }
 
@@ -153,14 +153,8 @@ export default class Logger {
     return p.select<any, boolean>({
       message,
       options: [
-        {
-          value: true,
-          label: 'Yes',
-        },
-        {
-          value: false,
-          label: 'No',
-        },
+        { value: true, label: 'Yes' },
+        { value: false, label: 'No' },
       ],
       initialValue: false,
     });
