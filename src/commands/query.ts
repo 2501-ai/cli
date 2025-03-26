@@ -18,6 +18,7 @@ import {
   toItalic,
 } from '../helpers/streams';
 import {
+  generateWorkspaceZip,
   getWorkspaceChanges,
   resolveWorkspacePath,
   updateWorkspaceState,
@@ -29,7 +30,6 @@ import credentialsService from '../utils/credentials';
 import { getDirectoryMd5Hash } from '../utils/files';
 import Logger, { getTerminalWidth } from '../utils/logger';
 import { isLooping } from '../utils/loopDetection';
-import { generateWorkspaceZip } from '../utils/workspace';
 import { generateTree } from '../utils/tree';
 import {
   AgentConfig,

@@ -3,8 +3,12 @@ import path from 'path';
 import os from 'os';
 
 import Logger from '../utils/logger';
-import { getDirectoryMd5Hash } from '../utils/files';
+import { getDirectoryMd5Hash, getDirectoryFiles } from '../utils/files';
 import { WorkspaceDiff, WorkspaceState } from '../utils/types';
+import { DEFAULT_MAX_DEPTH, DEFAULT_MAX_DIR_SIZE } from '../constants';
+import { IgnoreManager } from '../utils/ignore';
+import { zipUtility } from '../utils/zip';
+import { toReadableSize } from '../utils/files';
 
 export function resolveWorkspacePath(options: { workspace?: string }): string {
   let finalPath = options.workspace || process.cwd();
@@ -100,18 +104,34 @@ export async function updateWorkspaceState(
   return hasChanged;
 }
 
-export async function getWorkspaceChanges(workspace: string, agentId: string) {
-  const oldState = readWorkspaceState(workspace, agentId);
-  const newState = getDirectoryMd5Hash({
+/**
+ * Gets workspace state and changes in a single pass
+ */
+export async function getWorkspaceState(workspace: string, agentId: string) {
+  // Compute hash only once
+  const currentState = getDirectoryMd5Hash({
     directoryPath: workspace,
   });
 
-  return getWorkspaceDiff(oldState, {
-    state_hash: newState.md5,
-    file_hashes: newState.fileHashes,
+  const oldState = readWorkspaceState(workspace, agentId);
+
+  const diff = getWorkspaceDiff(oldState, {
+    state_hash: currentState.md5,
+    file_hashes: currentState.fileHashes,
     path: workspace,
     agent_id: agentId,
   });
+
+  return {
+    currentState,
+    diff,
+  };
+}
+
+// Modify getWorkspaceChanges to use the shared computation
+export async function getWorkspaceChanges(workspace: string, agentId: string) {
+  const { diff } = await getWorkspaceState(workspace, agentId);
+  return diff;
 }
 
 /**
@@ -154,4 +174,60 @@ export function getWorkspaceDiff(
     hasChanges,
     isEmpty: !newState.file_hashes.size,
   };
+}
+
+// Modify generateWorkspaceZip to accept pre-computed state
+export async function generateWorkspaceZip(
+  workspace: string,
+  workspaceFiles?: { fileHashes: Map<string, string>; totalSize: number }
+): Promise<{ path: string; data: Buffer }[]> {
+  const fileId = Math.floor(Math.random() * 100000);
+  const outputFilePath = `/tmp/2501/_files/workspace_${fileId}.zip`;
+
+  // Create output directory if it doesn't exist
+  const dir = path.dirname(outputFilePath);
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
+
+  // Use provided files or compute if not provided
+  const files =
+    workspaceFiles ||
+    getDirectoryFiles({
+      currentPath: '',
+      currentDepth: 0,
+      maxDepth: DEFAULT_MAX_DEPTH,
+      maxDirSize: DEFAULT_MAX_DIR_SIZE,
+      directoryPath: workspace,
+      currentTotalSize: 0,
+      ignoreManager: IgnoreManager.getInstance(),
+    });
+
+  // No files, no workspace ZIP
+  if (files.fileHashes.size === 0) {
+    return [];
+  }
+
+  Logger.debug('Total workspace size: ' + toReadableSize(files.totalSize));
+  Logger.debug('Files in workspace: ' + files.fileHashes.size);
+
+  // Prepare files for ZIP creation
+  const zipFiles = Array.from(files.fileHashes.keys()).map((relativePath) => ({
+    path: path.join(workspace, relativePath),
+    relativePath,
+    size: fs.statSync(path.join(workspace, relativePath)).size,
+  }));
+
+  await zipUtility.createZip(zipFiles, {
+    outputPath: outputFilePath,
+    maxTotalSize: DEFAULT_MAX_DIR_SIZE,
+  });
+
+  // Return the ZIP file information
+  return [
+    {
+      path: outputFilePath,
+      data: fs.readFileSync(outputFilePath),
+    },
+  ];
 }
