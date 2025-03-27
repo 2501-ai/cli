@@ -95,7 +95,8 @@ export function getActionPostfix(action: FunctionAction): string {
 
 export function getSubActionMessage(
   message: string,
-  action: FunctionAction
+  action: FunctionAction,
+  success: boolean
 ): string {
   // @todo maybe reactivate after tests
   let actionMsg = `${message}\n${chalk.gray('│')}  `;
@@ -106,19 +107,29 @@ export function getSubActionMessage(
 
   switch (functionName) {
     case 'read_file':
-      actionMsg += toItalic(`└ File read: ${args.path}`);
+      actionMsg += toItalic(
+        `└ File ${success ? 'read' : 'read failed'}: ${args.path}`
+      );
       break;
     case 'write_file':
-      actionMsg += toItalic(`└ File written: ${args.path}`);
+      actionMsg += toItalic(
+        `└ File ${success ? 'written' : 'write failed'}: ${args.path}`
+      );
       break;
     case 'update_file':
-      actionMsg += toItalic(`└ File updated: ${args.path}`);
+      actionMsg += toItalic(
+        `└ File ${success ? 'updated' : 'update failed'}: ${args.path}`
+      );
       break;
     case 'run_shell':
-      actionMsg += toItalic(`└ Command executed: ${args.command}`);
+      actionMsg += toItalic(
+        `└ Command ${success ? 'executed' : 'execution failed'}: ${args.command}`
+      );
       break;
     case 'browse_url':
-      actionMsg += toItalic(`└ URL browsed: ${args.url}`);
+      actionMsg += toItalic(
+        `└ URL ${success ? 'browsed' : 'browsing failed'}: ${args.url}`
+      );
       break;
     default:
       // TODO: find a better way to display the action. Right now it just adds the message indefinitely.
@@ -173,7 +184,7 @@ export async function parseStreamedResponse(
 
   for await (const chunk of agentResponse) {
     let content = '';
-    Logger.debug('Chunk:', chunk.toString('utf-8'));
+    // Logger.debug('Chunk:', chunk.toString('utf-8'));
 
     //If there were previous chunks, we need to add them
     chunks.push(chunk.toString('utf-8'));

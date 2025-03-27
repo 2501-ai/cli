@@ -242,4 +242,8 @@ export default class Logger {
       terminal[Colors.MAGENTA]('[DEBUG] ').defaultColor(...stringify(args));
     }
   }
+
+  static warn(...args: unknown[]) {
+    terminal[Colors.YELLOW]('[WARN] ').defaultColor(...stringify(args));
+  }
 }
