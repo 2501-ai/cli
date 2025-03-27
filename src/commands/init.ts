@@ -8,7 +8,7 @@ import { addAgent, readConfig, setValue } from '../utils/conf';
 import { API_HOST, API_VERSION } from '../constants';
 import { isDirUnsafe } from '../helpers/security';
 import { Configuration } from '../utils/types';
-import { createAgent, initAxios } from '../helpers/api';
+import { createAgent } from '../helpers/api';
 import { DISCORD_LINK } from '../utils/messaging';
 import { resolveWorkspacePath } from '../helpers/workspace';
 import { getSystemInfo } from '../utils/systemInfo';
@@ -28,7 +28,6 @@ interface InitCommandOptions {
 const logger = new Logger();
 
 async function fetchConfiguration(configKey: string): Promise<Configuration> {
-  await initAxios();
   const { data: configurations } =
     await axios.get<Configuration[]>(`/configurations`);
 
@@ -101,10 +100,6 @@ export async function initCommand(options?: InitCommandOptions) {
 
     const shouldDisableSpinner = process.env.TFZO_DISABLE_SPINNER === 'true';
     setValue('disable_spinner', shouldDisableSpinner);
-
-    if (!shouldDisableSpinner && !localConfig?.disable_spinner) {
-      setValue('join_discord_shown', true);
-    }
 
     logger.start('Creating agent');
     const configKey = options?.config || 'CODING_AGENT';
