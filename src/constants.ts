@@ -8,8 +8,8 @@ if (process.env.AUTH_JWT) {
 
 let API_HOST_VALUE = 'https://engine.2501.ai';
 
-if (process.env.API_HOST) {
-  API_HOST_VALUE = process.env.API_HOST;
+if (process.env['2501_API_HOST']) {
+  API_HOST_VALUE = process.env['2501_API_HOST'];
 } else if (process.env.NODE_ENV === 'dev') {
   API_HOST_VALUE = 'http://localhost:1337';
 } else if (process.env.NODE_ENV === 'staging') {

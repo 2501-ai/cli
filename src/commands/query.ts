@@ -1,37 +1,43 @@
+import chalk from 'chalk';
 import fs from 'fs';
-import { Readable } from 'stream';
 import { marked, MarkedExtension } from 'marked';
 import { markedTerminal } from 'marked-terminal';
-import chalk from 'chalk';
-import { indexFiles, queryAgent, submitToolOutputs } from '../helpers/api';
+import { Readable } from 'stream';
+
+import {
+  createTask,
+  indexFiles,
+  queryAgent,
+  submitToolOutputs,
+} from '../helpers/api';
 import {
   getActionPostfix,
   getSubActionMessage,
   isStreamingContext,
-  processStreamedResponse,
+  parseStreamedResponse,
   toItalic,
 } from '../helpers/streams';
 import {
-  getWorkspaceChanges,
+  generateWorkspaceZip,
+  getWorkspaceState,
   resolveWorkspacePath,
-  updateWorkspaceState,
+  writeWorkspaceState,
 } from '../helpers/workspace';
-import { initCommand } from './init';
+import { AgentManager } from '../managers/agentManager';
+import { getFunctionArgs } from '../utils/actions';
+import { getEligibleAgent, readConfig } from '../utils/conf';
+import credentialsService from '../utils/credentials';
+import { getDirectoryMd5Hash } from '../utils/files';
+import Logger, { getTerminalWidth } from '../utils/logger';
+import { isLooping } from '../utils/loopDetection';
+import { generateTree } from '../utils/tree';
 import {
   AgentConfig,
   FunctionAction,
   FunctionExecutionResult,
-  QueryResponseDTO,
+  WorkspaceState,
 } from '../utils/types';
-import { getFunctionArgs } from '../utils/actions';
-import { AgentManager } from '../managers/agentManager';
-import { getEligibleAgent, readConfig } from '../utils/conf';
-import Logger, { getTerminalWidth } from '../utils/logger';
-import { generatePDFs } from '../utils/pdf';
-import { isLooping } from '../utils/loopDetection';
-import { generateTree } from '../utils/tree';
-import { getDirectoryMd5Hash } from '../utils/files';
-import credentialsService from '../utils/credentials';
+import { initCommand } from './init';
 
 marked.use(markedTerminal() as MarkedExtension);
 
@@ -82,7 +88,11 @@ const executeActions = async (
     const toolOutput = await agentManager.executeAction(action, args);
     Logger.debug('Tool output:', toolOutput);
 
-    const subActionMessage = getSubActionMessage(taskTitle, action);
+    const subActionMessage = getSubActionMessage(
+      taskTitle,
+      action,
+      toolOutput.success
+    );
     toolOutput.success
       ? logger.stop(subActionMessage, 0)
       : logger.stop(`(failed) ${subActionMessage}`, 1);
@@ -98,31 +108,89 @@ const synchronizeWorkspace = async (
   force: boolean = false
 ): Promise<boolean> => {
   Logger.debug('Synchronizing workspace:', workspace);
-  const workspaceDiff = await getWorkspaceChanges(workspace, agentId);
+
+  // Get both state and changes in a single pass
+  const { currentState, diff: workspaceDiff } = await getWorkspaceState(
+    workspace,
+    agentId
+  );
   Logger.debug('Workspace diff:', { workspaceDiff });
+
   if (workspaceDiff.isEmpty) return false;
 
   if (workspaceDiff.hasChanges || force) {
     logger.start('Synchronizing workspace');
 
     Logger.debug('Agent Workspace has changes, synchronizing...');
-    // TODO: improve and send only changed files ?
-    const files = await generatePDFs(workspace);
+    // Pass the already computed files to avoid recomputation
+    const files = await generateWorkspaceZip(workspace, {
+      fileHashes: currentState.fileHashes,
+      totalSize: currentState.totalSize,
+    });
 
     if (process.env.NODE_ENV !== 'dev') {
-      // Don't pollute the filesystem with temporary files
       fs.unlinkSync(files[0].path);
-      Logger.debug('Agent : Workspace PDF deleted:', files[0].path);
+      Logger.debug('Agent : Workspace ZIP deleted:', files[0].path);
     }
 
     await indexFiles(agentId, files);
-    // Update the new state of the workspace
-    await updateWorkspaceState(workspace, agentId);
+
+    // Update workspace state using the already computed state
+    const newState: WorkspaceState = {
+      state_hash: currentState.md5,
+      file_hashes: currentState.fileHashes,
+      path: workspace,
+      agent_id: agentId,
+    };
+    writeWorkspaceState(newState);
+
     await new Promise((resolve) => setTimeout(resolve, 2000));
     logger.stop('Workspace synchronized');
     return true;
   }
   return false;
+};
+
+const handleReasoningSteps = (streamResponse: Readable) => {
+  streamResponse.on('data', (data: any) => {
+    if (!data.toString().includes('reasoning')) {
+      return;
+    }
+
+    try {
+      const res = JSON.parse(data.toString());
+      if (res.status === 'reasoning') {
+        let stepMessage: string = `Reasoning steps that will be followed:`;
+        for (const step of res.steps.steps) {
+          stepMessage += `\n${chalk.gray('│')}  ${toItalic(` └ ${step}`)}`;
+        }
+        logger.stop(stepMessage);
+        logger.start('Processing');
+      }
+    } catch (e) {
+      // Ignore
+    }
+  });
+};
+
+const parseAgentResponse = async (
+  agentResponse: any,
+  stream: boolean
+): Promise<[FunctionAction[], string]> => {
+  let actions: FunctionAction[] = [];
+  let queryResponse = '';
+
+  if (isStreamingContext(stream, agentResponse)) {
+    // TODO: stream doesnt bring any benefit here since we wait for the whole stream to be processed.
+    const res = await parseStreamedResponse(agentResponse);
+    if (res.actions.length) actions = res.actions;
+    if (res.message) queryResponse = res.message;
+  } else {
+    if (agentResponse.actions) actions = agentResponse.actions;
+    if (agentResponse.response) queryResponse = agentResponse.response;
+  }
+
+  return [actions, queryResponse];
 };
 
 export const queryCommand = async (
@@ -163,51 +231,23 @@ export const queryCommand = async (
       workspace,
     });
 
-    const handleAgentResponse = async (
-      agentResponse: any
-    ): Promise<[FunctionAction[], string]> => {
-      let actions: FunctionAction[] = [];
-      let queryResponse = '';
-
-      if (isStreamingContext(stream, agentResponse)) {
-        // TODO: stream doesnt bring any benefit here since we wait for the whole stream to be processed.
-        const res = await processStreamedResponse(agentResponse);
-        if (res.actions.length) actions = res.actions;
-        if (res.message) queryResponse = res.message;
-      } else {
-        if (agentResponse.actions) actions = agentResponse.actions;
-        if (agentResponse.response) queryResponse = agentResponse.response;
-      }
-
-      return [actions, queryResponse];
-    };
-
-    const handleSubmitResponse = async (
-      submitResponse: QueryResponseDTO | undefined
-    ): Promise<[FunctionAction[], string]> => {
-      let actions: FunctionAction[] = [];
-      let finalResponse = '';
-
-      if (isStreamingContext(stream, submitResponse)) {
-        // TODO: stream doesnt bring any benefit here since we wait for the whole stream to be processed.
-        const res = await processStreamedResponse(submitResponse);
-        if (res.actions.length) actions = res.actions;
-        if (res.message) finalResponse = res.message;
-      } else if (submitResponse) {
-        const { actions: responseActions, response: responseAnswer } =
-          submitResponse;
-        if (responseActions?.length) actions = responseActions;
-        if (responseAnswer) finalResponse = responseAnswer;
-      }
-
-      return [actions, finalResponse];
-    };
-
     ////////// Workflow start //////////
     let workspaceChanged = false;
+    let taskId: string;
 
     if (!skipWarmup) {
-      workspaceChanged = await synchronizeWorkspace(agentConfig.id, workspace);
+      // Run synchronizeWorkspace and createTask in parallel
+      const [syncResult, taskResult] = await Promise.all([
+        synchronizeWorkspace(agentConfig.id, workspace),
+        createTask(agentConfig.id, query),
+      ]);
+
+      workspaceChanged = syncResult;
+      taskId = taskResult.id;
+    } else {
+      // If we skip warmup, still create the task
+      const taskRecord = await createTask(agentConfig.id, query);
+      taskId = taskRecord.id;
     }
 
     const workspaceData = getDirectoryMd5Hash({
@@ -221,36 +261,21 @@ export const queryCommand = async (
     const agentResponse = await queryAgent(
       agentManager.id,
       workspaceChanged,
-      query,
+      taskId,
       workspaceTree,
       stream
     );
 
     if (stream) {
       const streamResponse = agentResponse as Readable;
-      streamResponse.on('data', (data: any) => {
-        if (!data.toString().includes('reasoning')) {
-          return;
-        }
-
-        try {
-          const res = JSON.parse(data.toString());
-          if (res.status === 'reasoning') {
-            let stepMessage: string = `Reasoning steps that will be followed:`;
-            for (const step of res.steps.steps) {
-              stepMessage += `\n${chalk.gray('│')}  ${toItalic(` └ ${step}`)}`;
-            }
-            logger.stop(stepMessage);
-            logger.start('Processing');
-          }
-        } catch (e) {
-          // Ignore
-        }
-      });
+      handleReasoningSteps(streamResponse);
     }
 
     // eslint-disable-next-line prefer-const
-    let [actions, queryResponse] = await handleAgentResponse(agentResponse);
+    let [actions, queryResponse] = await parseAgentResponse(
+      agentResponse,
+      stream
+    );
     if (queryResponse) {
       logger.stop(queryResponse);
     }
@@ -265,10 +290,14 @@ export const queryCommand = async (
       }
       const toolOutputs = await executeActions(actions, agentManager);
       logger.start('Reviewing the job');
+      // Submit the tool outputs to the agent
       const submitResponse = toolOutputs.length
-        ? await submitToolOutputs(agentManager.id, toolOutputs, stream)
+        ? await submitToolOutputs(agentManager.id, taskId, toolOutputs, stream)
         : undefined;
-      [actions, finalResponse] = await handleSubmitResponse(submitResponse);
+      [actions, finalResponse] = await parseAgentResponse(
+        submitResponse,
+        stream
+      );
       if (actions.length && finalResponse) {
         logger.stop(finalResponse);
       }
