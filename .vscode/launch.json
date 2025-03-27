@@ -15,7 +15,7 @@
         "${workspaceFolder}/.debug-workspace",
         "--credentials",
         "${workspaceFolder}/conf/credentials.json",
-        "Create a sample NodeJS Express backend AIP, with a health check endpoint. Apply best practices in API Design and coding standards. Install the node modules with yarn, and stop there."
+        "Initiliase a sample NodeJS Express backend project. Add a health check endpoint. Apply best practices in API Design and coding standards. Install the node modules with yarn, make sure the project is properly configured, gitignored and stop there."
       ],
       "console": "integratedTerminal",
       "envFile": "${workspaceFolder}/.env"
