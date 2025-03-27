@@ -20,6 +20,7 @@ import {
   FunctionExecutionResult,
 } from '../utils/types';
 import { getFunctionName } from '../utils/actions';
+import { BLACKLISTED_COMMANDS } from '../constants';
 
 export const ACTION_FNS = {
   browse_url,
@@ -28,6 +29,12 @@ export const ACTION_FNS = {
   write_file,
   update_file,
 } as const;
+
+function isBlacklistedCommand(command: string): boolean {
+  return BLACKLISTED_COMMANDS.some((blocked) =>
+    command.toLowerCase().includes(blocked.toLowerCase())
+  );
+}
 
 export class AgentManager {
   id: string;
@@ -63,6 +70,30 @@ export class AgentManager {
         output: `Function '${functionName}' not found. Please verify the function name and try again.`,
         success: false,
       };
+    }
+
+    if (
+      (functionName === 'run_shell' && args.command) ||
+      (functionName === 'write_file' && args.content) ||
+      (functionName === 'update_file' && args.updates)
+    ) {
+      const contentToCheck: string =
+        args.command || args.content || args.updates;
+      if (isBlacklistedCommand(contentToCheck)) {
+        const errorMessage = [
+          `EXECUTION BLOCKED: Content contains blocked command`,
+          'SECURITY VIOLATION:',
+          `Interactive terminal editors (${BLACKLISTED_COMMANDS.join(', ')}) are strictly prohibited in this environment.`,
+          'These commands require direct user interaction and violate the automated execution policy.',
+          'NOTE: All content containing editor commands will be systematically blocked.',
+        ].join('\n');
+
+        return {
+          tool_call_id: action.id,
+          output: errorMessage,
+          success: false,
+        };
+      }
     }
 
     let taskTitle: string = args.answer || args.command || '';
