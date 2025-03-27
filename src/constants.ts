@@ -8,8 +8,8 @@ if (process.env.AUTH_JWT) {
 
 let API_HOST_VALUE = 'https://engine.2501.ai';
 
-if (process.env.API_HOST_2501) {
-  API_HOST_VALUE = process.env.API_HOST_2501;
+if (process.env.TFZO_API_HOST) {
+  API_HOST_VALUE = process.env.TFZO_API_HOST;
 } else if (process.env.NODE_ENV === 'dev') {
   API_HOST_VALUE = 'http://localhost:1337';
 } else if (process.env.NODE_ENV === 'staging') {
@@ -35,7 +35,7 @@ export enum QueryStatus {
   Expired = 'expired',
 }
 
-export const DISABLE_SPINNER = process.env.DISABLE_SPINNER_2501 === 'true';
+export const DISABLE_SPINNER = process.env.TFZO_DISABLE_SPINNER === 'true';
 
 export const IGNORED_FILE_PATTERNS = [
   '.env',
