@@ -72,14 +72,8 @@ export class AgentManager {
       };
     }
 
-    if (
-      (functionName === 'run_shell' && args.command) ||
-      (functionName === 'write_file' && args.content) ||
-      (functionName === 'update_file' && args.updates)
-    ) {
-      const contentToCheck: string =
-        args.command || args.content || args.updates;
-      if (isBlacklistedCommand(contentToCheck)) {
+    if (args.command) {
+      if (isBlacklistedCommand(args.command)) {
         const errorMessage = [
           `EXECUTION BLOCKED: Content contains blocked command`,
           'SECURITY VIOLATION:',
