@@ -4,13 +4,7 @@ import { marked, MarkedExtension } from 'marked';
 import { markedTerminal } from 'marked-terminal';
 import chalk from 'chalk';
 
-import {
-  getPuppetMasterPlans,
-  getPuppetMasterAgentMemory,
-  indexFiles,
-  queryAgent,
-  submitToolOutputs,
-} from '../helpers/api';
+import { indexFiles, queryAgent, submitToolOutputs } from '../helpers/api';
 import {
   getActionPostfix,
   getSubActionMessage,
@@ -23,6 +17,8 @@ import {
   resolveWorkspacePath,
   updateWorkspaceState,
 } from '../helpers/workspace';
+
+import Logger, { getTerminalWidth } from '../utils/logger';
 import {
   AgentConfig,
   FunctionAction,
@@ -30,15 +26,15 @@ import {
   QueryResponseDTO,
 } from '../utils/types';
 import { getFunctionArgs } from '../utils/actions';
-import { AgentManager } from '../managers/agentManager';
 import { getEligibleAgent, readConfig } from '../utils/conf';
-import Logger, { getTerminalWidth } from '../utils/logger';
 import { generatePDFs } from '../utils/pdf';
 import { isLooping } from '../utils/loopDetection';
 import { generateTree } from '../utils/tree';
 import { getDirectoryMd5Hash } from '../utils/files';
 
-import { agentsCommand } from './agents';
+import { AgentManager } from '../managers/agentManager';
+import { PuppetmasterManager } from '../managers/puppetmasterManager';
+
 import { initCommand } from './init';
 
 marked.use(markedTerminal() as MarkedExtension);
@@ -124,7 +120,7 @@ const synchronizeWorkspace = async (
   return false;
 };
 
-const runAgent = async (
+export const runAgent = async (
   query: string,
   options: {
     workspace?: string;
@@ -135,8 +131,6 @@ const runAgent = async (
     noPersistentAgent?: boolean;
   }
 ) => {
-  Logger.debug('Options:', options);
-
   try {
     const config = readConfig();
     const workspace = resolveWorkspacePath(options);
@@ -293,40 +287,18 @@ export const queryCommand = async (
     noPersistentAgent?: boolean;
   }
 ) => {
+  Logger.debug('Options:', options);
+
   const workspace = options.workspace || process.cwd();
 
   if (process.env.PUPPET_ALPHA === 'true') {
-    Logger.log('Info - Puppet Alpha is enabled.\n\n');
-    const { steps } = await getPuppetMasterPlans(query);
-    Logger.log(
-      'Plan:',
-      steps
-        .map(
-          (step: any, idx: number) =>
-            `Agent ${idx + 1} - ${step.task} (${step.configuration_key})`
-        )
-        .join('\n')
-    );
-    Logger.log('\n');
+    const puppetManager = new PuppetmasterManager({
+      agentOptions: options,
+      query,
+      workspace,
+    });
 
-    for await (const step of steps) {
-      console.log('Running step:', step);
-      const task = `
-        You are about to run the following task:
-        ${step.task}
-
-        Original query:
-        ${query}
-      `;
-      await agentsCommand({ flush: true });
-      const agent = await initCommand({
-        config: step.configuration_key,
-        workspace,
-      });
-      await runAgent(task, options);
-      const memory = await getPuppetMasterAgentMemory(agent.id);
-      console.log('Memory', memory);
-    }
+    await puppetManager.run();
   } else {
     await runAgent(query, options);
   }

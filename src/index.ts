@@ -14,10 +14,10 @@ import { isLatestVersion } from './utils/versioning';
 import Logger from './utils/logger';
 import { DISCORD_LINK } from './utils/messaging';
 
-process.on('SIGINT', () => {
-  console.log('Process interrupted with Ctrl+C');
-  process.exit(130); // Exit with code 130 (128 + 2 for SIGINT)
-});
+// process.on('SIGINT', () => {
+//   console.log('Process interrupted with Ctrl+C');
+//   process.exit(130); // Exit with code 130 (128 + 2 for SIGINT)
+// });
 
 const program = new Command();
 

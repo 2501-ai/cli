@@ -33,11 +33,17 @@ export const getPuppetMasterPlans = async (query: string) => {
   return planResponse;
 };
 
-export const getPuppetMasterAgentMemory = async (agentId: string) => {
-  const { data } = await axios.get(
-    `${API_HOST}${API_VERSION}/puppetmaster/agents/${agentId}/memory`
+export const getPuppetMasterAgentMemory = async (
+  agentId: string,
+  sharedMemory: string = ''
+) => {
+  const { data } = await axios.put(
+    `${API_HOST}${API_VERSION}/puppetmaster/agents/${agentId}/memory`,
+    {
+      sharedMemory,
+    }
   );
-  return data;
+  return data.output;
 };
 
 export const createAgent = async (
