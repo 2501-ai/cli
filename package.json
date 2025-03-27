@@ -18,7 +18,7 @@
     "watch": "tsc --watch",
     "dev": "ts-node ./src/index.ts",
     "version:beta:bump": "npm version --prerelease --preid beta",
-    "prepublishOnly": "npm build:clean"
+    "prepublishOnly": "npm run build:clean"
   },
   "keywords": [
     "ai",
