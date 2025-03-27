@@ -114,7 +114,7 @@ const synchronizeWorkspace = async (
     // TODO: improve and send only changed files ?
     const files = await generatePDFs(workspace);
 
-    if (process.env.NODE_ENV !== 'dev') {
+    if (process.env.TFZO_NODE_ENV !== 'dev') {
       // Don't pollute the filesystem with temporary files
       fs.unlinkSync(files[0].path);
       Logger.debug('Agent : Workspace PDF deleted:', files[0].path);

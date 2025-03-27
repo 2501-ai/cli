@@ -3,7 +3,7 @@ import axios, { AxiosError } from 'axios';
 import { marked } from 'marked';
 
 import { terminal } from 'terminal-kit';
-import { DISABLE_SPINNER } from '../constants';
+import { readConfig } from '../utils/conf';
 const isDebug = process.env.DEBUG === 'true';
 
 enum Colors {
@@ -59,7 +59,9 @@ export default class Logger {
   #spinnerStarted = false;
   #lastUpdateTime = 0;
 
-  constructor(public spin = DISABLE_SPINNER ? null : p.spinner()) {}
+  constructor(
+    public spin = readConfig()?.disable_spinner ? p.spinner() : null
+  ) {}
 
   intro(message?: string) {
     p.intro(message);
@@ -79,17 +81,17 @@ export default class Logger {
   }
 
   start(message?: string) {
-    if (DISABLE_SPINNER) {
+    if (readConfig()?.disable_spinner) {
       p.log.message(message);
       return;
     }
 
     const terminalWidth = getTerminalWidth();
     const maxMessageLength = terminalWidth - 10;
+
     const truncatedMessage = message
       ? message.substring(0, maxMessageLength)
       : undefined;
-
     if (this.#spinnerStarted) {
       this.spin?.message(truncatedMessage);
       return;
@@ -104,7 +106,7 @@ export default class Logger {
   }
 
   message(message: string) {
-    if (DISABLE_SPINNER) {
+    if (readConfig()?.disable_spinner) {
       p.log.message(message);
       return;
     }
@@ -122,7 +124,7 @@ export default class Logger {
   }
 
   stop(message?: string, code?: number) {
-    if (DISABLE_SPINNER) {
+    if (readConfig()?.disable_spinner) {
       p.log.message(message);
       return;
     }

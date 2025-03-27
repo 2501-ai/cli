@@ -5,7 +5,7 @@ import { terminal } from 'terminal-kit';
 // Local imports
 import Logger from '../utils/logger';
 import { addAgent, readConfig, setValue } from '../utils/conf';
-import { API_HOST, API_VERSION, DISABLE_SPINNER } from '../constants';
+import { API_HOST, API_VERSION } from '../constants';
 import { isDirUnsafe } from '../helpers/security';
 import { Configuration } from '../utils/types';
 import { createAgent } from '../helpers/api';
@@ -101,11 +101,8 @@ export async function initCommand(options?: InitCommandOptions) {
       setValue('join_discord_shown', true);
     }
 
-    const shouldDisableSpinner = DISABLE_SPINNER;
-    setValue(
-      'disable_spinner',
-      shouldDisableSpinner || localConfig?.disable_spinner || false
-    );
+    const shouldDisableSpinner = process.env.TFZO_DISABLE_SPINNER === 'true';
+    setValue('disable_spinner', shouldDisableSpinner);
 
     if (!shouldDisableSpinner && !localConfig?.disable_spinner) {
       setValue('join_discord_shown', true);

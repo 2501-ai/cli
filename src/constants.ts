@@ -10,9 +10,9 @@ let API_HOST_VALUE = 'https://engine.2501.ai';
 
 if (process.env.TFZO_API_HOST) {
   API_HOST_VALUE = process.env.TFZO_API_HOST;
-} else if (process.env.NODE_ENV === 'dev') {
+} else if (process.env.TFZO_NODE_ENV === 'dev') {
   API_HOST_VALUE = 'http://localhost:1337';
-} else if (process.env.NODE_ENV === 'staging') {
+} else if (process.env.TFZO_NODE_ENV === 'staging') {
   API_HOST_VALUE = 'https://staging.engine.2501.ai';
 }
 
