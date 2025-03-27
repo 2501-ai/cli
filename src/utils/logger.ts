@@ -4,7 +4,7 @@ import { marked } from 'marked';
 
 import { terminal } from 'terminal-kit';
 import { readConfig } from '../utils/conf';
-const isDebug = process.env.DEBUG === 'true';
+const isDebug = process.env.TFZO_DEBUG === 'true';
 
 enum Colors {
   RED = 'red',
@@ -59,9 +59,7 @@ export default class Logger {
   #spinnerStarted = false;
   #lastUpdateTime = 0;
 
-  constructor(
-    public spin = readConfig()?.disable_spinner ? p.spinner() : null
-  ) {}
+  constructor(public spin = p.spinner()) {}
 
   intro(message?: string) {
     p.intro(message);
@@ -81,6 +79,7 @@ export default class Logger {
   }
 
   start(message?: string) {
+    console.log('here 1', readConfig()?.disable_spinner);
     if (readConfig()?.disable_spinner) {
       p.log.message(message);
       return;
