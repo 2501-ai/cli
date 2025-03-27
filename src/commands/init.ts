@@ -8,7 +8,7 @@ import { addAgent, readConfig, setValue } from '../utils/conf';
 import { API_HOST, API_VERSION } from '../constants';
 import { isDirUnsafe } from '../helpers/security';
 import { Configuration } from '../utils/types';
-import { createAgent } from '../helpers/api';
+import { createAgent, initAxios } from '../helpers/api';
 import { DISCORD_LINK } from '../utils/messaging';
 import { resolveWorkspacePath } from '../helpers/workspace';
 import { getSystemInfo } from '../utils/systemInfo';
@@ -28,11 +28,9 @@ interface InitCommandOptions {
 const logger = new Logger();
 
 async function fetchConfiguration(configKey: string): Promise<Configuration> {
-  const config = readConfig();
-  const { data: configurations } = await axios.get<Configuration[]>(
-    `/configurations`,
-    { headers: { Authorization: `Bearer ${config?.api_key}` } }
-  );
+  await initAxios();
+  const { data: configurations } =
+    await axios.get<Configuration[]>(`/configurations`);
 
   const selectedConfig = configurations.find(
     (config: { key: string; prompt: string }) => config.key === configKey

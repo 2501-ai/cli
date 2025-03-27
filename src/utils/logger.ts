@@ -79,7 +79,6 @@ export default class Logger {
   }
 
   start(message?: string) {
-    console.log('here 1', readConfig()?.disable_spinner);
     if (readConfig()?.disable_spinner) {
       p.log.message(message);
       return;
