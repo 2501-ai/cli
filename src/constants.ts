@@ -91,3 +91,5 @@ export const DEFAULT_ACTIONS_REPONSE: StreamEvent = {
   actions: [],
   usage: null,
 };
+
+export const BLACKLISTED_COMMANDS = ['nano', 'vim', 'vi', 'nvim'];
