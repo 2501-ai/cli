@@ -28,15 +28,8 @@ interface InitCommandOptions {
 const logger = new Logger();
 
 async function fetchConfiguration(configKey: string): Promise<Configuration> {
-  const config = readConfig();
-  const { data: configurations } = await axios.get<Configuration[]>(
-    `/configurations`,
-    {
-      headers: {
-        Authorization: `Bearer ${config?.api_key}`,
-      },
-    }
-  );
+  const { data: configurations } =
+    await axios.get<Configuration[]>(`/configurations`);
 
   const selectedConfig = configurations.find(
     (config: { key: string; prompt: string }) => config.key === configKey
@@ -104,6 +97,9 @@ export async function initCommand(options?: InitCommandOptions) {
 
       setValue('join_discord_shown', true);
     }
+
+    const shouldDisableSpinner = process.env.TFZO_DISABLE_SPINNER === 'true';
+    setValue('disable_spinner', shouldDisableSpinner);
 
     logger.start('Creating agent');
     const configKey = options?.config || 'CODING_AGENT';
