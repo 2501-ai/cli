@@ -17,7 +17,7 @@
         "${workspaceFolder}/.env.test",
         "--plugins",
         "${workspaceFolder}/conf/plugins.json",
-        "List me all backups in Shiva. You'll also need to fetch the list of virtual machines first."
+        "List me all network activity in Shiva for the past 2 hours"
       ],
       "console": "integratedTerminal",
       "envFile": "${workspaceFolder}/.env"
