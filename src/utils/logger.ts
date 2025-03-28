@@ -3,8 +3,8 @@ import axios, { AxiosError } from 'axios';
 import { marked } from 'marked';
 
 import { terminal } from 'terminal-kit';
-
-const isDebug = process.env.DEBUG === 'true';
+import { readConfig } from '../utils/conf';
+const isDebug = process.env.TFZO_DEBUG === 'true';
 
 enum Colors {
   RED = 'red',
@@ -79,26 +79,36 @@ export default class Logger {
   }
 
   start(message?: string) {
+    if (readConfig()?.disable_spinner) {
+      p.log.message(message);
+      return;
+    }
+
     const terminalWidth = getTerminalWidth();
     const maxMessageLength = terminalWidth - 10;
+
     const truncatedMessage = message
       ? message.substring(0, maxMessageLength)
       : undefined;
-
     if (this.#spinnerStarted) {
-      this.spin.message(truncatedMessage);
+      this.spin?.message(truncatedMessage);
       return;
     }
 
     if (truncatedMessage && truncatedMessage.length > maxMessageLength) {
-      this.spin.message(truncatedMessage.slice(0, maxMessageLength));
+      this.spin?.message(truncatedMessage.slice(0, maxMessageLength));
     }
 
-    this.spin.start(truncatedMessage);
+    this.spin?.start(truncatedMessage);
     this.#spinnerStarted = true;
   }
 
   message(message: string) {
+    if (readConfig()?.disable_spinner) {
+      p.log.message(message);
+      return;
+    }
+
     const now = Date.now();
     if (now - this.#lastUpdateTime < 100) {
       return;
@@ -108,15 +118,20 @@ export default class Logger {
     const terminalWidth = getTerminalWidth();
     const maxMessageLength = terminalWidth - 10;
     const truncatedMessage = message.substring(0, maxMessageLength);
-    this.spin.message(truncatedMessage);
+    this.spin?.message(truncatedMessage);
   }
 
   stop(message?: string, code?: number) {
-    if (!this.#spinnerStarted) {
-      this.spin.message(marked.parse(message || '') as string);
+    if (readConfig()?.disable_spinner) {
+      p.log.message(message);
       return;
     }
-    this.spin.stop((marked.parse(message || '') as string).trim(), code);
+
+    if (!this.#spinnerStarted) {
+      this.spin?.message(marked.parse(message || '') as string);
+      return;
+    }
+    this.spin?.stop((marked.parse(message || '') as string).trim(), code);
     this.#spinnerStarted = false;
   }
 
@@ -138,14 +153,8 @@ export default class Logger {
     return p.select<any, boolean>({
       message,
       options: [
-        {
-          value: true,
-          label: 'Yes',
-        },
-        {
-          value: false,
-          label: 'No',
-        },
+        { value: true, label: 'Yes' },
+        { value: false, label: 'No' },
       ],
       initialValue: false,
     });

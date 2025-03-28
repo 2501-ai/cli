@@ -38,6 +38,7 @@ Before we begin, you need to configure your API key. (You can get your API key b
       workspace_disabled: false,
       agents: [],
       join_discord_shown: false,
+      disable_spinner: true,
     });
 
     logger.log(
