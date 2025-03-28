@@ -79,7 +79,7 @@ program
       pluginService.initialize(options.plugins);
     }
 
-    // Initialize credentials service (will use existing env vars by default)
+    // Initialize credentials service (reads --env file or env vars)
     credentialsService.initialize(options.env);
 
     await queryCommand(query, options);
