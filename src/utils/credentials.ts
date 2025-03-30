@@ -66,13 +66,6 @@ class CredentialsService {
       // Safe credential retrieval
       const value = this.credentials[plugin]?.[credKey];
 
-      // Monitoring log
-      console.log('credential_usage', {
-        plugin,
-        key: credKey,
-        found: !!value,
-        timestamp: Date.now(),
-      });
       Logger.debug('credential_usage', {
         plugin,
         key: credKey,
