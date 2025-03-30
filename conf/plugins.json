@@ -5,7 +5,7 @@
     "description": "Interact with the Shiva api",
     "actions": [
       {
-        "description": "Obtain a Shiva Bearer token. It is needed for most of the Shiva API calls",
+        "description": "Generate an authentication Bearer token for Shiva API access. This token must be included in the Authorization header for subsequent Shiva API requests",
         "method": "POST",
         "endpoint": "https://shiva.cloud-temple.com/api/iam/v2/auth/personal_access_token",
         "parameters": [
@@ -35,7 +35,7 @@
     "auth": {
       "type": "bearer",
       "credentials": {
-        "token": "{rtms.bearer_token}"
+        "token": "{RTMS_BEARER}"
       }
     },
     "actions": [
@@ -68,7 +68,7 @@
       }
     ]
   },
-  "2501_api": {
+  "tfzo": {
     "type": "http",
     "name": "2501 API",
     "description": "Interact with the 2501 API",
@@ -76,7 +76,7 @@
     "auth": {
       "type": "bearer",
       "credentials": {
-        "token": "{2501_api.bearer_token}"
+        "token": "{TFZO_BEARER}"
       }
     },
     "actions": [
