@@ -142,7 +142,6 @@ program
   .action(wtfCommand);
 
 (async () => {
-  console.log(1234);
   const isLatest = await isLatestVersion();
   if (!isLatest) {
     Logger.log(
