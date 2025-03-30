@@ -22,20 +22,15 @@ class PluginService {
       return;
     }
 
-    try {
-      const resolvedPath = path.resolve(pluginsPath);
-      if (!fs.existsSync(resolvedPath)) {
-        Logger.debug(`Plugins file not found at ${resolvedPath}`);
-        return;
-      }
-
-      this.pluginsPath = resolvedPath;
-      const pluginsContent = fs.readFileSync(resolvedPath, 'utf-8');
-      this.plugins = JSON.parse(pluginsContent);
-      Logger.debug('Plugins loaded successfully');
-    } catch (error) {
-      Logger.debug(`Error loading plugins: ${error}`);
+    const resolvedPath = path.resolve(pluginsPath);
+    if (!fs.existsSync(resolvedPath)) {
+      throw new Error(`Plugins file not found at ${resolvedPath}`);
     }
+
+    this.pluginsPath = resolvedPath;
+    const pluginsContent = fs.readFileSync(resolvedPath, 'utf-8');
+    this.plugins = JSON.parse(pluginsContent);
+    Logger.debug('Plugins loaded successfully');
   }
 
   public getPlugins(): any {

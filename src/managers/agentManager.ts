@@ -31,9 +31,15 @@ export const ACTION_FNS = {
 } as const;
 
 function isBlacklistedCommand(command: string): boolean {
-  return BLACKLISTED_COMMANDS.some((blocked) =>
-    command.toLowerCase().includes(blocked.toLowerCase())
-  );
+  return BLACKLISTED_COMMANDS.some((blocked) => {
+    // Create a regex pattern that matches the blocked word as a standalone command
+    // This checks for word boundaries or command separators around the blocked term
+    const pattern = new RegExp(
+      `(^|\\s|;|\\||&|>|<)${blocked}($|\\s|;|\\||&|>|<)`,
+      'i'
+    );
+    return pattern.test(command);
+  });
 }
 
 export class AgentManager {
