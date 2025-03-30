@@ -1,6 +1,6 @@
+import dotenv from 'dotenv';
 import Logger from './logger';
 import { CredentialsConfig } from './types';
-import dotenv from 'dotenv';
 import pluginService from './plugins';
 
 class CredentialsService {
@@ -58,11 +58,12 @@ class CredentialsService {
   public replaceCredentialPlaceholders(command: string): string {
     if (!command?.trim()) return command;
 
-    // First pass: Handle {plugin.key} format
-    const namespacedPattern = /{([a-zA-Z0-9_]+)\.([a-zA-Z0-9_]+)}/g;
+    // Pattern to match credential placeholders in format {PLUGIN_CREDKEY}
+    const namespacedPattern = /{([a-zA-Z0-9_]+)_([a-zA-Z0-9_]+)}/g;
     return command.replace(namespacedPattern, (match, plugin, credKey) => {
       // Safe credential retrieval
-      const value = this.credentials[plugin]?.[credKey];
+      const value =
+        this.credentials[plugin.toLowerCase()]?.[credKey.toLowerCase()];
 
       Logger.debug('credential_usage', {
         plugin,
