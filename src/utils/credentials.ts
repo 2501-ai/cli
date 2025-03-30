@@ -22,19 +22,14 @@ class CredentialsService {
       return;
     }
 
-    try {
-      const resolvedPath = path.resolve(credentialsPath);
-      if (!fs.existsSync(resolvedPath)) {
-        Logger.debug(`Credentials file not found at ${resolvedPath}`);
-        return;
-      }
-
-      const credentialsContent = fs.readFileSync(resolvedPath, 'utf-8');
-      this.credentials = JSON.parse(credentialsContent);
-      Logger.debug('Credentials loaded successfully');
-    } catch (error) {
-      Logger.debug(`Error loading credentials: ${error}`);
+    const resolvedPath = path.resolve(credentialsPath);
+    if (!fs.existsSync(resolvedPath)) {
+      throw new Error(`Credentials file not found at ${resolvedPath}`);
     }
+
+    const credentialsContent = fs.readFileSync(resolvedPath, 'utf-8');
+    this.credentials = JSON.parse(credentialsContent);
+    Logger.debug('Credentials loaded successfully');
   }
 
   public getCredential(
@@ -72,6 +67,12 @@ class CredentialsService {
       const value = this.credentials[plugin]?.[credKey];
 
       // Monitoring log
+      console.log('credential_usage', {
+        plugin,
+        key: credKey,
+        found: !!value,
+        timestamp: Date.now(),
+      });
       Logger.debug('credential_usage', {
         plugin,
         key: credKey,

@@ -15,7 +15,9 @@
         "${workspaceFolder}/.debug-workspace",
         "--credentials",
         "${workspaceFolder}/conf/credentials.json",
-        "Initiliase a sample NodeJS Express backend project. Add a health check endpoint. Apply best practices in API Design and coding standards. Install the node modules with yarn, make sure the project is properly configured, gitignored and stop there."
+        "--plugins",
+        "${workspaceFolder}/conf/plugins.json",
+        "List me all recent network activity in Shiva. Do it yourself"
       ],
       "console": "integratedTerminal",
       "envFile": "${workspaceFolder}/.env"

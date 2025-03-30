@@ -41,6 +41,4 @@ typings/
 dist/
 out/
 
-# Plugins and credentials
-conf/
 

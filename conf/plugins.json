@@ -1,0 +1,30 @@
+{
+  "shiva": {
+    "type": "http",
+    "name": "shiva api",
+    "description": "Interact with the shiva api",
+    "actions": [
+      {
+        "description": "Obtain a Shiva Bearer token. It is needed for most of the Shiva API calls",
+        "method": "POST",
+        "endpoint": "https://shiva.cloud-temple.com/api/iam/v2/auth/personal_access_token",
+        "parameters": [
+          {
+            "name": "id",
+            "type": "string",
+            "description": "The id of the shiva user",
+            "required": true,
+            "value": "{shiva.id}"
+          },
+          {
+            "name": "secret",
+            "type": "string",
+            "description": "The secret of the shiva user",
+            "required": true,
+            "value": "{shiva.secret}"
+          }
+        ]
+      }
+    ]
+  }
+}
