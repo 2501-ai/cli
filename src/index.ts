@@ -74,15 +74,20 @@ program
   .option('--env <path>', 'Path to .env file containing credentials')
   .hook('preAction', authMiddleware)
   .action(async (query, options) => {
-    // Initialize plugins if provided
-    if (options.plugins) {
-      pluginService.initialize(options.plugins);
+    try {
+      // Initialize plugins if provided
+      if (options.plugins) {
+        pluginService.initialize(options.plugins);
+      }
+
+      // Initialize credentials service (reads --env file or env vars)
+      credentialsService.initialize(options.env);
+
+      await queryCommand(query, options);
+    } catch (error) {
+      Logger.error((error as Error).stack);
+      process.exit(1);
     }
-
-    // Initialize credentials service (reads --env file or env vars)
-    credentialsService.initialize(options.env);
-
-    await queryCommand(query, options);
   });
 
 // Init command
