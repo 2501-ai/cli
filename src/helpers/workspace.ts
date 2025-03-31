@@ -224,15 +224,8 @@ export async function generateWorkspaceZip(
       maxTotalSize: DEFAULT_MAX_DIR_SIZE,
     });
 
-    // Read file into memory and immediately remove the temporary file
+    // Just read the file and return - let the caller handle cleanup
     const data = fs.readFileSync(outputFilePath);
-
-    // Cleanup temporary ZIP file after reading
-    try {
-      fs.unlinkSync(outputFilePath);
-    } catch (e) {
-      Logger.debug('Error cleaning up temporary zip file:', e);
-    }
 
     return [
       {
@@ -241,7 +234,7 @@ export async function generateWorkspaceZip(
       },
     ];
   } catch (error) {
-    // Added error cleanup to ensure temporary file is removed even if operation fails
+    // Only cleanup on error since the caller handles successful case
     try {
       if (fs.existsSync(outputFilePath)) {
         fs.unlinkSync(outputFilePath);
