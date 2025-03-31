@@ -158,6 +158,7 @@ export class ZipUtility {
         Logger.debug(
           `ZIP created: ${options.outputPath} - ${archive.pointer()} bytes`
         );
+        cleanup();
         resolve(options.outputPath);
       });
 
@@ -182,7 +183,6 @@ export class ZipUtility {
         archive.append(processed.content, processed.options);
       }
       archive.finalize();
-      cleanup();
     });
   }
 }
