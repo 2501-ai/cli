@@ -183,7 +183,6 @@ export class ZipUtility {
         archive.append(processed.content, processed.options);
       }
       archive.finalize();
-      cleanup();
     });
   }
 }
