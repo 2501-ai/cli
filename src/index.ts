@@ -85,7 +85,7 @@ program
 
       await queryCommand(query, options);
     } catch (error) {
-      Logger.error((error as Error).stack);
+      Logger.error((error as Error).message);
       process.exit(1);
     }
   });
