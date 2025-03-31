@@ -218,16 +218,37 @@ export async function generateWorkspaceZip(
     size: fs.statSync(path.join(workspace, relativePath)).size,
   }));
 
-  await zipUtility.createZip(zipFiles, {
-    outputPath: outputFilePath,
-    maxTotalSize: DEFAULT_MAX_DIR_SIZE,
-  });
+  try {
+    await zipUtility.createZip(zipFiles, {
+      outputPath: outputFilePath,
+      maxTotalSize: DEFAULT_MAX_DIR_SIZE,
+    });
 
-  // Return the ZIP file information
-  return [
-    {
-      path: outputFilePath,
-      data: fs.readFileSync(outputFilePath),
-    },
-  ];
+    // Read file into memory and immediately remove the temporary file
+    const data = fs.readFileSync(outputFilePath);
+
+    // Cleanup temporary ZIP file after reading
+    try {
+      fs.unlinkSync(outputFilePath);
+    } catch (e) {
+      Logger.debug('Error cleaning up temporary zip file:', e);
+    }
+
+    return [
+      {
+        path: outputFilePath,
+        data,
+      },
+    ];
+  } catch (error) {
+    // Added error cleanup to ensure temporary file is removed even if operation fails
+    try {
+      if (fs.existsSync(outputFilePath)) {
+        fs.unlinkSync(outputFilePath);
+      }
+    } catch (e) {
+      Logger.debug('Error cleaning up temporary zip file after error:', e);
+    }
+    throw error;
+  }
 }

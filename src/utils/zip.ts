@@ -121,17 +121,41 @@ export class ZipUtility {
     return new Promise((resolve, reject) => {
       const output = createWriteStream(options.outputPath);
       const archive = archiver('zip', {
-        zlib: { level: 6 }, // Default compression level
+        zlib: { level: 6 },
       });
       let currentTotalSize = 0;
       const activeStreams = new Set<Readable>();
 
-      // Cleanup function for error cases
+      // Enhanced cleanup function to properly destroy all resources
       const cleanup = () => {
-        activeStreams.forEach((stream) => stream.destroy());
+        // Cleanup all active file streams
+        activeStreams.forEach((stream) => {
+          try {
+            stream.destroy();
+          } catch (e) {
+            Logger.debug('Error destroying stream:', e);
+          }
+        });
         activeStreams.clear();
-        output.destroy();
-        archive.destroy();
+
+        // Cleanup output stream
+        try {
+          output.destroy();
+        } catch (e) {
+          Logger.debug('Error destroying output stream:', e);
+        }
+
+        // Cleanup archive
+        try {
+          archive.destroy();
+        } catch (e) {
+          Logger.debug('Error destroying archive:', e);
+        }
+
+        // Request garbage collection if available
+        if (global.gc) {
+          global.gc();
+        }
       };
 
       // Handle events
@@ -158,6 +182,7 @@ export class ZipUtility {
         Logger.debug(
           `ZIP created: ${options.outputPath} - ${archive.pointer()} bytes`
         );
+        cleanup(); // Added cleanup call after successful completion
         resolve(options.outputPath);
       });
 
