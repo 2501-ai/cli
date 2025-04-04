@@ -26,7 +26,7 @@ import {
 import { AgentManager } from '../managers/agentManager';
 import { getFunctionArgs } from '../utils/actions';
 import { getEligibleAgent, readConfig } from '../utils/conf';
-import credentialsService from '../utils/credentials';
+import { credentialsService } from '../utils/credentials';
 import { getDirectoryMd5Hash } from '../utils/files';
 import Logger, { getTerminalWidth } from '../utils/logger';
 import { isLooping } from '../utils/loopDetection';
@@ -215,7 +215,7 @@ export const queryCommand = async (
     Logger.debug('Workspace:', workspace);
 
     const skipWarmup = !!options.skipWarmup;
-    const stream = options.stream ?? config?.stream ?? true;
+    const stream = options.stream ?? config?.stream ?? false;
 
     ////////// Agent Init //////////
     const agentConfig = await initializeAgentConfig(workspace, skipWarmup);

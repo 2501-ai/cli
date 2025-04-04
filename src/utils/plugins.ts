@@ -2,6 +2,9 @@ import fs from 'fs';
 import path from 'path';
 import Logger from './logger';
 import { PluginsConfig } from './types';
+import { CONFIG_DIR } from '../constants';
+import { Command } from 'commander';
+
 class PluginService {
   private pluginsPath: string | null = null;
   private plugins: PluginsConfig = {};
@@ -30,6 +33,7 @@ class PluginService {
     this.pluginsPath = resolvedPath;
     const pluginsContent = fs.readFileSync(resolvedPath, 'utf-8');
     this.plugins = JSON.parse(pluginsContent);
+    Logger.debug(this.plugins);
     Logger.debug('Plugins loaded successfully');
   }
 
@@ -38,4 +42,18 @@ class PluginService {
   }
 }
 
-export default PluginService.getInstance();
+export const pluginService = PluginService.getInstance();
+
+export const initPlugins = async (
+  thisCommand: Command,
+  actionCommand: Command
+) => {
+  const defaultPluginsPath = path.join(CONFIG_DIR, 'plugins.json');
+  const options = actionCommand.opts();
+
+  if (options.plugins) {
+    pluginService.initialize(options.plugins);
+  } else if (fs.existsSync(defaultPluginsPath)) {
+    pluginService.initialize(defaultPluginsPath);
+  }
+};

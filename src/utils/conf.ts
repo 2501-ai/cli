@@ -1,15 +1,11 @@
 import fs from 'fs';
-import os from 'os';
 import * as path from 'path';
 
 import Logger from '../utils/logger';
 import { AgentConfig, LocalConfig } from './types';
 import { clearWorkspaceState } from '../helpers/workspace';
-
-const CONFIG_FILE_PATH = path.join(
-  path.join(os.homedir(), '.2501'),
-  '2501.conf'
-);
+import { CONFIG_DIR } from '../constants';
+const CONFIG_FILE_PATH = path.join(CONFIG_DIR, '2501.conf');
 
 /**
  * Reads the configuration from the specified file.

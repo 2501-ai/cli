@@ -13,8 +13,8 @@ import { authMiddleware } from './middleware/auth';
 import { isLatestVersion } from './utils/versioning';
 import Logger from './utils/logger';
 import { DISCORD_LINK } from './utils/messaging';
-import credentialsService from './utils/credentials';
-import pluginService from './utils/plugins';
+import { initPluginCredentials } from './utils/credentials';
+import { initPlugins } from './utils/plugins';
 
 process.on('SIGINT', () => {
   console.log('Process interrupted with Ctrl+C');
@@ -69,20 +69,14 @@ program
   .description('Execute a query using the specified agent')
   .option('--workspace <path>', 'Specify a different workspace path')
   .option('--agentId <id>', 'Specify the agent ID')
-  .option('--stream [stream]', 'Stream the output of the query', true)
+  .option('--stream [stream]', 'Stream the output of the query', false) // if you run it "@2501 query --stream false" - it will pass stream as 'false' string
   .option('--plugins <path>', 'Path to plugins configuration file')
   .option('--env <path>', 'Path to .env file containing credentials')
   .hook('preAction', authMiddleware)
+  .hook('preAction', initPlugins)
+  .hook('preAction', initPluginCredentials)
   .action(async (query, options) => {
     try {
-      // Initialize plugins if provided
-      if (options.plugins) {
-        pluginService.initialize(options.plugins);
-      }
-
-      // Initialize credentials service (reads --env file or env vars)
-      credentialsService.initialize(options.env);
-
       await queryCommand(query, options);
     } catch (error) {
       Logger.error((error as Error).message);
@@ -130,6 +124,8 @@ program
   )
   .option('--listen', 'Listen for new jobs from the API and execute them')
   .hook('preAction', authMiddleware)
+  .hook('preAction', initPlugins)
+  .hook('preAction', initPluginCredentials)
   .action(jobSubscriptionCommand);
 
 program
