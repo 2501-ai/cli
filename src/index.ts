@@ -13,7 +13,7 @@ import { authMiddleware } from './middleware/auth';
 import { isLatestVersion } from './utils/versioning';
 import Logger from './utils/logger';
 import { DISCORD_LINK } from './utils/messaging';
-import { credentialsService, initPluginCredentials } from './utils/credentials';
+import { initPluginCredentials } from './utils/credentials';
 import { initPlugins } from './utils/plugins';
 
 process.on('SIGINT', () => {
@@ -77,9 +77,6 @@ program
   .hook('preAction', initPluginCredentials)
   .action(async (query, options) => {
     try {
-      // Initialize credentials service (reads --env file or env vars)
-      credentialsService.initialize(options.env);
-
       await queryCommand(query, options);
     } catch (error) {
       Logger.error((error as Error).message);
