@@ -35,8 +35,15 @@
       {
         "description": "Fuzzy search through Shiva swagger documentation",
         "method": "GET",
-        "endpoint": "http://localhost:3000/api/search",
+        "endpoint": "https://probiotics-2501.vercel.app/api/search",
         "parameters": [
+          {
+            "name": "auth_token",
+            "type": "string",
+            "description": "The Shiva Swagger Search auth token",
+            "required": true,
+            "value": "{SHIVASWAGGERSEARCH_TOKEN}"
+          },
           {
             "name": "query",
             "type": "string",
