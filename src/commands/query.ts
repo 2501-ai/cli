@@ -215,7 +215,7 @@ export const queryCommand = async (
     Logger.debug('Workspace:', workspace);
 
     const skipWarmup = !!options.skipWarmup;
-    const stream = options.stream ?? config?.stream ?? true;
+    const stream = options.stream ?? config?.stream ?? false;
 
     ////////// Agent Init //////////
     const agentConfig = await initializeAgentConfig(workspace, skipWarmup);

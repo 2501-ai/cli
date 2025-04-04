@@ -69,7 +69,7 @@ program
   .description('Execute a query using the specified agent')
   .option('--workspace <path>', 'Specify a different workspace path')
   .option('--agentId <id>', 'Specify the agent ID')
-  .option('--stream [stream]', 'Stream the output of the query', false)
+  .option('--stream [stream]', 'Stream the output of the query', false) // if you run it "@2501 query --stream false" - it will pass stream as 'false' string
   .option('--plugins <path>', 'Path to plugins configuration file')
   .option('--env <path>', 'Path to .env file containing credentials')
   .hook('preAction', authMiddleware)
