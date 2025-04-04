@@ -1,11 +1,11 @@
 {
-  "shiva": {
+  "shivaauthentication": {
     "type": "http",
-    "name": "shiva api",
-    "description": "Interact with the Shiva api",
+    "name": "Shiva API",
+    "description": "Use this plugin to generate a Bearer token for Shiva API authentication. This token is required for authorizing subsequent requests to the Shiva API.",
     "actions": [
       {
-        "description": "Generate an authentication Bearer token for Shiva API access. This token must be included in the Authorization header for subsequent Shiva API requests",
+        "description": "Generates a Bearer token for Shiva API authentication. This token is required for authorizing subsequent requests to the Shiva API.",
         "method": "POST",
         "endpoint": "https://shiva.cloud-temple.com/api/iam/v2/auth/personal_access_token",
         "parameters": [
@@ -14,119 +14,44 @@
             "type": "string",
             "description": "The id of the shiva user",
             "required": true,
-            "value": "{SHIVA_ID}"
+            "value": "{SHIVAAUTHENTICATION_ID}"
           },
           {
             "name": "secret",
             "type": "string",
             "description": "The secret of the shiva user",
             "required": true,
-            "value": "{SHIVA_SECRET}"
+            "value": "{SHIVAAUTHENTICATION_SECRET}"
           }
         ]
       }
     ]
   },
-  "rtms": {
+  "shivaswaggersearch": {
     "type": "http",
-    "name": "RTMS",
-    "description": "Interact with the RTMS",
-    "version": "1.0.0",
-    "auth": {
-      "type": "bearer",
-      "credentials": {
-        "token": "{RTMS_BEARER}"
-      }
-    },
+    "name": "Shiva API swagger",
+    "description": "You have no knowledge of Shiva API! Use this plugin to find the right Shiva enpoints to accomplish your task",
     "actions": [
       {
-        "id": "notify",
-        "name": "Notify",
-        "description": "Notify the RTMS System",
-        "method": "POST",
-        "endpoint": "http://localhost:3000/api/notify",
+        "description": "Fuzzy search through Shiva swagger documentation",
+        "method": "GET",
+        "endpoint": "http://localhost:3000/api/search",
         "parameters": [
           {
-            "name": "ticket_id",
+            "name": "query",
             "type": "string",
-            "description": "The ticket id",
+            "description": "The query to search for",
             "required": true
           },
           {
-            "name": "message",
-            "type": "string",
-            "description": "The message to notify the RTMS System",
-            "required": true
-          },
-          {
-            "name": "status",
-            "type": "string",
-            "description": "The status of the ticket",
-            "required": true
+            "name": "limit",
+            "type": "number",
+            "description": "The number of results to return. Ask for a few to get a better overview.",
+            "required": false,
+            "defaultValue": 10
           }
         ]
       }
     ]
-  },
-  "tfzo": {
-    "type": "http",
-    "name": "2501 API",
-    "description": "Interact with the 2501 API",
-    "version": "1.0.0",
-    "auth": {
-      "type": "bearer",
-      "credentials": {
-        "token": "{TFZO_BEARER}"
-      }
-    },
-    "actions": [
-      {
-        "id": "create_agent",
-        "name": "Create Agent",
-        "description": "Create a new AI agent",
-        "method": "POST",
-        "endpoint": "https://engine.2501.ai/api/v1/agents",
-        "parameters": [
-          {
-            "name": "workspace",
-            "type": "string",
-            "description": "Workspace identifier",
-            "required": true
-          },
-          {
-            "name": "configuration",
-            "type": "string",
-            "description": "Agent configuration",
-            "required": true
-          },
-          {
-            "name": "prompt",
-            "type": "string",
-            "description": "Agent prompt",
-            "required": true
-          },
-          {
-            "name": "engine",
-            "type": "string",
-            "description": "Engine to use",
-            "required": true
-          }
-        ],
-        "examples": [
-          {
-            "description": "Create a basic agent",
-            "parameters": {
-              "workspace": "my-workspace",
-              "configuration": "default",
-              "prompt": "You are a helpful assistant",
-              "engine": "gpt-4"
-            }
-          }
-        ]
-      }
-    ],
-    "metadata": {
-      "content_type": "application/json"
-    }
   }
 }
