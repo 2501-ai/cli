@@ -10,7 +10,7 @@ import {
   QueryResponseDTO,
   SystemInfo,
 } from '../utils/types';
-import pluginService from '../utils/plugins';
+import { pluginService } from '../utils/plugins';
 
 // const ONE_MINUTES_MILLIS = 60 * 1000;
 const FIVE_MINUTES_MILLIS = 5 * 60 * 1000;

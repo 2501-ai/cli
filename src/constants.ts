@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { StreamEvent } from './utils/types';
-
+import path from 'path';
+import os from 'os';
 if (process.env.AUTH_JWT) {
   axios.defaults.headers.common['Cookie'] =
     `_vercel_jwt=${process.env.AUTH_JWT}`;
@@ -19,6 +20,8 @@ if (process.env.TFZO_API_HOST) {
 export const API_HOST = API_HOST_VALUE;
 
 export const API_VERSION = '/api/v1';
+
+export const CONFIG_DIR = path.join(os.homedir(), '.2501');
 
 export enum QueryStatus {
   // Engine Statuses:

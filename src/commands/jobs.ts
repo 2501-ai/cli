@@ -86,7 +86,7 @@ export async function jobSubscriptionCommand(options: {
       );
 
       const jobs = response.data;
-      if (!jobs.length) {
+      if (!jobs || !jobs.length) {
         logger.outro('No jobs found');
         return;
       }
