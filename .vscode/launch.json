@@ -15,8 +15,6 @@
         "${workspaceFolder}/.debug-workspace",
         "--env",
         "${workspaceFolder}/.env.test",
-        "--plugins",
-        "${workspaceFolder}/conf/plugins.json",
         "List me all network activity in Shiva for the past 2 hours"
       ],
       "console": "integratedTerminal",
