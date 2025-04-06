@@ -1,33 +1,32 @@
 import axios from 'axios';
 
 import { API_HOST, API_VERSION } from '../constants';
-
 import {
   ERRORFILE_PATH,
   hasError,
   LOGFILE_PATH,
   run_shell,
 } from '../helpers/actions';
-
+import { getTasks } from '../helpers/api';
+import { resolveWorkspacePath } from '../helpers/workspace';
+import { listAgentsFromWorkspace } from '../utils/conf';
+import Logger from '../utils/logger';
+import { unixSourceCommand } from '../utils/shellCommands';
 import { queryCommand } from './query';
 
-import { listAgentsFromWorkspace } from '../utils/conf';
-import { unixSourceCommand } from '../utils/shellCommands';
-import Logger from '../utils/logger';
-
-export async function jobSubscriptionCommand(options: {
+export async function tasksSubscriptionCommand(options: {
   subscribe?: boolean;
   unsubscribe?: boolean;
   workspace?: string;
   listen?: boolean;
 }): Promise<void> {
   const logger = new Logger();
-  const workspace = options.workspace || process.cwd();
+  const workspace = resolveWorkspacePath(options);
 
-  logger.intro('2501 - Jobs Subscription');
+  logger.intro('2501 - Tasks Subscription');
 
   if (options.subscribe) {
-    logger.start('Subscribing for new jobs');
+    logger.start('Subscribing for new tasks');
     const shellOutput = await run_shell({
       command: `echo $SHELL`,
       shell: true,
@@ -45,72 +44,71 @@ export async function jobSubscriptionCommand(options: {
     }
     const crontabOutput = await run_shell({
       shell: true,
-      command: `(crontab -l 2>/dev/null; echo "* * * * * ${shellOutput} -c \\"${soureCommandOutput} && cd ${workspace} && @2501 jobs --listen\\" >> ${LOGFILE_PATH} 2>>${ERRORFILE_PATH}") | crontab -`,
+      command: `(crontab -l 2>/dev/null; echo "* * * * * ${shellOutput} -c \\"${soureCommandOutput} && cd ${workspace} && @2501 tasks --listen\\" >> ${LOGFILE_PATH} 2>>${ERRORFILE_PATH}") | crontab -`,
     });
     if (hasError(crontabOutput)) {
       return Logger.error('crontabOutput', crontabOutput);
     }
     return logger.stop(
-      `Subscribed to the API for new jobs on workspace ${workspace}`
+      `Subscribed to the API for new tasks on workspace ${workspace}`
     );
   }
 
   if (options.unsubscribe) {
-    logger.start('Unsubscribing for new jobs');
+    logger.start('Unsubscribing for new tasks');
     const crontabOutput = await run_shell({
       shell: true,
-      command: `crontab -l | grep -v "cd ${workspace} && @2501 jobs --listen" | crontab -`,
+      command: `crontab -l | grep -v "cd ${workspace} && @2501 tasks --listen" | crontab -`,
     });
     if (hasError(crontabOutput)) {
       return Logger.error('crontabOutput', crontabOutput);
     }
     return logger.stop(
-      `Unsubscribed to the API for new jobs on workspace ${workspace}`
+      `Unsubscribed to the API for new tasks on workspace ${workspace}`
     );
   }
 
   if (options.listen) {
     try {
-      const workspace = options.workspace || process.cwd();
-
       const [agent] = listAgentsFromWorkspace(workspace);
 
       if (!agent) {
         return logger.outro('No agents available in the workspace');
       }
 
-      logger.start(`Listening for new jobs on ${workspace}`);
+      logger.start(`Listening for new tasks on ${workspace}`);
 
-      const response = await axios.get(
-        `${API_HOST}${API_VERSION}/agents/${agent.id}/jobs?status=todo`
-      );
+      const status = 'assigned';
+      const tasks = await getTasks(agent.id, status);
 
-      const jobs = response.data;
-      if (!jobs.length) {
-        logger.outro('No jobs found');
+      if (!tasks.length) {
+        logger.outro('No tasks found');
         return;
       }
 
       const shell_user = await run_shell({ command: `whoami` });
       const localIP = await run_shell({ command: `hostname -I` });
 
-      logger.stop(`Found ${jobs.length} jobs to execute`);
-      for (const idx in jobs) {
-        await axios.put(`${API_HOST}${API_VERSION}/jobs/${jobs[idx].id}`, {
+      logger.stop(`Found ${tasks.length} tasks to execute`);
+      for (const idx in tasks) {
+        await axios.put(`${API_HOST}${API_VERSION}/tasks/${tasks[idx].id}`, {
           status: 'in_progress',
           host: `${shell_user.trim()}@${localIP.trim()}`,
         });
-        await queryCommand(jobs[idx].brief, {
+        await queryCommand(tasks[idx].brief, {
           callback: async (response: unknown) => {
-            await axios.put(`${API_HOST}${API_VERSION}/jobs/${jobs[idx].id}`, {
-              status: 'completed',
-              result: response,
-            });
+            await axios.put(
+              `${API_HOST}${API_VERSION}/tasks/${tasks[idx].id}`,
+              {
+                status: 'completed',
+                result: response,
+              }
+            );
           },
         });
       }
     } catch (error) {
-      Logger.error('Jobs error:', error);
+      Logger.error('Tasks error:', error);
     }
   }
 }
