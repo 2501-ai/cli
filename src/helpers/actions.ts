@@ -54,25 +54,33 @@ export function update_file({
   sectionsDiff: string[];
 }) {
   Logger.debug('Updating sections:', sectionsDiff);
-  const fileContent = fs.readFileSync(path, 'utf8');
-  const newContent = modifyCodeSections({
-    originalContent: fileContent,
-    diffSections: sectionsDiff,
-  });
 
-  const ignoreManager = IgnoreManager.getInstance();
-  const content = ignoreManager.isIgnored(path)
-    ? ''
-    : `New file Content :
+  try {
+    const fileContent = fs.readFileSync(path, 'utf8');
+    const newContent = modifyCodeSections({
+      originalContent: fileContent,
+      diffSections: sectionsDiff,
+    });
+
+    const ignoreManager = IgnoreManager.getInstance();
+    const content = ignoreManager.isIgnored(path)
+      ? ''
+      : `New file Content :
     \`\`\`
     ${newContent}
     \`\`\``;
 
-  fs.writeFileSync(path, newContent);
+    fs.writeFileSync(path, newContent);
 
-  return `
+    return `
     File updated: ${path}
     ${content}`;
+  } catch (error) {
+    return `${ERROR_BOL} I failed to run update_file, please fix the situation, errors below.\n ${(error as Error).message}
+     \`\`\`
+     ${error}
+     \`\`\``;
+  }
 }
 
 export async function run_shell(args: {
