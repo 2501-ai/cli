@@ -76,10 +76,8 @@ export function update_file({
     File updated: ${path}
     ${content}`;
   } catch (error) {
-    return `${ERROR_BOL} I failed to run update_file, please fix the situation, errors below.\n ${(error as Error).message}
-     \`\`\`
-     ${error}
-     \`\`\``;
+    return `${ERROR_BOL} I failed to run update_file on ${path}, please fix the situation, errors below.\n ${(error as Error).message}
+    ${error}`;
   }
 }
 
@@ -109,9 +107,7 @@ export async function run_shell(args: {
     return output;
   } catch (error) {
     return `${ERROR_BOL} I failed to run ${args.command}, please fix the situation, errors below.\n ${(error as Error).message}
-     \`\`\`
-     ${error}
-     \`\`\``;
+    ${error}`;
   }
 }
 
