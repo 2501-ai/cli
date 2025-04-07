@@ -23,7 +23,6 @@ export async function jobSubscriptionCommand(options: {
 }): Promise<void> {
   const logger = new Logger();
   const workspace = options.workspace || process.cwd();
-  console.log('workspace', workspace);
 
   logger.intro('2501 - Jobs Subscription');
 
@@ -72,9 +71,6 @@ export async function jobSubscriptionCommand(options: {
   }
 
   if (options.listen) {
-    console.log('process.env');
-    console.log(process.env);
-    console.log('--------------------------------');
     try {
       const workspace = options.workspace || process.cwd();
 
@@ -84,7 +80,7 @@ export async function jobSubscriptionCommand(options: {
         return logger.outro('No agents available in the workspace');
       }
 
-      logger.start(`Listening for new jobs on ${workspace}`);
+      logger.log(`Listening for new jobs on ${workspace}`);
 
       const response = await axios.get(
         `${API_HOST}${API_VERSION}/agents/${agent.id}/jobs?status=todo`
@@ -99,7 +95,7 @@ export async function jobSubscriptionCommand(options: {
       const shell_user = await run_shell({ command: `whoami` });
       const localIP = await run_shell({ command: `hostname -I` });
 
-      logger.stop(`Found ${jobs.length} jobs to execute`);
+      logger.log(`Found ${jobs.length} jobs to execute`);
       for (const idx in jobs) {
         await axios.put(`${API_HOST}${API_VERSION}/jobs/${jobs[idx].id}`, {
           status: 'in_progress',
