@@ -23,6 +23,7 @@ export async function jobSubscriptionCommand(options: {
 }): Promise<void> {
   const logger = new Logger();
   const workspace = options.workspace || process.cwd();
+  console.log('workspace', workspace);
 
   logger.intro('2501 - Jobs Subscription');
 
@@ -46,7 +47,7 @@ export async function jobSubscriptionCommand(options: {
     }
     const crontabOutput = await run_shell({
       shell: true,
-      command: `(crontab -l 2>/dev/null || echo "") | grep -v "cd ${workspace} && @2501 jobs --listen" | (cat && echo "* * * * * cd ${workspace} && ${soureCommandOutput.trim()} && @2501 jobs --listen > ${LOGFILE_PATH} 2> ${ERRORFILE_PATH}") | crontab -`,
+      command: `(crontab -l 2>/dev/null || echo "") | grep -v "cd ${workspace} && .*@2501 jobs --listen" | (cat && echo "* * * * * cd ${workspace} && ${soureCommandOutput.trim()} && @2501 jobs --listen --workspace ${workspace} > ${LOGFILE_PATH} 2> ${ERRORFILE_PATH}") | crontab -`,
     });
     if (hasError(crontabOutput)) {
       return Logger.error('crontabOutput', crontabOutput);
@@ -60,7 +61,7 @@ export async function jobSubscriptionCommand(options: {
     logger.start('Unsubscribing for new jobs');
     const crontabOutput = await run_shell({
       shell: true,
-      command: `crontab -l | grep -v "cd ${workspace} && @2501 jobs --listen" | crontab -`,
+      command: `crontab -l | grep -v "cd ${workspace} && .*@2501 jobs --listen" | crontab -`,
     });
     if (hasError(crontabOutput)) {
       return Logger.error('crontabOutput', crontabOutput);
