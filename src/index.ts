@@ -16,6 +16,9 @@ import { DISCORD_LINK } from './utils/messaging';
 import { initPluginCredentials } from './utils/credentials';
 import { initPlugins } from './utils/plugins';
 
+// Increase max event listeners to avoid warnings during polling
+process.setMaxListeners(50);
+
 process.on('SIGINT', () => {
   console.log('Process interrupted with Ctrl+C');
   process.exit(130); // Exit with code 130 (128 + 2 for SIGINT)

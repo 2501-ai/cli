@@ -74,6 +74,9 @@ async function pollJobs(workspace: string): Promise<void> {
       return;
     }
 
+    // Make sure to stop the spinner before processing jobs
+    logger.stop(`Found ${jobs.length} jobs to execute`);
+
     // Temporarily pause polling while executing jobs
     isPolling = false;
 
