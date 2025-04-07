@@ -13,6 +13,33 @@ import Logger from '../utils/logger';
 let isPolling = false;
 let pollTimer: NodeJS.Timeout | null = null;
 
+// Function to process jobs - extracted common logic
+async function processJobs(jobs: any[], logger: Logger): Promise<void> {
+  const shell_user = await run_shell({ command: `whoami` });
+  const localIP = await run_shell({ command: `hostname -I` }); // doesn't work
+
+  logger.stop(`Found ${jobs.length} jobs to execute`);
+
+  for (const idx in jobs) {
+    // Update job status to in_progress
+    await axios.put(`${API_HOST}${API_VERSION}/jobs/${jobs[idx].id}`, {
+      status: 'in_progress',
+      host: `${shell_user.trim()}@${localIP.trim()}`,
+    });
+
+    await queryCommand(jobs[idx].brief, {
+      callback: async (response: unknown) => {
+        // Update job status to completed
+        // TODO: also handle failed status
+        await axios.put(`${API_HOST}${API_VERSION}/jobs/${jobs[idx].id}`, {
+          status: 'completed',
+          result: response,
+        });
+      },
+    });
+  }
+}
+
 // Function to poll for jobs and execute them
 async function pollJobs(workspace: string): Promise<void> {
   const logger = new Logger();
@@ -47,29 +74,10 @@ async function pollJobs(workspace: string): Promise<void> {
       return;
     }
 
-    logger.stop(`Found ${jobs.length} jobs to execute`);
-
     // Temporarily pause polling while executing jobs
     isPolling = false;
 
-    const shell_user = await run_shell({ command: `whoami` });
-    const localIP = await run_shell({ command: `hostname -I` });
-
-    for (const idx in jobs) {
-      await axios.put(`${API_HOST}${API_VERSION}/jobs/${jobs[idx].id}`, {
-        status: 'in_progress',
-        host: `${shell_user.trim()}@${localIP.trim()}`,
-      });
-
-      await queryCommand(jobs[idx].brief, {
-        callback: async (response: unknown) => {
-          await axios.put(`${API_HOST}${API_VERSION}/jobs/${jobs[idx].id}`, {
-            status: 'completed',
-            result: response,
-          });
-        },
-      });
-    }
+    await processJobs(jobs, logger);
 
     // Resume polling after job execution
     isPolling = true;
@@ -143,24 +151,7 @@ export async function jobSubscriptionCommand(options: {
         return;
       }
 
-      const shell_user = await run_shell({ command: `whoami` });
-      const localIP = await run_shell({ command: `hostname -I` });
-
-      logger.stop(`Found ${jobs.length} jobs to execute`);
-      for (const idx in jobs) {
-        await axios.put(`${API_HOST}${API_VERSION}/jobs/${jobs[idx].id}`, {
-          status: 'in_progress',
-          host: `${shell_user.trim()}@${localIP.trim()}`,
-        });
-        await queryCommand(jobs[idx].brief, {
-          callback: async (response: unknown) => {
-            await axios.put(`${API_HOST}${API_VERSION}/jobs/${jobs[idx].id}`, {
-              status: 'completed',
-              result: response,
-            });
-          },
-        });
-      }
+      await processJobs(jobs, logger);
     } catch (error) {
       Logger.error('Jobs error:', error);
     }
