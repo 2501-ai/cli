@@ -39,13 +39,14 @@ export async function jobSubscriptionCommand(options: {
     const soureCommandOutput = await run_shell({
       command: unixSourceCommand,
       shell: shellOutput,
-    });
+    }); // returns smth like 'source ~/.zshrc'
+
     if (hasError(soureCommandOutput)) {
       return Logger.error(soureCommandOutput);
     }
     const crontabOutput = await run_shell({
       shell: true,
-      command: `(crontab -l 2>/dev/null; echo "* * * * * ${shellOutput} -c \\"${soureCommandOutput} && cd ${workspace} && @2501 jobs --listen\\" >> ${LOGFILE_PATH} 2>>${ERRORFILE_PATH}") | crontab -`,
+      command: `(crontab -l 2>/dev/null || echo "") | grep -v "cd ${workspace} && .*@2501 jobs --listen" | (cat && echo "* * * * * cd ${workspace} && ${soureCommandOutput.trim()} && @2501 jobs --listen --workspace ${workspace} > ${LOGFILE_PATH} 2> ${ERRORFILE_PATH}") | crontab -`,
     });
     if (hasError(crontabOutput)) {
       return Logger.error('crontabOutput', crontabOutput);
@@ -59,7 +60,7 @@ export async function jobSubscriptionCommand(options: {
     logger.start('Unsubscribing for new jobs');
     const crontabOutput = await run_shell({
       shell: true,
-      command: `crontab -l | grep -v "cd ${workspace} && @2501 jobs --listen" | crontab -`,
+      command: `crontab -l | grep -v "cd ${workspace} && .*@2501 jobs --listen" | crontab -`,
     });
     if (hasError(crontabOutput)) {
       return Logger.error('crontabOutput', crontabOutput);
@@ -79,7 +80,7 @@ export async function jobSubscriptionCommand(options: {
         return logger.outro('No agents available in the workspace');
       }
 
-      logger.start(`Listening for new jobs on ${workspace}`);
+      logger.log(`Listening for new jobs on ${workspace}`);
 
       const response = await axios.get(
         `${API_HOST}${API_VERSION}/agents/${agent.id}/jobs?status=todo`
@@ -94,7 +95,7 @@ export async function jobSubscriptionCommand(options: {
       const shell_user = await run_shell({ command: `whoami` });
       const localIP = await run_shell({ command: `hostname -I` });
 
-      logger.stop(`Found ${jobs.length} jobs to execute`);
+      logger.log(`Found ${jobs.length} jobs to execute`);
       for (const idx in jobs) {
         await axios.put(`${API_HOST}${API_VERSION}/jobs/${jobs[idx].id}`, {
           status: 'in_progress',
