@@ -39,13 +39,14 @@ export async function jobSubscriptionCommand(options: {
     const soureCommandOutput = await run_shell({
       command: unixSourceCommand,
       shell: shellOutput,
-    });
+    }); // returns smth like 'source ~/.zshrc'
+
     if (hasError(soureCommandOutput)) {
       return Logger.error(soureCommandOutput);
     }
     const crontabOutput = await run_shell({
       shell: true,
-      command: `(crontab -l 2>/dev/null; echo "* * * * * ${shellOutput} -c \\"${soureCommandOutput} && cd ${workspace} && @2501 jobs --listen\\" >> ${LOGFILE_PATH} 2>>${ERRORFILE_PATH}") | crontab -`,
+      command: `(crontab -l 2>/dev/null || echo "") | grep -v "cd ${workspace} && @2501 jobs --listen" | (cat && echo "* * * * * cd ${workspace} && ${soureCommandOutput.trim()} && @2501 jobs --listen > ${LOGFILE_PATH} 2> ${ERRORFILE_PATH}") | crontab -`,
     });
     if (hasError(crontabOutput)) {
       return Logger.error('crontabOutput', crontabOutput);
@@ -70,6 +71,9 @@ export async function jobSubscriptionCommand(options: {
   }
 
   if (options.listen) {
+    console.log('process.env');
+    console.log(process.env);
+    console.log('--------------------------------');
     try {
       const workspace = options.workspace || process.cwd();
 
