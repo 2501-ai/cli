@@ -2,18 +2,95 @@ import axios from 'axios';
 
 import { API_HOST, API_VERSION } from '../constants';
 
-import {
-  ERRORFILE_PATH,
-  hasError,
-  LOGFILE_PATH,
-  run_shell,
-} from '../helpers/actions';
+import { run_shell } from '../helpers/actions';
 
 import { queryCommand } from './query';
 
 import { listAgentsFromWorkspace } from '../utils/conf';
-import { unixSourceCommand } from '../utils/shellCommands';
 import Logger from '../utils/logger';
+
+// Global variable to track if polling process is running
+let isPolling = false;
+let pollTimer: NodeJS.Timeout | null = null;
+
+// Function to poll for jobs and execute them
+async function pollJobs(workspace: string): Promise<void> {
+  const logger = new Logger();
+
+  try {
+    if (!isPolling) {
+      return; // Exit if polling has been stopped
+    }
+
+    const [agent] = listAgentsFromWorkspace(workspace);
+
+    if (!agent) {
+      logger.outro('No agents available in the workspace');
+      stopPolling();
+      return;
+    }
+
+    logger.start(`Checking for new jobs on ${workspace}`);
+
+    const response = await axios.get(
+      `${API_HOST}${API_VERSION}/agents/${agent.id}/jobs?status=todo`
+    );
+
+    const jobs = response.data;
+    if (!jobs || !jobs.length) {
+      logger.stop('No jobs found');
+
+      // Schedule next poll
+      if (isPolling) {
+        pollTimer = setTimeout(() => pollJobs(workspace), 30000);
+      }
+      return;
+    }
+
+    logger.stop(`Found ${jobs.length} jobs to execute`);
+
+    // Temporarily pause polling while executing jobs
+    isPolling = false;
+
+    const shell_user = await run_shell({ command: `whoami` });
+    const localIP = await run_shell({ command: `hostname -I` });
+
+    for (const idx in jobs) {
+      await axios.put(`${API_HOST}${API_VERSION}/jobs/${jobs[idx].id}`, {
+        status: 'in_progress',
+        host: `${shell_user.trim()}@${localIP.trim()}`,
+      });
+
+      await queryCommand(jobs[idx].brief, {
+        callback: async (response: unknown) => {
+          await axios.put(`${API_HOST}${API_VERSION}/jobs/${jobs[idx].id}`, {
+            status: 'completed',
+            result: response,
+          });
+        },
+      });
+    }
+
+    // Resume polling after job execution
+    isPolling = true;
+    pollTimer = setTimeout(() => pollJobs(workspace), 30000);
+  } catch (error) {
+    Logger.error('Jobs error:', error);
+    // On error, continue polling
+    if (isPolling) {
+      pollTimer = setTimeout(() => pollJobs(workspace), 30000);
+    }
+  }
+}
+
+// Function to stop polling
+function stopPolling(): void {
+  isPolling = false;
+  if (pollTimer) {
+    clearTimeout(pollTimer);
+    pollTimer = null;
+  }
+}
 
 export async function jobSubscriptionCommand(options: {
   subscribe?: boolean;
@@ -27,45 +104,20 @@ export async function jobSubscriptionCommand(options: {
   logger.intro('2501 - Jobs Subscription');
 
   if (options.subscribe) {
-    logger.start('Subscribing for new jobs');
-    const shellOutput = await run_shell({
-      command: `echo $SHELL`,
-      shell: true,
-    });
-    if (hasError(shellOutput)) {
-      return Logger.error(shellOutput);
+    // If already polling, stop the current polling
+    if (isPolling) {
+      stopPolling();
+      logger.log('Stopped previous job subscription');
     }
 
-    const soureCommandOutput = await run_shell({
-      command: unixSourceCommand,
-      shell: shellOutput,
-    });
-    if (hasError(soureCommandOutput)) {
-      return Logger.error(soureCommandOutput);
-    }
-    const crontabOutput = await run_shell({
-      shell: true,
-      command: `(crontab -l 2>/dev/null; echo "* * * * * ${shellOutput} -c \\"${soureCommandOutput} && cd ${workspace} && @2501 jobs --listen\\" >> ${LOGFILE_PATH} 2>>${ERRORFILE_PATH}") | crontab -`,
-    });
-    if (hasError(crontabOutput)) {
-      return Logger.error('crontabOutput', crontabOutput);
-    }
-    return logger.stop(
-      `Subscribed to the API for new jobs on workspace ${workspace}`
-    );
-  }
+    logger.start('Starting job subscription');
 
-  if (options.unsubscribe) {
-    logger.start('Unsubscribing for new jobs');
-    const crontabOutput = await run_shell({
-      shell: true,
-      command: `crontab -l | grep -v "cd ${workspace} && @2501 jobs --listen" | crontab -`,
-    });
-    if (hasError(crontabOutput)) {
-      return Logger.error('crontabOutput', crontabOutput);
-    }
+    // Set up polling
+    isPolling = true;
+    pollJobs(workspace);
+
     return logger.stop(
-      `Unsubscribed to the API for new jobs on workspace ${workspace}`
+      `Subscribed to the API for new jobs on workspace ${workspace}. Polling every 30 seconds.`
     );
   }
 

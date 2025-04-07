@@ -116,11 +116,7 @@ program
   .option('--workspace <path>', 'Specify a different workspace path')
   .option(
     '--subscribe',
-    'Subscribe to the API for new jobs on the current workspace (updated every minute)'
-  )
-  .option(
-    '--unsubscribe',
-    'Unsubscribe to the API for new jobs on the current workspace'
+    'Subscribe to the API for new jobs on the current workspace (polls every 30 seconds)'
   )
   .option('--listen', 'Listen for new jobs from the API and execute them')
   .hook('preAction', authMiddleware)
