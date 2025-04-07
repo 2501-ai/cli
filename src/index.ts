@@ -142,6 +142,7 @@ program
   .action(wtfCommand);
 
 (async () => {
+  console.log('2501 DEEEEEV');
   const isLatest = await isLatestVersion();
   if (!isLatest) {
     Logger.log(

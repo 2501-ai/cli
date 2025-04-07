@@ -42,6 +42,22 @@ export async function jobSubscriptionCommand(options: {
       return Logger.error(shellOutput);
     }
 
+    const whichNode = await run_shell({
+      command: `which node`,
+      shell: true,
+    });
+    if (hasError(whichNode)) {
+      return Logger.error(whichNode);
+    }
+
+    const whichTFZO = await run_shell({
+      command: `which @2501`,
+      shell: true,
+    });
+    if (hasError(whichTFZO)) {
+      return Logger.error(whichTFZO);
+    }
+
     const soureCommandOutput = await run_shell({
       command: unixSourceCommand,
       shell: shellOutput,
@@ -54,7 +70,7 @@ export async function jobSubscriptionCommand(options: {
 
     const crontabOutput = await run_shell({
       shell: true,
-      command: `(crontab -l 2>/dev/null || echo "") | grep -v "cd ${workspace} && .*@2501 jobs --listen" | (cat && echo "* * * * * cd ${workspace} && ${soureCommandOutput.trim()} && @2501 jobs --listen --workspace ${workspace} > ${LOGFILE_PATH} 2> ${ERRORFILE_PATH}") | crontab -`,
+      command: `(crontab -l 2>/dev/null; echo "* * * * * ${shellOutput} -c \\"${soureCommandOutput} && cd ${workspace} && ${whichNode} ${whichTFZO} jobs --listen\\" >> ${LOGFILE_PATH} 2>>${ERRORFILE_PATH}") | crontab -`,
     });
     console.log('Step: Set up crontab job subscription');
 
