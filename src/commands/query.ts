@@ -153,7 +153,8 @@ const synchronizeWorkspace = async (
 };
 
 const handleReasoningSteps = (streamResponse: Readable) => {
-  streamResponse.on('data', (data: any) => {
+  // Define the handler function separately so we can reference it for removal
+  const dataHandler = (data: any) => {
     if (!data.toString().includes('reasoning')) {
       return;
     }
@@ -171,7 +172,15 @@ const handleReasoningSteps = (streamResponse: Readable) => {
     } catch (e) {
       // Ignore
     }
-  });
+  };
+
+  // Add the listener
+  streamResponse.on('data', dataHandler);
+
+  // Return a cleanup function that can be called later
+  return () => {
+    streamResponse.removeListener('data', dataHandler);
+  };
 };
 
 const parseAgentResponse = async (
@@ -208,6 +217,8 @@ export const queryCommand = async (
   }
 ) => {
   Logger.debug('Options:', options);
+
+  let cleanupFunction: (() => void) | null = null;
 
   try {
     const config = readConfig();
@@ -269,7 +280,7 @@ export const queryCommand = async (
 
     if (stream) {
       const streamResponse = agentResponse as Readable;
-      handleReasoningSteps(streamResponse);
+      cleanupFunction = handleReasoningSteps(streamResponse);
     }
 
     // eslint-disable-next-line prefer-const
@@ -312,5 +323,10 @@ export const queryCommand = async (
     if (options.callback) await options.callback(finalResponse);
   } catch (error) {
     logger.handleError(error as Error);
+  } finally {
+    // Clean up any event listeners
+    if (cleanupFunction) {
+      cleanupFunction();
+    }
   }
 };

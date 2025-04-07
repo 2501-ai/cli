@@ -16,6 +16,9 @@ import { DISCORD_LINK } from './utils/messaging';
 import { initPluginCredentials } from './utils/credentials';
 import { initPlugins } from './utils/plugins';
 
+// Increase max event listeners to avoid warnings during polling
+process.setMaxListeners(50);
+
 process.on('SIGINT', () => {
   console.log('Process interrupted with Ctrl+C');
   process.exit(130); // Exit with code 130 (128 + 2 for SIGINT)
@@ -116,11 +119,7 @@ program
   .option('--workspace <path>', 'Specify a different workspace path')
   .option(
     '--subscribe',
-    'Subscribe to the API for new jobs on the current workspace (updated every minute)'
-  )
-  .option(
-    '--unsubscribe',
-    'Unsubscribe to the API for new jobs on the current workspace'
+    'Subscribe to the API for new jobs on the current workspace (polls every 30 seconds)'
   )
   .option('--listen', 'Listen for new jobs from the API and execute them')
   .hook('preAction', authMiddleware)
