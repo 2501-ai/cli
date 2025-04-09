@@ -4,7 +4,7 @@ import { FormData } from 'formdata-node';
 import { DEFAULT_ENGINE } from '../commands/init';
 import { API_HOST, API_VERSION } from '../constants';
 import { readConfig } from '../utils/conf';
-import pluginService from '../utils/plugins';
+import { pluginService } from '../utils/plugins';
 import {
   Configuration,
   EngineType,

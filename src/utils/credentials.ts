@@ -1,7 +1,8 @@
 import dotenv from 'dotenv';
 import Logger from './logger';
 import { CredentialsConfig } from './types';
-import pluginService from './plugins';
+import { pluginService } from './plugins';
+import { Command } from 'commander';
 
 class CredentialsService {
   private credentials: CredentialsConfig = {};
@@ -77,4 +78,12 @@ class CredentialsService {
   }
 }
 
-export default CredentialsService.getInstance();
+export const credentialsService = CredentialsService.getInstance();
+
+export const initPluginCredentials = (
+  thisCommand: Command,
+  actionCommand: Command
+) => {
+  const options = actionCommand.opts();
+  credentialsService.initialize(options.env);
+};

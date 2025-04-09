@@ -1,11 +1,14 @@
 import fs from 'fs';
 import path from 'path';
-import os from 'os';
 
 import Logger from '../utils/logger';
 import { getDirectoryMd5Hash, getDirectoryFiles } from '../utils/files';
 import { WorkspaceDiff, WorkspaceState } from '../utils/types';
-import { DEFAULT_MAX_DEPTH, DEFAULT_MAX_DIR_SIZE } from '../constants';
+import {
+  CONFIG_DIR,
+  DEFAULT_MAX_DEPTH,
+  DEFAULT_MAX_DIR_SIZE,
+} from '../constants';
 import { IgnoreManager } from '../utils/ignore';
 import { zipUtility } from '../utils/zip';
 import { toReadableSize } from '../utils/files';
@@ -21,10 +24,7 @@ export function resolveWorkspacePath(options: { workspace?: string }): string {
 }
 
 export function getWorkspaceConfName(agentId: string): string {
-  return path.join(
-    path.join(os.homedir(), '.2501'),
-    `workspace_state_${agentId}.conf`
-  );
+  return path.join(CONFIG_DIR, `workspace_state_${agentId}.conf`);
 }
 
 export function clearWorkspaceState(agentId: string): void {

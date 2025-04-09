@@ -15,8 +15,6 @@
         "${workspaceFolder}/.debug-workspace",
         "--env",
         "${workspaceFolder}/.env.test",
-        "--plugins",
-        "${workspaceFolder}/conf/plugins.json",
         "List me all network activity in Shiva for the past 2 hours"
       ],
       "console": "integratedTerminal",
@@ -33,6 +31,42 @@
         "dev",
         "--",
         "init",
+        "--workspace",
+        "${workspaceFolder}/.debug-workspace"
+      ],
+      "console": "integratedTerminal",
+      "envFile": "${workspaceFolder}/.env"
+    },
+    {
+      "name": "jobs listen",
+      "type": "node",
+      "request": "launch",
+      "cwd": "${workspaceFolder}",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "run",
+        "dev",
+        "--",
+        "jobs",
+        "--listen",
+        "--workspace",
+        "${workspaceFolder}/.debug-workspace"
+      ],
+      "console": "integratedTerminal",
+      "envFile": "${workspaceFolder}/.env"
+    },
+    {
+      "name": "jobs subscribe",
+      "type": "node",
+      "request": "launch",
+      "cwd": "${workspaceFolder}",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "run",
+        "dev",
+        "--",
+        "jobs",
+        "--subscribe",
         "--workspace",
         "${workspaceFolder}/.debug-workspace"
       ],

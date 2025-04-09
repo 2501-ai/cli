@@ -54,25 +54,31 @@ export function update_file({
   sectionsDiff: string[];
 }) {
   Logger.debug('Updating sections:', sectionsDiff);
-  const fileContent = fs.readFileSync(path, 'utf8');
-  const newContent = modifyCodeSections({
-    originalContent: fileContent,
-    diffSections: sectionsDiff,
-  });
 
-  const ignoreManager = IgnoreManager.getInstance();
-  const content = ignoreManager.isIgnored(path)
-    ? ''
-    : `New file Content :
+  try {
+    const fileContent = fs.readFileSync(path, 'utf8');
+    const newContent = modifyCodeSections({
+      originalContent: fileContent,
+      diffSections: sectionsDiff,
+    });
+
+    const ignoreManager = IgnoreManager.getInstance();
+    const content = ignoreManager.isIgnored(path)
+      ? ''
+      : `New file Content :
     \`\`\`
     ${newContent}
     \`\`\``;
 
-  fs.writeFileSync(path, newContent);
+    fs.writeFileSync(path, newContent);
 
-  return `
+    return `
     File updated: ${path}
     ${content}`;
+  } catch (error) {
+    return `${ERROR_BOL} I failed to run update_file on ${path}, please fix the situation, errors below.\n ${(error as Error).message}
+    ${error}`;
+  }
 }
 
 export async function run_shell(args: {
@@ -84,27 +90,10 @@ export async function run_shell(args: {
   Logger.debug(`    Running shell command: ${args.command}`);
 
   try {
-    // Wrap command with proper signal handling and cleanup
-    const cmd = `
-      # Set up cleanup trap for multiple signals
-      cleanup() {
-        trap - EXIT SIGINT SIGTERM SIGQUIT
-        # Add any specific cleanup commands here if needed
-        exit 0
-      }
-      
-      # Set up traps
-      trap cleanup EXIT SIGINT SIGTERM SIGQUIT
-      
-      # Execute the actual command
-      ${args.command}
-    `;
-
-    const { stderr, stdout } = await execa(cmd, {
+    const { stderr, stdout } = await execa(args.command, {
       shell: args.shell ?? true,
       env: args.env,
       preferLocal: true,
-      cleanup: true, // execa's own cleanup
     });
 
     if (stdout) output += stdout;
@@ -118,9 +107,7 @@ export async function run_shell(args: {
     return output;
   } catch (error) {
     return `${ERROR_BOL} I failed to run ${args.command}, please fix the situation, errors below.\n ${(error as Error).message}
-     \`\`\`
-     ${error}
-     \`\`\``;
+    ${error}`;
   }
 }
 
