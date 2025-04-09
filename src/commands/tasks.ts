@@ -1,15 +1,12 @@
-import axios from 'axios';
-
-import { API_HOST, API_VERSION } from '../constants';
 import {
   ERRORFILE_PATH,
   hasError,
   LOGFILE_PATH,
   run_shell,
 } from '../helpers/actions';
-import { getTasks } from '../helpers/api';
+import { getTasks, updateTask } from '../helpers/api';
 import { resolveWorkspacePath } from '../helpers/workspace';
-import { listAgentsFromWorkspace } from '../utils/conf';
+import { getEligibleAgent } from '../utils/conf';
 import Logger from '../utils/logger';
 import { unixSourceCommand } from '../utils/shellCommands';
 import { queryCommand } from './query';
@@ -31,7 +28,6 @@ export async function tasksSubscriptionCommand(options: {
       command: `echo $SHELL`,
       shell: true,
     });
-    console.log('Step: Retrieved shell information');
 
     if (hasError(shellOutput)) {
       return Logger.error(shellOutput);
@@ -57,7 +53,6 @@ export async function tasksSubscriptionCommand(options: {
       command: unixSourceCommand,
       shell: shellOutput,
     }); // returns smth like 'source ~/.zshrc'
-    console.log('Step: Got source command output');
 
     if (hasError(soureCommandOutput)) {
       return Logger.error(soureCommandOutput);
@@ -67,13 +62,11 @@ export async function tasksSubscriptionCommand(options: {
       shell: true,
       command: `(crontab -l 2>/dev/null; echo "* * * * * ${shellOutput} -c \\"${soureCommandOutput} && cd ${workspace} && ${whichNode} ${whichTFZO} tasks --listen\\" >> ${LOGFILE_PATH} 2>>${ERRORFILE_PATH}") | crontab -`,
     });
-    console.log('Step: Set up crontab job subscription');
 
     if (hasError(crontabOutput)) {
       return Logger.error('crontabOutput', crontabOutput);
     }
 
-    console.log('Step: Subscription completed successfully');
     return logger.stop(
       `Subscribed to the API for new tasks on workspace ${workspace}`
     );
@@ -81,19 +74,16 @@ export async function tasksSubscriptionCommand(options: {
 
   if (options.unsubscribe) {
     logger.start('Unsubscribing for new jobs');
-    console.log('Step: Starting unsubscription process');
 
     const crontabOutput = await run_shell({
       shell: true,
       command: `crontab -l | grep -v "cd ${workspace} && .*@2501 tasks --listen" | crontab -`,
     });
-    console.log('Step: Removed crontab job subscription');
 
     if (hasError(crontabOutput)) {
       return Logger.error('crontabOutput', crontabOutput);
     }
 
-    console.log('Step: Unsubscription completed successfully');
     return logger.stop(
       `Unsubscribed to the API for new tasks on workspace ${workspace}`
     );
@@ -101,9 +91,7 @@ export async function tasksSubscriptionCommand(options: {
 
   if (options.listen) {
     try {
-      const [agent] = listAgentsFromWorkspace(workspace);
-      console.log('Step: Retrieved agents from workspace');
-
+      const agent = getEligibleAgent(workspace);
       if (!agent) {
         return logger.outro('No agents available in the workspace');
       }
@@ -118,34 +106,32 @@ export async function tasksSubscriptionCommand(options: {
         return;
       }
 
-      const shell_user = await run_shell({ command: `whoami` });
-      console.log('Step: Got current user');
+      // TODO: what is the purpose of this??
+      // const shell_user = await run_shell({ command: `whoami` });
+      // console.log('Step: Got current user');
 
-      const localIP = await run_shell({ command: `hostname -I` });
-      console.log('Step: Got local IP address');
+      // const localIP = await run_shell({ command: `hostname -I` });
+      // console.log('Step: Got local IP address');
 
       logger.log(`Found ${tasks.length} tasks to execute`);
-      console.log(`Step: Processing ${tasks.length} tasks`);
 
-      logger.stop(`Found ${tasks.length} tasks to execute`);
       for (const idx in tasks) {
-        await axios.put(`${API_HOST}${API_VERSION}/tasks/${tasks[idx].id}`, {
-          status: 'in_progress',
-          host: `${shell_user.trim()}@${localIP.trim()}`,
-        });
+        Logger.log(`Processing task ${tasks[idx].id}`);
+        // The engine will update the task as in_progress.
         await queryCommand(tasks[idx].brief, {
-          callback: async (response: unknown) => {
-            await axios.put(
-              `${API_HOST}${API_VERSION}/tasks/${tasks[idx].id}`,
-              {
-                status: 'completed',
-                result: response,
-              }
-            );
-          },
+          workspace,
+          agentId: agent.id,
+          taskId: tasks[idx].id,
+        }).catch(async (error) => {
+          // Update the task as failed if the error comes from the CLI side.
+          await updateTask(agent.id, tasks[idx].id, {
+            status: 'failed',
+            result: `CLI Error: ${error}`,
+          });
+          Logger.error(`Task ${tasks[idx].id} failed: ${error}`);
         });
       }
-      console.log('Step: All jobs processed successfully');
+      Logger.log('All tasks have been processed');
     } catch (error) {
       Logger.error('Tasks error:', error);
     }

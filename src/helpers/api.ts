@@ -143,7 +143,25 @@ export const getTasks = async (
   agentId: string,
   status: string
 ): Promise<any[]> => {
+  console.log('getTasks', { agentId, status });
   if (!agentId) throw new Error('Agent ID is required');
-  const { data } = await axios.get(`/agents/${agentId}/tasks/${status}`);
-  return data.tasks;
+  const response = await axios.get(`/agents/${agentId}/tasks/${status}`);
+  if (response.status !== 200) {
+    throw new Error('Failed to get tasks');
+  }
+  console.log('getTasks', { data: response.data });
+  return response.data.tasks;
+};
+
+export const updateTask = async (
+  agentId: string,
+  taskId: string,
+  data: {
+    status: string;
+    host?: string;
+    result?: any;
+  }
+) => {
+  const response = await axios.put(`/agents/${agentId}/tasks/${taskId}`, data);
+  return response.data;
 };
