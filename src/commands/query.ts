@@ -44,19 +44,18 @@ marked.use(markedTerminal() as MarkedExtension);
 const logger = new Logger();
 
 const initializeAgentConfig = async (
-  workspace: string,
-  skipWarmup: boolean
+  workspace: string
 ): Promise<AgentConfig | null> => {
   let eligible = getEligibleAgent(workspace);
   let force = false;
-  if (!eligible && !skipWarmup) {
+  if (!eligible) {
     await initCommand({ workspace });
     eligible = getEligibleAgent(workspace);
     force = true;
   }
 
   // Ensure workspace is always synchronized after initialization
-  if (eligible && !skipWarmup) {
+  if (eligible) {
     await synchronizeWorkspace(eligible.id, workspace, force);
   }
 
@@ -199,12 +198,11 @@ export const queryCommand = async (
   options: {
     workspace?: string;
     agentId?: string;
-    skipWarmup?: boolean;
     stream?: boolean;
-    callback?: (...args: any[]) => Promise<void>;
     noPersistentAgent?: boolean;
     plugins?: string;
     credentials?: string;
+    taskId?: string;
   }
 ) => {
   Logger.debug('Options:', options);
@@ -214,11 +212,10 @@ export const queryCommand = async (
     const workspace = resolveWorkspacePath(options);
     Logger.debug('Workspace:', workspace);
 
-    const skipWarmup = !!options.skipWarmup;
     const stream = options.stream ?? config?.stream ?? true;
 
     ////////// Agent Init //////////
-    const agentConfig = await initializeAgentConfig(workspace, skipWarmup);
+    const agentConfig = await initializeAgentConfig(workspace);
 
     // If not agent is eligible, it usually means there was an error during the init process that is already displayed.
     if (!agentConfig) {
@@ -234,22 +231,18 @@ export const queryCommand = async (
 
     ////////// Workflow start //////////
     let workspaceChanged = false;
-    let taskId: string;
+    let taskId = options.taskId;
 
-    if (!skipWarmup) {
-      // Run synchronizeWorkspace and createTask in parallel
-      const [syncResult, taskResult] = await Promise.all([
-        synchronizeWorkspace(agentConfig.id, workspace),
-        createTask(agentConfig.id, query),
-      ]);
+    // Run synchronizeWorkspace and createTask in parallel
+    const [syncResult, taskResult] = await Promise.all([
+      synchronizeWorkspace(agentConfig.id, workspace),
+      taskId
+        ? Promise.resolve({ id: taskId })
+        : createTask(agentConfig.id, query),
+    ]);
 
-      workspaceChanged = syncResult;
-      taskId = taskResult.id;
-    } else {
-      // If we skip warmup, still create the task
-      const taskRecord = await createTask(agentConfig.id, query);
-      taskId = taskRecord.id;
-    }
+    workspaceChanged = syncResult;
+    taskId = taskResult.id;
 
     const workspaceData = getDirectoryMd5Hash({
       directoryPath: workspace,
@@ -308,8 +301,6 @@ export const queryCommand = async (
       logger.stop(chalk.italic.gray('-'.repeat(getTerminalWidth() - 10)));
       Logger.agent(finalResponse);
     }
-
-    if (options.callback) await options.callback(finalResponse);
   } catch (error) {
     logger.handleError(error as Error);
   }

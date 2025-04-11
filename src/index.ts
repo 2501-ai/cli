@@ -7,7 +7,7 @@ import { initCommand } from './commands/init';
 import { agentsCommand } from './commands/agents';
 import { setCommand } from './commands/set';
 import { wtfCommand } from './commands/wtf';
-import { jobSubscriptionCommand } from './commands/jobs';
+import { tasksSubscriptionCommand } from './commands/tasks';
 
 import { authMiddleware } from './middleware/auth';
 import { isLatestVersion } from './utils/versioning';
@@ -109,24 +109,24 @@ program
   .option('--flush', 'Flush all agents from the configuration')
   .action(agentsCommand);
 
-// Jobs command
+// Tasks command
 program
-  .command('jobs')
-  .description('Fetch jobs from API')
+  .command('tasks')
+  .description('Fetch tasks from API')
   .option('--workspace <path>', 'Specify a different workspace path')
   .option(
     '--subscribe',
-    'Subscribe to the API for new jobs on the current workspace (updated every minute)'
+    'Subscribe to the API for new tasks on the current workspace (updated every minute)'
   )
   .option(
     '--unsubscribe',
-    'Unsubscribe to the API for new jobs on the current workspace'
+    'Unsubscribe to the API for new tasks on the current workspace'
   )
-  .option('--listen', 'Listen for new jobs from the API and execute them')
+  .option('--listen', 'Listen for new tasks from the API and execute them')
   .hook('preAction', authMiddleware)
   .hook('preAction', initPlugins)
   .hook('preAction', initPluginCredentials)
-  .action(jobSubscriptionCommand);
+  .action(tasksSubscriptionCommand);
 
 program
   .command('set')

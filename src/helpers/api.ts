@@ -1,16 +1,16 @@
 import axios from 'axios';
 
-import { API_HOST, API_VERSION } from '../constants';
-import { readConfig } from '../utils/conf';
 import { FormData } from 'formdata-node';
 import { DEFAULT_ENGINE } from '../commands/init';
+import { API_HOST, API_VERSION } from '../constants';
+import { readConfig } from '../utils/conf';
+import { pluginService } from '../utils/plugins';
 import {
   Configuration,
   EngineType,
   QueryResponseDTO,
   SystemInfo,
 } from '../utils/types';
-import { pluginService } from '../utils/plugins';
 
 // const ONE_MINUTES_MILLIS = 60 * 1000;
 const FIVE_MINUTES_MILLIS = 5 * 60 * 1000;
@@ -139,8 +139,29 @@ export const createTask = async (
  * @param agentId - The ID of the agent
  * @returns - The tasks
  */
-export const getTasks = async (agentId: string) => {
+export const getTasks = async (
+  agentId: string,
+  status: string
+): Promise<any[]> => {
+  console.log('getTasks', { agentId, status });
   if (!agentId) throw new Error('Agent ID is required');
-  const { data } = await axios.get(`/agents/${agentId}/tasks`);
-  return data;
+  const response = await axios.get(`/agents/${agentId}/tasks/${status}`);
+  if (response.status !== 200) {
+    throw new Error('Failed to get tasks');
+  }
+  console.log('getTasks', { data: response.data });
+  return response.data.tasks;
+};
+
+export const updateTask = async (
+  agentId: string,
+  taskId: string,
+  data: {
+    status: string;
+    host?: string;
+    result?: any;
+  }
+) => {
+  const response = await axios.put(`/agents/${agentId}/tasks/${taskId}`, data);
+  return response.data;
 };
