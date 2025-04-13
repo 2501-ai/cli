@@ -63,8 +63,7 @@ export const queryAgent = async (
       changed,
       workspaceTree,
       stream,
-      plugins:
-        Object.keys(plugins).length > 0 ? JSON.stringify(plugins) : undefined,
+      plugins,
     },
     {
       responseType: stream ? 'stream' : 'json',
