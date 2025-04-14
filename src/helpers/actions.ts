@@ -1,8 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import TurndownService from 'turndown';
 import execa from 'execa';
-import * as cheerio from 'cheerio';
 
 import Logger from '../utils/logger';
 
@@ -116,25 +114,3 @@ export const ERROR_BOL = `ERROR :`; // beginning of line
 export const hasError = (output: string) => {
   return output.startsWith(ERROR_BOL);
 };
-
-export async function browse_url(args: { url: string }) {
-  const html = await fetch(args.url).then((res) => res.text());
-  const $ = cheerio.load(html);
-
-  // Remove script and style elements
-  $('script').remove();
-  $('style').remove();
-
-  // Optionally, you can remove other elements like iframes, images, etc.
-  $('iframe, img, video, object').remove();
-
-  // Extract the textual content
-  const text = $('body').text();
-
-  const turndownService = new TurndownService();
-  const md = turndownService.turndown(text);
-  return `
-    Result of content of page :
-    ${md.replace(/\s+/g, '')}
-  `;
-}

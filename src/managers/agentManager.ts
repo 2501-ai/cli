@@ -2,7 +2,6 @@ import axios from 'axios';
 import fs from 'fs';
 
 import {
-  browse_url,
   read_file,
   run_shell,
   update_file,
@@ -23,7 +22,6 @@ import { getFunctionName } from '../utils/actions';
 import { BLACKLISTED_COMMANDS } from '../constants';
 
 export const ACTION_FNS = {
-  browse_url,
   read_file,
   run_shell,
   write_file,
