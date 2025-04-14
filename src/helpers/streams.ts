@@ -86,8 +86,6 @@ export function getActionPostfix(action: FunctionAction): string {
               .slice(args.command.indexOf('&&') + 1)
           : args.command;
       return toItalic(` (Executing command: ${formatted})`);
-    case 'browse_url':
-      return toItalic(` (Browsing URL: ${args.url})`);
     default:
       return '';
   }
@@ -124,11 +122,6 @@ export function getSubActionMessage(
     case 'run_shell':
       actionMsg += toItalic(
         `└ Command ${success ? 'executed' : 'execution failed'}: ${args.command}`
-      );
-      break;
-    case 'browse_url':
-      actionMsg += toItalic(
-        `└ URL ${success ? 'browsed' : 'browsing failed'}: ${args.url}`
       );
       break;
     default:
