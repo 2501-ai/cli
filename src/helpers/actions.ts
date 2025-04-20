@@ -33,8 +33,25 @@ export function read_file(args: { path: string }): string | null {
 
 export async function write_file(args: { path: string; content: string }) {
   Logger.debug(`Writing file at "${args.path}"`);
-  fs.mkdirSync(path.dirname(args.path), { recursive: true });
-  fs.writeFileSync(args.path, args.content);
+  try {
+    fs.mkdirSync(path.dirname(args.path), { recursive: true });
+    fs.writeFileSync(args.path, args.content);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'EACCES') {
+      try {
+        // Attempt to write with sudo
+        const escapedContent = args.content.replace(/"/g, '\\"');
+        await run_shell({
+          command: `echo "${escapedContent}" | sudo tee "${args.path}" > /dev/null`,
+        });
+      } catch (e) {
+        throw new Error(`Failed to write file with sudo: ${e}`);
+      }
+    } else {
+      throw error;
+    }
+  }
+
   const ignoreManager = IgnoreManager.getInstance();
   const content = ignoreManager.isIgnored(args.path)
     ? ''
@@ -45,7 +62,7 @@ export async function write_file(args: { path: string; content: string }) {
     ${content}`;
 }
 
-export function update_file({
+export async function update_file({
   sectionsDiff,
   path,
 }: {
@@ -61,6 +78,23 @@ export function update_file({
       originalContent: fileContent,
       diffSections: sectionsDiff,
     });
+
+    try {
+      fs.writeFileSync(path, newContent);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'EACCES') {
+        try {
+          const escapedContent = newContent.replace(/"/g, '\\"');
+          await run_shell({
+            command: `echo "${escapedContent}" | sudo tee "${path}" > /dev/null`,
+          });
+        } catch (e) {
+          throw new Error(`Failed to write file with sudo: ${e}`);
+        }
+      } else {
+        throw error;
+      }
+    }
 
     const ignoreManager = IgnoreManager.getInstance();
     const content = ignoreManager.isIgnored(path)

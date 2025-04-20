@@ -16,7 +16,7 @@ describe('Action - sectionUpdate', () => {
     fs.unlinkSync(`${__dirname}${path.sep}mocks/content.temp.jsonl`);
   });
 
-  it('should update a file correctly', () => {
+  it('should update a file correctly', async () => {
     const action = {
       function: 'update_file',
       args: {
@@ -31,11 +31,11 @@ describe('Action - sectionUpdate', () => {
       },
     };
 
-    const res = update_file(action.args);
+    const res = await update_file(action.args);
     expect(res.includes('File updated')).toEqual(true);
   });
 
-  it('should update a file correctly', () => {
+  it('should update a file correctly', async () => {
     const action = {
       function: 'update_file',
       args: {
@@ -48,7 +48,7 @@ describe('Action - sectionUpdate', () => {
       },
     };
 
-    const res = update_file(action.args);
+    const res = await update_file(action.args);
     expect(res.includes('File updated')).toEqual(true);
   });
 });
