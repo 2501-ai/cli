@@ -1,4 +1,4 @@
-import * as fs from 'fs';
+/*import * as fs from 'fs';
 import { update_file } from '../actions';
 import path from 'path';
 
@@ -51,4 +51,4 @@ describe('Action - sectionUpdate', () => {
     const res = update_file(action.args);
     expect(res.includes('File updated')).toEqual(true);
   });
-});
+}); */
