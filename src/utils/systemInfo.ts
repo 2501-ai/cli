@@ -1,14 +1,14 @@
-import { exec } from 'child_process';
+// Node.js built-in modules
+import fs from 'fs';
 import os from 'os';
 import { promisify } from 'node:util';
-import { execSync } from 'child_process';
-import { HostInfo } from './types';
-import fs from 'fs';
+import { exec, execSync } from 'child_process';
 
-// Local imports
+// Local utilities
 import Logger from './logger';
-import { SystemInfo } from './types';
 
+// Local types
+import { HostInfo, SystemInfo } from './types';
 const execAsync = promisify(exec);
 
 type PackageManagerInfo = {
