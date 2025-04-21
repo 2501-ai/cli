@@ -108,6 +108,13 @@ export type UsageData = {
 };
 export type EngineType = 'rhino' | 'rabbit';
 
+export interface HostInfo {
+  unique_id: string; // Matches Host.unique_id
+  name: string; // Matches Host.name
+  private_ip?: string; // Optional, matches Host.private_ip
+  additional_names?: string[]; // Optional, matches Host.additional_names
+}
+
 export interface AgentConfig {
   id: string;
   name: string;
@@ -115,6 +122,9 @@ export interface AgentConfig {
   engine: EngineType;
   configuration: string;
   capabilities: EngineCapability[];
+  host_id?: string; // Optional, matches Agent.host_id
+  key?: string; // Matches Agent.key
+  cli_data?: Record<string, any>; // Matches Agent.cli_data
 }
 
 export type LocalConfig = {

@@ -1,6 +1,8 @@
 import { exec } from 'child_process';
 import os from 'os';
 import { promisify } from 'node:util';
+import { execSync } from 'child_process';
+import { HostInfo } from './types';
 
 // Local imports
 import Logger from './logger';
@@ -272,4 +274,38 @@ async function getInstalledPackages(
     Logger.error('Error getting installed packages:', (error as Error).message);
     return {};
   }
+}
+
+export function getHostInfo(): HostInfo {
+  let unique_id: string;
+  try {
+    if (process.platform === 'darwin') {
+      unique_id = execSync(
+        "ioreg -d2 -c IOPlatformExpertDevice | awk -F\\\" '/IOPlatformUUID/{print $(NF-1)}'"
+      )
+        .toString()
+        .trim();
+    } else {
+      unique_id = execSync(
+        'cat /var/lib/dbus/machine-id 2>/dev/null || cat /etc/machine-id'
+      )
+        .toString()
+        .trim();
+    }
+  } catch (error) {
+    const networkInterfaces = os.networkInterfaces();
+    const mac =
+      Object.values(networkInterfaces)
+        .flat()
+        .find((iface) => !iface?.internal && iface?.mac)?.mac || '';
+    unique_id = `${os.hostname()}-${mac}`;
+  }
+
+  return {
+    unique_id,
+    name: os.hostname(),
+    private_ip: Object.values(os.networkInterfaces())
+      .flat()
+      .find((iface) => !iface?.internal && iface?.family === 'IPv4')?.address,
+  };
 }
