@@ -11,6 +11,7 @@ import {
   QueryResponseDTO,
   SystemInfo,
 } from '../utils/types';
+import { getHostInfo } from '../utils/systemInfo';
 
 // const ONE_MINUTES_MILLIS = 60 * 1000;
 const FIVE_MINUTES_MILLIS = 5 * 60 * 1000;
@@ -33,14 +34,17 @@ export const createAgent = async (
   sysinfo: SystemInfo,
   engine?: EngineType | undefined
 ) => {
+  const hostInfo = getHostInfo();
+
   const { data: createResponse } = await axios.post('/agents', {
     workspace,
     configuration: selected_config.id,
     prompt: selected_config.prompt,
     engine: engine || DEFAULT_ENGINE,
     sysinfo,
-    // files: workspaceResponse.vectorStoredFiles.map((file) => file.id),
+    host: hostInfo,
   });
+
   return createResponse;
 };
 
