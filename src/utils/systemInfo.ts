@@ -9,6 +9,7 @@ import Logger from './logger';
 
 // Local types
 import { HostInfo, SystemInfo } from './types';
+
 const execAsync = promisify(exec);
 
 type PackageManagerInfo = {
