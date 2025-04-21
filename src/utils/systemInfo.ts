@@ -3,6 +3,7 @@ import os from 'os';
 import { promisify } from 'node:util';
 import { execSync } from 'child_process';
 import { HostInfo } from './types';
+import fs from 'fs';
 
 // Local imports
 import Logger from './logger';
@@ -286,11 +287,16 @@ export function getHostInfo(): HostInfo {
         .toString()
         .trim();
     } else {
-      unique_id = execSync(
-        'cat /var/lib/dbus/machine-id 2>/dev/null || cat /etc/machine-id'
-      )
-        .toString()
-        .trim();
+      // Check for Docker environment
+      if (fs.existsSync('/.dockerenv')) {
+        unique_id = process.env.HOSTNAME || os.hostname();
+      } else {
+        unique_id = execSync(
+          'cat /var/lib/dbus/machine-id 2>/dev/null || cat /etc/machine-id'
+        )
+          .toString()
+          .trim();
+      }
     }
   } catch (error) {
     const networkInterfaces = os.networkInterfaces();
