@@ -146,13 +146,11 @@ export const getTasks = async (
   agentId: string,
   status: string
 ): Promise<any[]> => {
-  console.log('getTasks', { agentId, status });
   if (!agentId) throw new Error('Agent ID is required');
   const response = await axios.get(`/agents/${agentId}/tasks/${status}`);
   if (response.status !== 200) {
     throw new Error('Failed to get tasks');
   }
-  console.log('getTasks', { data: response.data });
   return response.data.tasks;
 };
 

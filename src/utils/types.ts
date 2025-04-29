@@ -137,6 +137,8 @@ export type LocalConfig = {
   disable_spinner: boolean;
 };
 
+export type LocalConfigKey = keyof LocalConfig;
+
 export type AgentCallbackType = (...args: unknown[]) => Promise<void>;
 
 export interface FunctionExecutionResult {

@@ -98,8 +98,10 @@ export async function initCommand(options?: InitCommandOptions) {
       setValue('join_discord_shown', true);
     }
 
-    const shouldDisableSpinner = process.env.TFZO_DISABLE_SPINNER === 'true';
-    setValue('disable_spinner', shouldDisableSpinner);
+    if (process.env.TFZO_DISABLE_SPINNER) {
+      const shouldDisableSpinner = process.env.TFZO_DISABLE_SPINNER === 'true';
+      setValue('disable_spinner', shouldDisableSpinner);
+    }
 
     logger.start('Creating agent');
     const configKey = options?.config || 'CODING_AGENT';
