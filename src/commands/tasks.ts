@@ -111,7 +111,7 @@ export async function tasksSubscriptionCommand(options: {
         return;
       }
 
-      logger.message(`Found ${tasks.length} tasks to execute`);
+      logger.log(`Found ${tasks.length} tasks to execute`);
 
       for (const idx in tasks) {
         logger.log(`Processing task ${tasks[idx].id}`);
