@@ -1,7 +1,7 @@
 import axios from 'axios';
-import { StreamEvent } from './utils/types';
-import path from 'path';
 import os from 'os';
+import path from 'path';
+import { StreamEvent } from './utils/types';
 if (process.env.AUTH_JWT) {
   axios.defaults.headers.common['Cookie'] =
     `_vercel_jwt=${process.env.AUTH_JWT}`;

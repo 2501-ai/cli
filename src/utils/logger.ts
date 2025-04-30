@@ -70,6 +70,9 @@ export default class Logger {
   }
 
   outro(message: string) {
+    if (this.#spinnerStarted) {
+      this.stop();
+    }
     p.outro(message);
   }
 

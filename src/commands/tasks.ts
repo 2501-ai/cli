@@ -96,27 +96,25 @@ export async function tasksSubscriptionCommand(options: {
         return logger.outro('No agents available in the workspace');
       }
 
-      logger.start(`Listening for new tasks on ${workspace}`);
+      // A spinner start requires a stop before returning.
+      logger.start();
+      logger.log(`Listening for new tasks on ${workspace}`);
 
       const status = 'assigned';
+      logger.log(
+        `Retrieving tasks for agent ${agent.id} with status ${status}`
+      );
       const tasks = await getTasks(agent.id, status);
 
       if (!tasks.length) {
-        logger.outro('No tasks found');
+        logger.stop(`No tasks found`);
         return;
       }
-
-      // TODO: what is the purpose of this??
-      // const shell_user = await run_shell({ command: `whoami` });
-      // console.log('Step: Got current user');
-
-      // const localIP = await run_shell({ command: `hostname -I` });
-      // console.log('Step: Got local IP address');
 
       logger.log(`Found ${tasks.length} tasks to execute`);
 
       for (const idx in tasks) {
-        Logger.log(`Processing task ${tasks[idx].id}`);
+        logger.log(`Processing task ${tasks[idx].id}`);
         // The engine will update the task as in_progress.
         await queryCommand(tasks[idx].brief, {
           workspace,
@@ -131,9 +129,11 @@ export async function tasksSubscriptionCommand(options: {
           Logger.error(`Task ${tasks[idx].id} failed: ${error}`);
         });
       }
-      Logger.log('All tasks have been processed');
+      logger.log('All tasks have been processed');
     } catch (error) {
       Logger.error('Tasks error:', error);
     }
+    // Make sure the logger spinner is stopped.
+    logger.stop();
   }
 }
