@@ -33,6 +33,11 @@ Before we begin, you need to configure your API key. (You can get your API key b
     `Once you have registered, please enter your API key here: `,
     'string'
   );
+  if (res.toString() === 'Symbol(clack:cancel)') {
+    logger.cancel('Operation cancelled');
+    process.exit(0);
+  }
+
   if (res) {
     try {
       ConfigManager.instance.set('api_key', res);

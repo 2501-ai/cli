@@ -82,7 +82,7 @@ export default class Logger {
   }
 
   start(message?: string) {
-    if (ConfigManager.instance.config.disable_spinner) {
+    if (ConfigManager.instance.get('disable_spinner')) {
       p.log.message(message);
       return;
     }
@@ -107,7 +107,7 @@ export default class Logger {
   }
 
   message(message: string) {
-    if (ConfigManager.instance.config.disable_spinner) {
+    if (ConfigManager.instance.get('disable_spinner')) {
       p.log.message(message);
       return;
     }
@@ -125,7 +125,7 @@ export default class Logger {
   }
 
   stop(message?: string, code?: number) {
-    if (ConfigManager.instance.config.disable_spinner) {
+    if (ConfigManager.instance.get('disable_spinner')) {
       p.log.message(message);
       return;
     }

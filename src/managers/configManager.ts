@@ -47,13 +47,6 @@ export class ConfigManager {
   }
 
   /**
-   * Get the current configuration (read-only)
-   */
-  get config(): Readonly<LocalConfig> {
-    return Object.freeze({ ...this._config });
-  }
-
-  /**
    * Set a specific configuration key
    * @param key - Configuration key to set
    * @param value - Value to set

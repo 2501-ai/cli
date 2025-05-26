@@ -210,11 +210,10 @@ export const queryCommand = async (
 
   try {
     const configManager = ConfigManager.instance;
-    const config = configManager.config;
     const workspace = resolveWorkspacePath(options);
     Logger.debug('Workspace:', workspace);
 
-    const stream = options.stream ?? config.stream ?? true;
+    const stream = options.stream ?? configManager.get('stream') ?? true;
 
     ////////// Agent Init //////////
     const agentConfig = await initializeAgentConfig(workspace);

@@ -18,12 +18,12 @@ const FIVE_MINUTES_MILLIS = 5 * 60 * 1000;
 const TEN_MINUTES_MILLIS = 10 * 60 * 1000;
 
 export const initAxios = async () => {
-  const config = ConfigManager.instance.config;
-  if (!config.api_key) {
+  const apiKey = ConfigManager.instance.get('api_key');
+  if (!apiKey) {
     throw new Error('API key must be set.');
   }
 
-  axios.defaults.headers.common['Authorization'] = `Bearer ${config.api_key}`;
+  axios.defaults.headers.common['Authorization'] = `Bearer ${apiKey}`;
   axios.defaults.baseURL = `${API_HOST}${API_VERSION}`;
   axios.defaults.timeout = FIVE_MINUTES_MILLIS;
 };

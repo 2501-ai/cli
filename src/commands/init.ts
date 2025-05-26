@@ -84,9 +84,8 @@ export async function getWorkspacePath(
 export async function initCommand(options?: InitCommandOptions) {
   try {
     const configManager = ConfigManager.instance;
-    const localConfig = configManager.config;
 
-    if (!localConfig.join_discord_shown) {
+    if (!configManager.get('join_discord_shown')) {
       const term = terminal;
 
       term('\n');
@@ -124,7 +123,7 @@ export async function initCommand(options?: InitCommandOptions) {
       workspacePath,
       agentConfig,
       systemInfo,
-      localConfig.engine
+      configManager.get('engine')
     );
     Logger.debug('Agent created:', createResponse);
 
@@ -135,7 +134,7 @@ export async function initCommand(options?: InitCommandOptions) {
       capabilities: createResponse.capabilities,
       workspace: workspacePath,
       configuration: agentConfig.id,
-      engine: localConfig.engine || DEFAULT_ENGINE,
+      engine: configManager.get('engine') || DEFAULT_ENGINE,
     });
 
     logger.stop(`Agent ${createResponse.id} created`);
