@@ -17,8 +17,6 @@ import { getSystemInfo } from '../utils/systemInfo';
 axios.defaults.baseURL = `${API_HOST}${API_VERSION}`;
 axios.defaults.timeout = 120 * 1000;
 
-export const DEFAULT_ENGINE = 'rhino';
-
 interface InitCommandOptions {
   name?: string;
   workspace?: string | boolean;
@@ -134,7 +132,7 @@ export async function initCommand(options?: InitCommandOptions) {
       capabilities: createResponse.capabilities,
       workspace: workspacePath,
       configuration: agentConfig.id,
-      engine: configManager.get('engine') || DEFAULT_ENGINE,
+      engine: configManager.get('engine'),
     });
 
     logger.stop(`Agent ${createResponse.id} created`);

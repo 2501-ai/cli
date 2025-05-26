@@ -1,17 +1,16 @@
 import axios from 'axios';
 
 import { FormData } from 'formdata-node';
-import { DEFAULT_ENGINE } from '../commands/init';
 import { API_HOST, API_VERSION } from '../constants';
 import { ConfigManager } from '../managers/configManager';
 import { pluginService } from '../utils/plugins';
+import { getHostInfo } from '../utils/systemInfo';
 import {
   Configuration,
   EngineType,
   QueryResponseDTO,
   SystemInfo,
 } from '../utils/types';
-import { getHostInfo } from '../utils/systemInfo';
 
 // const ONE_MINUTES_MILLIS = 60 * 1000;
 const FIVE_MINUTES_MILLIS = 5 * 60 * 1000;
@@ -32,7 +31,7 @@ export const createAgent = async (
   workspace: string,
   selected_config: Configuration,
   sysinfo: SystemInfo,
-  engine?: EngineType | undefined
+  engine: EngineType
 ) => {
   const hostInfo = getHostInfo();
 
@@ -40,7 +39,7 @@ export const createAgent = async (
     workspace,
     configuration: selected_config.id,
     prompt: selected_config.prompt,
-    engine: engine || DEFAULT_ENGINE,
+    engine,
     sysinfo,
     host: hostInfo,
   });
