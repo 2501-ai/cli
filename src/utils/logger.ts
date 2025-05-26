@@ -3,7 +3,7 @@ import axios, { AxiosError } from 'axios';
 import { marked } from 'marked';
 
 import { terminal } from 'terminal-kit';
-import { readConfig } from '../utils/conf';
+import { ConfigManager } from '../managers/configManager';
 const isDebug = process.env.TFZO_DEBUG === 'true';
 
 enum Colors {
@@ -82,7 +82,7 @@ export default class Logger {
   }
 
   start(message?: string) {
-    if (readConfig()?.disable_spinner) {
+    if (ConfigManager.instance.config.disable_spinner) {
       p.log.message(message);
       return;
     }
@@ -107,7 +107,7 @@ export default class Logger {
   }
 
   message(message: string) {
-    if (readConfig()?.disable_spinner) {
+    if (ConfigManager.instance.config.disable_spinner) {
       p.log.message(message);
       return;
     }
@@ -125,7 +125,7 @@ export default class Logger {
   }
 
   stop(message?: string, code?: number) {
-    if (readConfig()?.disable_spinner) {
+    if (ConfigManager.instance.config.disable_spinner) {
       p.log.message(message);
       return;
     }

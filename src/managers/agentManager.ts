@@ -10,8 +10,9 @@ import {
 } from '../helpers/actions';
 
 import Logger from '../utils/logger';
-import { readConfig } from '../utils/conf';
 
+import { BLACKLISTED_COMMANDS } from '../constants';
+import { getFunctionName } from '../utils/actions';
 import {
   AgentCallbackType,
   EngineCapability,
@@ -19,8 +20,6 @@ import {
   FunctionAction,
   FunctionExecutionResult,
 } from '../utils/types';
-import { getFunctionName } from '../utils/actions';
-import { BLACKLISTED_COMMANDS } from '../constants';
 
 export const ACTION_FNS = {
   browse_url,
@@ -107,7 +106,6 @@ export class AgentManager {
       const previous =
         ACTION_FNS.read_file({ path: args.path }) || 'NO PREVIOUS VERSION';
       try {
-        const config = readConfig();
         const { data: correctionData } = await axios.post(
           `/agents/${this.id}/verifyOutput`,
           {
@@ -117,9 +115,6 @@ export class AgentManager {
           },
           {
             timeout: 150_000,
-            headers: {
-              Authorization: `Bearer ${config?.api_key}`,
-            },
           }
         );
 

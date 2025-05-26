@@ -1,11 +1,6 @@
-import axios from 'axios';
 import os from 'os';
 import path from 'path';
 import { StreamEvent } from './utils/types';
-if (process.env.AUTH_JWT) {
-  axios.defaults.headers.common['Cookie'] =
-    `_vercel_jwt=${process.env.AUTH_JWT}`;
-}
 
 let API_HOST_VALUE = 'https://engine.2501.ai';
 

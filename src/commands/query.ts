@@ -25,7 +25,7 @@ import {
 } from '../helpers/workspace';
 import { AgentManager } from '../managers/agentManager';
 import { getFunctionArgs } from '../utils/actions';
-import { getEligibleAgent, readConfig } from '../utils/conf';
+import { getEligibleAgent } from '../utils/conf';
 import { credentialsService } from '../utils/credentials';
 import { getDirectoryMd5Hash } from '../utils/files';
 import Logger, { getTerminalWidth } from '../utils/logger';
@@ -38,6 +38,7 @@ import {
   WorkspaceState,
 } from '../utils/types';
 import { initCommand } from './init';
+import { ConfigManager } from '../managers/configManager';
 
 marked.use(markedTerminal() as MarkedExtension);
 
@@ -208,11 +209,12 @@ export const queryCommand = async (
   Logger.debug('Options:', options);
 
   try {
-    const config = readConfig();
+    const configManager = ConfigManager.instance;
+    const config = configManager.config;
     const workspace = resolveWorkspacePath(options);
     Logger.debug('Workspace:', workspace);
 
-    const stream = options.stream ?? config?.stream ?? true;
+    const stream = options.stream ?? config.stream ?? true;
 
     ////////// Agent Init //////////
     const agentConfig = await initializeAgentConfig(workspace);

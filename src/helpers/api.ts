@@ -3,7 +3,7 @@ import axios from 'axios';
 import { FormData } from 'formdata-node';
 import { DEFAULT_ENGINE } from '../commands/init';
 import { API_HOST, API_VERSION } from '../constants';
-import { readConfig } from '../utils/conf';
+import { ConfigManager } from '../managers/configManager';
 import { pluginService } from '../utils/plugins';
 import {
   Configuration,
@@ -18,12 +18,12 @@ const FIVE_MINUTES_MILLIS = 5 * 60 * 1000;
 const TEN_MINUTES_MILLIS = 10 * 60 * 1000;
 
 export const initAxios = async () => {
-  const config = readConfig();
-  if (!config?.api_key) {
+  const config = ConfigManager.instance.config;
+  if (!config.api_key) {
     throw new Error('API key must be set.');
   }
 
-  axios.defaults.headers.common['Authorization'] = `Bearer ${config?.api_key}`;
+  axios.defaults.headers.common['Authorization'] = `Bearer ${config.api_key}`;
   axios.defaults.baseURL = `${API_HOST}${API_VERSION}`;
   axios.defaults.timeout = FIVE_MINUTES_MILLIS;
 };

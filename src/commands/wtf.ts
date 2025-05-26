@@ -2,13 +2,10 @@ import axios from 'axios';
 import { select } from '@clack/prompts';
 
 import { run_shell } from '../helpers/actions';
-import { readConfig } from '../utils/conf';
 
 import { API_HOST, API_VERSION } from '../constants';
 
 export async function wtfCommand() {
-  const config = readConfig();
-
   const shellHistory = await run_shell({
     command: `
     shell=$(echo $SHELL)
@@ -34,13 +31,11 @@ export async function wtfCommand() {
     shell: true,
   });
 
-  const { data } = await axios.post(
-    `${API_HOST}${API_VERSION}/chat`,
-    {
-      messages: [
-        {
-          role: 'user',
-          content: `
+  const { data } = await axios.post(`${API_HOST}${API_VERSION}/chat`, {
+    messages: [
+      {
+        role: 'user',
+        content: `
           You're an expert in shell commands. Something went wrong with my shell history. Can you help me?
           Ignore the @2501 wtf command. It's yourself, don't mention it.
 
@@ -60,13 +55,9 @@ export async function wtfCommand() {
           Shell history below :
           ${shellHistory}
         `,
-        },
-      ],
-    },
-    {
-      headers: { Authorization: `Bearer ${config?.api_key}` },
-    }
-  );
+      },
+    ],
+  });
 
   const JSON_REGEXP = /<JSON_OUTPUT>([\s\S]*?)<\/JSON_OUTPUT>/m;
   const match = data.response?.toString().match(JSON_REGEXP);

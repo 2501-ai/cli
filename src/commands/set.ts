@@ -1,40 +1,34 @@
-import { readConfig, setValue } from '../utils/conf';
+import { ConfigManager } from '../managers/configManager';
 import Logger from '../utils/logger';
 import { LocalConfigKey } from '../utils/types';
 
+// Keys that need to be parsed as JSON (boolean)
 const KEYS_WITH_PARSING: LocalConfigKey[] = ['stream', 'disable_spinner'];
-
-const ALL_CONFIG_KEYS: LocalConfigKey[] = [
-  'stream',
-  'disable_spinner',
-  'agents',
-  'workspace_disabled',
-  'join_discord_shown',
-  'api_key',
-  'engine',
-];
+const logger = new Logger();
 
 export function setCommand() {
-  const config = readConfig();
-  if (!config) return;
-
   const key = process.argv[3] as LocalConfigKey;
   let value = process.argv[4];
 
-  if (!key || !ALL_CONFIG_KEYS.includes(key)) {
-    Logger.error('Please provide a valid key to set.');
+  if (!key) {
+    logger.cancel('Please provide a key to set.');
     return;
   }
 
   if (!value) {
-    Logger.error('Please provide a value to set.');
+    logger.cancel('Please provide a value to set.');
     return;
   }
 
-  if (KEYS_WITH_PARSING.includes(key)) {
-    value = JSON.parse(value);
-  }
+  try {
+    // Parse boolean values
+    if (KEYS_WITH_PARSING.includes(key)) {
+      value = JSON.parse(value);
+    }
 
-  setValue(key, value);
-  Logger.log(`${key} set successfully to ${value}.`);
+    ConfigManager.instance.set(key, value);
+    logger.log(`${key} set successfully to ${value}.`);
+  } catch (error) {
+    logger.cancel((error as Error).message);
+  }
 }
