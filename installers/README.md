@@ -37,7 +37,7 @@ After the installation is complete, you can use the `@2501` CLI to interact with
 Before using the CLI, set your API key with the following command:
 
 ```sh
-@2501 set api-key <API_KEY>
+@2501 set api_key <API_KEY>
 ```
 
 ### Usage

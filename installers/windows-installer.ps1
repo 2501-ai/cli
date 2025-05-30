@@ -48,14 +48,14 @@ try {
     if ($LASTEXITCODE -eq 0) {
         Write-Host "Node.js version: $nodeVersion" -ForegroundColor Green
         
-        # Install @2501-ai/cli
-        Write-Host "Installing @2501-ai/cli..." -ForegroundColor Yellow
-        & npm install -g @2501-ai/cli
+        # Install 2501-ai/cli
+        Write-Host "Installing 2501-ai/cli..." -ForegroundColor Yellow
+        & npm install -g 2501-ai/cli
         
         if ($LASTEXITCODE -eq 0) {
-            $cliVersion = & @2501 --version 2>$null
+            $cliVersion = & 2501 --version 2>$null
             if ($LASTEXITCODE -eq 0) {
-                Write-Host "@2501-ai/cli version: $cliVersion" -ForegroundColor Green
+                Write-Host "2501-ai/cli version: $cliVersion" -ForegroundColor Green
             }
         }
     }
@@ -66,8 +66,8 @@ try {
     Write-Host "Next steps:" -ForegroundColor Cyan
     Write-Host "1. Restart your PowerShell session" -ForegroundColor White
     Write-Host "2. Add to your PowerShell profile: fnm env --use-on-cd | Out-String | Invoke-Expression" -ForegroundColor White
-    Write-Host "3. Set your API key: @2501 set api-key <YOUR_API_KEY>" -ForegroundColor White
-    Write-Host "4. Get help: @2501 --help" -ForegroundColor White
+    Write-Host "3. Set your API key: 2501 set api_key <YOUR_API_KEY>" -ForegroundColor White
+    Write-Host "4. Get help: 2501 --help" -ForegroundColor White
     Write-Host ""
     Write-Host "Happy nerding! 🚀" -ForegroundColor Magenta
 }
