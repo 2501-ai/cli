@@ -45,12 +45,27 @@ try {
     & fnm install --lts 2>$null
     & fnm use lts-latest 2>$null
     
-    # Set up fnm environment for current session
+    # Set up fnm environment properly for current session
     Write-Host "Setting up fnm environment..." -ForegroundColor Yellow
-    Invoke-Expression (fnm env --use-on-cd)
+    $fnmEnv = & fnm env --use-on-cd --shell powershell
+    Invoke-Expression $fnmEnv
     
-    # Refresh PATH again after fnm setup
-    $env:PATH = [System.Environment]::GetEnvironmentVariable("PATH", "Machine") + ";" + [System.Environment]::GetEnvironmentVariable("PATH", "User")
+    # Wait a moment for environment to be set up
+    Start-Sleep -Seconds 2
+    
+    # Get the fnm directory and add it to PATH manually
+    $fnmDir = [System.Environment]::GetEnvironmentVariable("FNM_DIR", "User")
+    if (-not $fnmDir) {
+        $fnmDir = "$env:USERPROFILE\AppData\Roaming\fnm"
+    }
+    
+    # Find the active Node.js path and add it to current session PATH
+    $activePath = & fnm current 2>$null
+    if ($activePath) {
+        $nodePath = "$fnmDir\node-versions\v$activePath\installation"
+        $env:PATH = "$nodePath;$env:PATH"
+        Write-Host "Added Node.js path to current session: $nodePath" -ForegroundColor Green
+    }
     
     # Verify Node installation
     $nodeVersion = & node --version 2>$null
