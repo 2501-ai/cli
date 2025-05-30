@@ -1,11 +1,11 @@
 {
   "name": "@2501-ai/cli",
-  "version": "0.2.22",
+  "version": "0.2.22-alpha-windows",
   "description": "",
   "main": "dist/index.js",
   "bin": {
-    "@2501": "./dist/index.js",
-    "2501": "./dist/index.js"
+    "2501": "./dist/index.js",
+    "@2501": "./dist/index.js"
   },
   "scripts": {
     "build": "tsc",
