@@ -74,7 +74,7 @@ try {
         
         # Install 2501-ai/cli
         Write-Host "Installing @2501-ai/cli..." -ForegroundColor Yellow
-        & npm install -g @2501-ai/cli@alpha-windows
+        & npm install -g @2501-ai/cli@0.2.22-alpha-windows
         
         if ($LASTEXITCODE -eq 0) {
             $cliVersion = & 2501 --version 2>$null
