@@ -4,7 +4,8 @@ import { terminal } from 'terminal-kit';
 
 // Local imports
 import Logger from '../utils/logger';
-import { addAgent, readConfig, setValue } from '../utils/conf';
+import { addAgent } from '../utils/conf';
+import { ConfigManager } from '../managers/configManager';
 import { API_HOST, API_VERSION } from '../constants';
 import { isDirUnsafe } from '../helpers/security';
 import { Configuration } from '../utils/types';
@@ -15,8 +16,6 @@ import { getSystemInfo } from '../utils/systemInfo';
 
 axios.defaults.baseURL = `${API_HOST}${API_VERSION}`;
 axios.defaults.timeout = 120 * 1000;
-
-export const DEFAULT_ENGINE = 'rhino';
 
 interface InitCommandOptions {
   name?: string;
@@ -82,8 +81,9 @@ export async function getWorkspacePath(
 // This function will be called when the `init` command is executed
 export async function initCommand(options?: InitCommandOptions) {
   try {
-    const localConfig = readConfig();
-    if (!localConfig?.join_discord_shown) {
+    const configManager = ConfigManager.instance;
+
+    if (!configManager.get('join_discord_shown')) {
       const term = terminal;
 
       term('\n');
@@ -95,12 +95,12 @@ export async function initCommand(options?: InitCommandOptions) {
         );
       term.gray('│ ').gray.underline(`${DISCORD_LINK}\n`);
 
-      setValue('join_discord_shown', true);
+      configManager.set('join_discord_shown', true);
     }
 
     if (process.env.TFZO_DISABLE_SPINNER) {
       const shouldDisableSpinner = process.env.TFZO_DISABLE_SPINNER === 'true';
-      setValue('disable_spinner', shouldDisableSpinner);
+      configManager.set('disable_spinner', shouldDisableSpinner);
     }
 
     logger.start('Creating agent');
@@ -121,7 +121,7 @@ export async function initCommand(options?: InitCommandOptions) {
       workspacePath,
       agentConfig,
       systemInfo,
-      localConfig?.engine
+      configManager.get('engine')
     );
     Logger.debug('Agent created:', createResponse);
 
@@ -132,7 +132,7 @@ export async function initCommand(options?: InitCommandOptions) {
       capabilities: createResponse.capabilities,
       workspace: workspacePath,
       configuration: agentConfig.id,
-      engine: localConfig?.engine || DEFAULT_ENGINE,
+      engine: configManager.get('engine'),
     });
 
     logger.stop(`Agent ${createResponse.id} created`);

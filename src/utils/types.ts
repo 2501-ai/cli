@@ -130,7 +130,7 @@ export interface AgentConfig {
 export type LocalConfig = {
   workspace_disabled: boolean;
   api_key?: string;
-  engine?: EngineType;
+  engine: EngineType;
   stream?: boolean;
   agents: AgentConfig[];
   join_discord_shown: boolean;

@@ -1,29 +1,28 @@
 import axios from 'axios';
 
 import { FormData } from 'formdata-node';
-import { DEFAULT_ENGINE } from '../commands/init';
 import { API_HOST, API_VERSION } from '../constants';
-import { readConfig } from '../utils/conf';
+import { ConfigManager } from '../managers/configManager';
 import { pluginService } from '../utils/plugins';
+import { getHostInfo } from '../utils/systemInfo';
 import {
   Configuration,
   EngineType,
   QueryResponseDTO,
   SystemInfo,
 } from '../utils/types';
-import { getHostInfo } from '../utils/systemInfo';
 
 // const ONE_MINUTES_MILLIS = 60 * 1000;
 const FIVE_MINUTES_MILLIS = 5 * 60 * 1000;
 const TEN_MINUTES_MILLIS = 10 * 60 * 1000;
 
 export const initAxios = async () => {
-  const config = readConfig();
-  if (!config?.api_key) {
+  const apiKey = ConfigManager.instance.get('api_key');
+  if (!apiKey) {
     throw new Error('API key must be set.');
   }
 
-  axios.defaults.headers.common['Authorization'] = `Bearer ${config?.api_key}`;
+  axios.defaults.headers.common['Authorization'] = `Bearer ${apiKey}`;
   axios.defaults.baseURL = `${API_HOST}${API_VERSION}`;
   axios.defaults.timeout = FIVE_MINUTES_MILLIS;
 };
@@ -32,7 +31,7 @@ export const createAgent = async (
   workspace: string,
   selected_config: Configuration,
   sysinfo: SystemInfo,
-  engine?: EngineType | undefined
+  engine: EngineType
 ) => {
   const hostInfo = getHostInfo();
 
@@ -40,7 +39,7 @@ export const createAgent = async (
     workspace,
     configuration: selected_config.id,
     prompt: selected_config.prompt,
-    engine: engine || DEFAULT_ENGINE,
+    engine,
     sysinfo,
     host: hostInfo,
   });

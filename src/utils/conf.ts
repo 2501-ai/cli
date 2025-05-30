@@ -1,10 +1,11 @@
 import fs from 'fs';
 import * as path from 'path';
 
+import { CONFIG_DIR } from '../constants';
+import { clearWorkspaceState } from '../helpers/workspace';
 import Logger from '../utils/logger';
 import { AgentConfig, LocalConfig } from './types';
-import { clearWorkspaceState } from '../helpers/workspace';
-import { CONFIG_DIR } from '../constants';
+
 const CONFIG_FILE_PATH = path.join(CONFIG_DIR, '2501.conf');
 
 /**
@@ -15,16 +16,7 @@ const CONFIG_FILE_PATH = path.join(CONFIG_DIR, '2501.conf');
 export function readConfig(): LocalConfig | null {
   try {
     if (!fs.existsSync(CONFIG_FILE_PATH)) {
-      fs.mkdirSync(path.dirname(CONFIG_FILE_PATH), { recursive: true });
-      fs.writeFileSync(
-        CONFIG_FILE_PATH,
-        JSON.stringify(
-          { workspace_disabled: false, agents: [], stream: true },
-          null,
-          2
-        ),
-        'utf8'
-      );
+      return null;
     }
     const data = fs.readFileSync(CONFIG_FILE_PATH, 'utf8');
     return JSON.parse(data);
@@ -35,35 +27,22 @@ export function readConfig(): LocalConfig | null {
 }
 
 /**
- * Writes the specified key-value pair to the configuration file.
- * @param key - The key to set.
- * @param value - The value to set.
- */
-export function setValue<K extends keyof LocalConfig>(
-  key: K,
-  value: LocalConfig[K]
-): void {
-  try {
-    const config = readConfig();
-    if (config) {
-      config[key] = value;
-      writeConfig(config);
-    }
-  } catch (error) {
-    Logger.error('Error setting value:', error);
-  }
-}
-
-/**
  * Writes the provided configuration object to the configuration file.
  * @param config - The configuration object to write.
+ * @throws {Error} If the write operation fails
  */
 export function writeConfig(config: LocalConfig): void {
   try {
+    if (!fs.existsSync(CONFIG_FILE_PATH)) {
+      fs.mkdirSync(path.dirname(CONFIG_FILE_PATH), { recursive: true });
+    }
     const data = JSON.stringify(config, null, 2);
     fs.writeFileSync(CONFIG_FILE_PATH, data, 'utf8');
   } catch (error) {
     Logger.error('Error writing configuration:', error);
+    throw new Error(
+      `Failed to write configuration: ${(error as Error).message}`
+    );
   }
 }
 
