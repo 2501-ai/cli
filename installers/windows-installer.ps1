@@ -9,6 +9,8 @@ try {
     
     $wingetResult = winget install Schniz.fnm --accept-source-agreements --accept-package-agreements 2>$null
     
+    Write-Host "Winget result: $wingetResult" -ForegroundColor Yellow
+    
     if ($LASTEXITCODE -eq 0) {
         Write-Host "fnm installed successfully via Winget!" -ForegroundColor Green
     } else {
