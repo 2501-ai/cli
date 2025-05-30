@@ -45,6 +45,13 @@ try {
     & fnm install --lts 2>$null
     & fnm use lts-latest 2>$null
     
+    # Set up fnm environment for current session
+    Write-Host "Setting up fnm environment..." -ForegroundColor Yellow
+    Invoke-Expression (fnm env --use-on-cd)
+    
+    # Refresh PATH again after fnm setup
+    $env:PATH = [System.Environment]::GetEnvironmentVariable("PATH", "Machine") + ";" + [System.Environment]::GetEnvironmentVariable("PATH", "User")
+    
     # Verify Node installation
     $nodeVersion = & node --version 2>$null
     if ($LASTEXITCODE -eq 0) {
