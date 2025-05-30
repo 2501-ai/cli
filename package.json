@@ -4,7 +4,7 @@
   "description": "",
   "main": "dist/index.js",
   "bin": {
-    "2501": "./dist/index.js",
+    "tz": "./dist/index.js",
     "@2501": "./dist/index.js"
   },
   "scripts": {
