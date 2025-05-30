@@ -47,7 +47,7 @@ try {
     
     # Set up fnm environment properly for current session
     Write-Host "Setting up fnm environment..." -ForegroundColor Yellow
-    $fnmEnv = & fnm env --use-on-cd --shell powershell
+    $fnmEnv = & fnm env --use-on-cd --shell powershell | Out-String
     Invoke-Expression $fnmEnv
     
     # Wait a moment for environment to be set up
@@ -73,13 +73,13 @@ try {
         Write-Host "Node.js version: $nodeVersion" -ForegroundColor Green
         
         # Install 2501-ai/cli
-        Write-Host "Installing 2501-ai/cli..." -ForegroundColor Yellow
-        & npm install -g 2501-ai/cli
+        Write-Host "Installing @2501-ai/cli..." -ForegroundColor Yellow
+        & npm install -g @2501-ai/cli@alpha-windows
         
         if ($LASTEXITCODE -eq 0) {
             $cliVersion = & 2501 --version 2>$null
             if ($LASTEXITCODE -eq 0) {
-                Write-Host "2501-ai/cli version: $cliVersion" -ForegroundColor Green
+                Write-Host "@2501-ai/cli version: $cliVersion" -ForegroundColor Green
             }
         }
     }
