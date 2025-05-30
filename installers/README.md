@@ -25,7 +25,7 @@ curl -sL https://raw.githubusercontent.com/2501-ai/cli/main/installers/macOS-ins
 To install the AI Autonomous Systems CLI on a Windows machine, run the following command in PowerShell:
 
 ```powershell
-iex "& {$(irm https://raw.githubusercontent.com/2501-ai/cli/main/installers/windows-installer.bat)}"
+iex "& {$(irm https://raw.githubusercontent.com/2501-ai/cli/main/installers/windows-installer.ps1)}"
 ```
 
 ## Post-Installation
