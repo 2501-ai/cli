@@ -120,7 +120,6 @@ export abstract class BaseTelemetry<TEvent extends BaseTelemetryEvent> {
   protected async sendEvents(events: TEvent[]): Promise<void> {
     if (process.env.TFZO_NODE_ENV === 'dev') {
       this.logEventsInDev(events);
-      return;
     }
 
     await this.sendToEndpoint(events);

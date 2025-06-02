@@ -145,7 +145,6 @@ export const initCommand = async (
     TelemetryManager.instance.updateContext({
       agentId: createResponse.id,
     });
-    throw new Error('test');
     logger.stop(`Agent ${createResponse.id} created`);
   } catch (e: unknown) {
     logger.handleError(e as Error, (e as Error).message);
