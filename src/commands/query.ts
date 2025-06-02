@@ -24,6 +24,8 @@ import {
   writeWorkspaceState,
 } from '../helpers/workspace';
 import { AgentManager } from '../managers/agentManager';
+import { ConfigManager } from '../managers/configManager';
+import { TelemetryManager } from '../managers/telemetryManager';
 import { getFunctionArgs } from '../utils/actions';
 import { getEligibleAgent } from '../utils/conf';
 import { credentialsService } from '../utils/credentials';
@@ -38,8 +40,6 @@ import {
   WorkspaceState,
 } from '../utils/types';
 import { initCommand } from './init';
-import { ConfigManager } from '../managers/configManager';
-import { withErrorHandler } from '../middleware/errorHandler';
 
 marked.use(markedTerminal() as MarkedExtension);
 
@@ -145,8 +145,6 @@ const synchronizeWorkspace = async (
       agent_id: agentId,
     };
     writeWorkspaceState(newState);
-
-    await new Promise((resolve) => setTimeout(resolve, 2000));
     logger.stop('Workspace synchronized');
     return true;
   }
@@ -195,122 +193,124 @@ const parseAgentResponse = async (
   return [actions, queryResponse];
 };
 
-export const queryCommand = withErrorHandler(
-  async (
-    query: string,
-    options: {
-      workspace?: string;
-      agentId?: string;
-      stream?: boolean;
-      noPersistentAgent?: boolean;
-      plugins?: string;
-      credentials?: string;
-      taskId?: string;
-    }
-  ) => {
-    Logger.debug('Options:', options);
-
-    try {
-      const configManager = ConfigManager.instance;
-      const workspace = resolveWorkspacePath(options);
-      Logger.debug('Workspace:', workspace);
-
-      const stream = options.stream ?? configManager.get('stream') ?? true;
-
-      ////////// Agent Init //////////
-      const agentConfig = await initializeAgentConfig(workspace);
-
-      // If not agent is eligible, it usually means there was an error during the init process that is already displayed.
-      if (!agentConfig) {
-        return;
-      }
-      const agentManager = new AgentManager({
-        id: agentConfig.id,
-        name: agentConfig.name,
-        engine: agentConfig.engine,
-        capabilities: agentConfig.capabilities,
-        workspace,
-      });
-
-      ////////// Workflow start //////////
-      let workspaceChanged = false;
-      let taskId = options.taskId;
-
-      // Run synchronizeWorkspace and createTask in parallel
-      const [syncResult, taskResult] = await Promise.all([
-        synchronizeWorkspace(agentConfig.id, workspace),
-        taskId
-          ? Promise.resolve({ id: taskId })
-          : createTask(agentConfig.id, query),
-      ]);
-
-      workspaceChanged = syncResult;
-      taskId = taskResult.id;
-
-      const workspaceData = getDirectoryMd5Hash({
-        directoryPath: workspace,
-      });
-      const workspaceTree = generateTree(
-        Array.from(workspaceData.fileHashes.keys())
-      );
-
-      logger.start('Thinking');
-      const agentResponse = await queryAgent(
-        agentManager.id,
-        workspaceChanged,
-        taskId,
-        workspaceTree,
-        stream
-      );
-
-      if (stream) {
-        const streamResponse = agentResponse as Readable;
-        handleReasoningSteps(streamResponse);
-      }
-
-      // eslint-disable-next-line prefer-const
-      let [actions, queryResponse] = await parseAgentResponse(
-        agentResponse,
-        stream
-      );
-      if (queryResponse) {
-        logger.stop(queryResponse);
-      }
-
-      let finalResponse = '';
-      while (actions.length) {
-        if (isLooping(actions)) {
-          return logger.stop(
-            'Unfortunately, a loop has been detected. Please try again.',
-            1
-          );
-        }
-        const toolOutputs = await executeActions(actions, agentManager);
-        logger.start('Reviewing the job');
-        // Submit the tool outputs to the agent
-        const submitResponse = toolOutputs.length
-          ? await submitToolOutputs(
-              agentManager.id,
-              taskId,
-              toolOutputs,
-              stream
-            )
-          : undefined;
-        [actions, finalResponse] = await parseAgentResponse(
-          submitResponse,
-          stream
-        );
-        if (actions.length && finalResponse) {
-          logger.stop(finalResponse);
-        }
-      }
-
-      if (finalResponse) {
-        logger.stop(chalk.italic.gray('-'.repeat(getTerminalWidth() - 10)));
-        Logger.agent(finalResponse);
-      }
-    } catch (error) {
-      logger.handleError(error as Error);
-    }
+export const queryCommand = async (
+  query: string,
+  options: {
+    workspace?: string;
+    agentId?: string;
+    stream?: boolean;
+    noPersistentAgent?: boolean;
+    plugins?: string;
+    credentials?: string;
+    taskId?: string;
   }
-);
+) => {
+  Logger.debug('Options:', options);
+
+  const context = {
+    command: query,
+    taskId: options.taskId,
+    workspacePath: options.workspace,
+    agentId: options.agentId,
+  };
+
+  TelemetryManager.instance.updateContext(context);
+
+  try {
+    const configManager = ConfigManager.instance;
+    const workspace = resolveWorkspacePath(options);
+    Logger.debug('Workspace:', workspace);
+
+    const stream = options.stream ?? configManager.get('stream') ?? true;
+
+    ////////// Agent Init //////////
+    const agentConfig = await initializeAgentConfig(workspace);
+
+    // If not agent is eligible, it usually means there was an error during the init process that is already displayed.
+    if (!agentConfig) {
+      return;
+    }
+    const agentManager = new AgentManager({
+      id: agentConfig.id,
+      name: agentConfig.name,
+      engine: agentConfig.engine,
+      capabilities: agentConfig.capabilities,
+      workspace,
+    });
+
+    ////////// Workflow start //////////
+    let workspaceChanged = false;
+    let taskId = options.taskId;
+
+    // Run synchronizeWorkspace and createTask in parallel
+    const [syncResult, taskResult] = await Promise.all([
+      synchronizeWorkspace(agentConfig.id, workspace),
+      taskId
+        ? Promise.resolve({ id: taskId })
+        : createTask(agentConfig.id, query),
+    ]);
+
+    workspaceChanged = syncResult;
+    taskId = taskResult.id;
+
+    const workspaceData = getDirectoryMd5Hash({
+      directoryPath: workspace,
+    });
+    const workspaceTree = generateTree(
+      Array.from(workspaceData.fileHashes.keys())
+    );
+
+    logger.start('Thinking');
+    const agentResponse = await queryAgent(
+      agentManager.id,
+      workspaceChanged,
+      taskId,
+      workspaceTree,
+      stream
+    );
+
+    if (stream) {
+      const streamResponse = agentResponse as Readable;
+      handleReasoningSteps(streamResponse);
+    }
+
+    // eslint-disable-next-line prefer-const
+    let [actions, queryResponse] = await parseAgentResponse(
+      agentResponse,
+      stream
+    );
+    if (queryResponse) {
+      logger.stop(queryResponse);
+    }
+
+    let finalResponse = '';
+    while (actions.length) {
+      if (isLooping(actions)) {
+        return logger.stop(
+          'Unfortunately, a loop has been detected. Please try again.',
+          1
+        );
+      }
+      const toolOutputs = await executeActions(actions, agentManager);
+      logger.start('Reviewing the job');
+      // Submit the tool outputs to the agent
+      const submitResponse = toolOutputs.length
+        ? await submitToolOutputs(agentManager.id, taskId, toolOutputs, stream)
+        : undefined;
+      [actions, finalResponse] = await parseAgentResponse(
+        submitResponse,
+        stream
+      );
+      if (actions.length && finalResponse) {
+        logger.stop(finalResponse);
+      }
+    }
+
+    if (finalResponse) {
+      logger.stop(chalk.italic.gray('-'.repeat(getTerminalWidth() - 10)));
+      Logger.agent(finalResponse);
+    }
+  } catch (error) {
+    logger.handleError(error as Error);
+  }
+};

@@ -135,6 +135,7 @@ export type LocalConfig = {
   agents: AgentConfig[];
   join_discord_shown: boolean;
   disable_spinner: boolean;
+  telemetry_enabled: boolean;
 };
 
 export type LocalConfigKey = keyof LocalConfig;

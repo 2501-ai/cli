@@ -1,7 +1,8 @@
 import { terminal } from 'terminal-kit';
-import { ConfigManager } from '../managers/configManager';
-import Logger from '../utils/logger';
 import { initAxios } from '../helpers/api';
+import { ConfigManager } from '../managers/configManager';
+import { TelemetryManager } from '../managers/telemetryManager';
+import Logger from '../utils/logger';
 
 const logger = new Logger();
 
@@ -12,6 +13,7 @@ export async function authMiddleware() {
     !ConfigManager.instance.get('agents').length
   ) {
     await showFirstTimeMessage();
+    await showTelemetryStatus();
   }
 
   if (!ConfigManager.instance.get('api_key')) {
@@ -23,6 +25,14 @@ export async function authMiddleware() {
   await initAxios();
 }
 
+async function showTelemetryStatus() {
+  const status = TelemetryManager.instance.getStatus();
+  if (status.errors) {
+    terminal.bold.red(
+      'Telemetry is enabled. Run the command `@2501 set telemetry_enabled false` if you want to disable telemetry.'
+    );
+  }
+}
 async function showFirstTimeMessage() {
   logger.log(`Welcome to @2501 CLI!
 It looks like this is your first time using the CLI.

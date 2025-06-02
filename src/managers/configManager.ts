@@ -10,6 +10,7 @@ export const DEFAULT_CONFIG: LocalConfig = {
   disable_spinner: true,
   api_key: '',
   engine: 'rhino',
+  telemetry_enabled: true,
 };
 
 // Configuration validation rules
@@ -21,6 +22,7 @@ const CONFIG_VALIDATORS: Record<LocalConfigKey, (value: any) => boolean> = {
   disable_spinner: (value) => typeof value === 'boolean',
   api_key: (value) => typeof value === 'string',
   engine: (value) => typeof value === 'string',
+  telemetry_enabled: (value) => typeof value === 'boolean',
 };
 
 export class ConfigManager {
@@ -41,6 +43,11 @@ export class ConfigManager {
     if (!config) {
       writeConfig(DEFAULT_CONFIG);
       config = DEFAULT_CONFIG;
+    }
+
+    // Set default telemetry enabled if not set
+    if (config.telemetry_enabled === undefined) {
+      config.telemetry_enabled = DEFAULT_CONFIG.telemetry_enabled;
     }
 
     this._config = config;
