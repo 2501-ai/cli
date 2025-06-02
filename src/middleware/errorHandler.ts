@@ -10,6 +10,8 @@ export function withErrorHandler<T extends (...args: any[]) => Promise<any>>(
       await fn(...args);
     } catch (err) {
       const agentConfig: AgentConfig[] = ConfigManager.instance.get('agents');
+
+      // Todo : pas ouf
       const agent =
         agentConfig && agentConfig.length > 0 ? agentConfig[0] : undefined;
 
