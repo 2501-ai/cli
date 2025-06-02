@@ -13,6 +13,7 @@ import { createAgent } from '../helpers/api';
 import { DISCORD_LINK } from '../utils/messaging';
 import { resolveWorkspacePath } from '../helpers/workspace';
 import { getSystemInfo } from '../utils/systemInfo';
+import { withErrorHandler } from '../middleware/errorHandler';
 
 axios.defaults.baseURL = `${API_HOST}${API_VERSION}`;
 axios.defaults.timeout = 120 * 1000;
@@ -79,64 +80,67 @@ export async function getWorkspacePath(
 }
 
 // This function will be called when the `init` command is executed
-export async function initCommand(options?: InitCommandOptions) {
-  try {
-    const configManager = ConfigManager.instance;
+export const initCommand = withErrorHandler(
+  async (options?: InitCommandOptions): Promise<void | string> => {
+    try {
+      const configManager = ConfigManager.instance;
 
-    if (!configManager.get('join_discord_shown')) {
-      const term = terminal;
+      if (!configManager.get('join_discord_shown')) {
+        const term = terminal;
 
-      term('\n');
-      term.gray('🔗 Join our Discord\n');
-      term
-        .gray('│ ')
-        .gray(
-          'Connect with the 2501 team and community for updates, support, and insights:\n'
-        );
-      term.gray('│ ').gray.underline(`${DISCORD_LINK}\n`);
+        term('\n');
+        term.gray('🔗 Join our Discord\n');
+        term
+          .gray('│ ')
+          .gray(
+            'Connect with the 2501 team and community for updates, support, and insights:\n'
+          );
+        term.gray('│ ').gray.underline(`${DISCORD_LINK}\n`);
 
-      configManager.set('join_discord_shown', true);
+        configManager.set('join_discord_shown', true);
+      }
+
+      if (process.env.TFZO_DISABLE_SPINNER) {
+        const shouldDisableSpinner =
+          process.env.TFZO_DISABLE_SPINNER === 'true';
+        configManager.set('disable_spinner', shouldDisableSpinner);
+      }
+
+      logger.start('Creating agent');
+      const configKey = options?.config || 'CODING_AGENT';
+
+      const parallelPromises = [
+        getWorkspacePath(options),
+        getSystemInfo(),
+        fetchConfiguration(configKey),
+      ] as const;
+
+      const [workspacePath, systemInfo, agentConfig] =
+        await Promise.all(parallelPromises);
+
+      Logger.debug('systemInfo results:', { systemInfo });
+
+      const createResponse = await createAgent(
+        workspacePath,
+        agentConfig,
+        systemInfo,
+        configManager.get('engine')
+      );
+      Logger.debug('Agent created:', createResponse);
+
+      // Add agent to config.
+      addAgent({
+        id: createResponse.id,
+        name: createResponse.name,
+        capabilities: createResponse.capabilities,
+        workspace: workspacePath,
+        configuration: agentConfig.id,
+        engine: configManager.get('engine'),
+      });
+
+      logger.stop(`Agent ${createResponse.id} created`);
+    } catch (e: unknown) {
+      logger.handleError(e as Error, (e as Error).message);
     }
-
-    if (process.env.TFZO_DISABLE_SPINNER) {
-      const shouldDisableSpinner = process.env.TFZO_DISABLE_SPINNER === 'true';
-      configManager.set('disable_spinner', shouldDisableSpinner);
-    }
-
-    logger.start('Creating agent');
-    const configKey = options?.config || 'CODING_AGENT';
-
-    const parallelPromises = [
-      getWorkspacePath(options),
-      getSystemInfo(),
-      fetchConfiguration(configKey),
-    ] as const;
-
-    const [workspacePath, systemInfo, agentConfig] =
-      await Promise.all(parallelPromises);
-
-    Logger.debug('systemInfo results:', { systemInfo });
-
-    const createResponse = await createAgent(
-      workspacePath,
-      agentConfig,
-      systemInfo,
-      configManager.get('engine')
-    );
-    Logger.debug('Agent created:', createResponse);
-
-    // Add agent to config.
-    addAgent({
-      id: createResponse.id,
-      name: createResponse.name,
-      capabilities: createResponse.capabilities,
-      workspace: workspacePath,
-      configuration: agentConfig.id,
-      engine: configManager.get('engine'),
-    });
-
-    logger.stop(`Agent ${createResponse.id} created`);
-  } catch (e: unknown) {
-    logger.handleError(e as Error, (e as Error).message);
   }
-}
+);
