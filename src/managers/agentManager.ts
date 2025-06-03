@@ -152,7 +152,7 @@ export class AgentManager {
       if (output.length > 20000) {
         output = `
         ERROR: The output is too large to display to prevent performance issues.
-        Use now an alternative method to retrieve the relevant information for the user (for example grep and sample the content first).
+        Use an alternative method to retrieve the relevant information for the user (for example grep, an another command or sample the content first).
         `;
 
         return {
