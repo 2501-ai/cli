@@ -3,9 +3,8 @@ import { terminal } from 'terminal-kit';
 
 import { API_HOST, API_VERSION } from '../constants';
 import Logger from '../utils/logger';
-import { withErrorHandler } from '../middleware/errorHandler';
 
-export const configCommand = withErrorHandler(async () => {
+export const configCommand = async () => {
   const logger = new Logger();
   try {
     logger.start('Fetching configurations...');
@@ -38,4 +37,4 @@ export const configCommand = withErrorHandler(async () => {
   } catch (error) {
     Logger.error('Failed to fetch configurations:');
   }
-});
+};

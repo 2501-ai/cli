@@ -10,7 +10,6 @@ import {
   EngineType,
   QueryResponseDTO,
   SystemInfo,
-  AgentConfig,
 } from '../utils/types';
 
 // const ONE_MINUTES_MILLIS = 60 * 1000;
@@ -167,22 +166,22 @@ export const updateTask = async (
   return response.data;
 };
 
-export const sendErrorToEngine = async (
-  agent: AgentConfig,
-  stacktrace: string
-) => {
-  const response = await axios.post(`/agents/${agent.id}/errors`, {
-    error: stacktrace,
-    agent: {
-      id: agent.id,
-      name: agent.name,
-      workspace: agent.workspace,
-      engine: agent.engine,
-      configuration: agent.configuration,
-      capabilities: agent.capabilities,
-      host_id: agent.host_id,
-      key: agent.key,
-    },
-  });
-  return response.data;
-};
+// export const sendErrorToEngine = async (
+//   agent: AgentConfig,
+//   stacktrace: string
+// ) => {
+//   const response = await axios.post(`/agents/${agent.id}/errors`, {
+//     error: stacktrace,
+//     agent: {
+//       id: agent.id,
+//       name: agent.name,
+//       workspace: agent.workspace,
+//       engine: agent.engine,
+//       configuration: agent.configuration,
+//       capabilities: agent.capabilities,
+//       host_id: agent.host_id,
+//       key: agent.key,
+//     },
+//   });
+//   return response.data;
+// };

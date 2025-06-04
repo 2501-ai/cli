@@ -1,23 +1,33 @@
 #!/usr/bin/env node
 
 import { Command } from 'commander';
-import { configCommand } from './commands/config';
-import { queryCommand } from './commands/query';
-import { initCommand } from './commands/init';
 import { agentsCommand } from './commands/agents';
+import { configCommand } from './commands/config';
+import { initCommand } from './commands/init';
+import { queryCommand } from './commands/query';
 import { setCommand } from './commands/set';
 import { tasksSubscriptionCommand } from './commands/tasks';
 
 import { authMiddleware } from './middleware/auth';
-import { isLatestVersion } from './utils/versioning';
+import { errorHandler } from './middleware/errorHandler';
+import { TelemetryManager } from './managers/telemetryManager';
+import { initPluginCredentials } from './utils/credentials';
 import Logger from './utils/logger';
 import { DISCORD_LINK } from './utils/messaging';
-import { initPluginCredentials } from './utils/credentials';
 import { initPlugins } from './utils/plugins';
+import { isLatestVersion } from './utils/versioning';
 
-process.on('SIGINT', () => {
-  console.log('Process interrupted with Ctrl+C');
-  process.exit(130); // Exit with code 130 (128 + 2 for SIGINT)
+// Initialize global error handlers before any other code
+errorHandler.initializeGlobalHandlers();
+
+process.on('SIGINT', async () => {
+  await TelemetryManager.instance.shutdown();
+  process.exit(0);
+});
+
+process.on('SIGTERM', async () => {
+  await TelemetryManager.instance.shutdown();
+  process.exit(0);
 });
 
 const program = new Command();
@@ -41,17 +51,34 @@ Join our Discord server: ${DISCORD_LINK}
   )
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   .version(require('../package.json').version)
+  .on('*', (commandName) => {
+    Logger.error(`Unknown command: ${commandName}`);
+    Logger.log('Run @2501 --help to see available commands');
+    process.exit(1);
+  })
+  .hook('postAction', async () => {
+    // The shutdown makes sure the Telemetry timer is cleared, to allow the process to exit.
+    await TelemetryManager.instance.shutdown();
+  })
   .on('command:*', async (args, options) => {
     const query = args?.join(' ');
     if (!query) {
+      Logger.log(
+        'Please provide a query or use --help to see available commands'
+      );
       return;
     }
-    Logger.debug('Options', options);
-    // @TODO : implement options support.
-    await authMiddleware();
-    await queryCommand(query, {
-      stream: options.stream,
-    });
+
+    try {
+      await authMiddleware();
+      await queryCommand(query, {
+        stream: options.stream,
+      });
+    } catch (error) {
+      await errorHandler.handleCommandError(error as Error, 'fallback-query', {
+        exitCode: 1,
+      });
+    }
   });
 
 // Config command
@@ -59,7 +86,15 @@ program
   .command('config')
   .description('Fetch configuration from API')
   .hook('preAction', authMiddleware)
-  .action(configCommand);
+  .action(async () => {
+    try {
+      await configCommand();
+    } catch (error) {
+      await errorHandler.handleCommandError(error as Error, 'config', {
+        exitCode: 1,
+      });
+    }
+  });
 
 // Query command
 program
@@ -78,8 +113,9 @@ program
     try {
       await queryCommand(query, options);
     } catch (error) {
-      Logger.error((error as Error).message);
-      process.exit(1);
+      await errorHandler.handleCommandError(error as Error, 'query', {
+        exitCode: 1,
+      });
     }
   });
 
@@ -95,7 +131,16 @@ program
   )
   .option('--config <configKey>', 'Specify the configuration Key to use')
   .hook('preAction', authMiddleware)
-  .action(initCommand);
+  .action(async (options, command) => {
+    try {
+      console.log('initCommand', options);
+      await initCommand(options);
+    } catch (error) {
+      await errorHandler.handleCommandError(error as Error, command.name(), {
+        exitCode: 1,
+      });
+    }
+  });
 
 // Agents command
 program
@@ -106,7 +151,15 @@ program
   .option('--workspace <path>', 'Specify a different workspace path')
   .option('--all', 'Parameter to target all agents during list or flush action')
   .option('--flush', 'Flush all agents from the configuration')
-  .action(agentsCommand);
+  .action(async (options) => {
+    try {
+      await agentsCommand(options);
+    } catch (error) {
+      await errorHandler.handleCommandError(error as Error, 'agents', {
+        exitCode: 1,
+      });
+    }
+  });
 
 // Tasks command
 program
@@ -125,22 +178,44 @@ program
   .hook('preAction', authMiddleware)
   .hook('preAction', initPlugins)
   .hook('preAction', initPluginCredentials)
-  .action(tasksSubscriptionCommand);
+  .action(async (options) => {
+    try {
+      await tasksSubscriptionCommand(options);
+    } catch (error) {
+      await errorHandler.handleCommandError(error as Error, 'tasks', {
+        exitCode: 1,
+      });
+    }
+  });
 
 program
   .command('set')
   .description('Set a configuration value')
   .argument('<key>', 'The key to set')
   .argument('<value>', 'The value to set')
-  .action(setCommand);
+  .action(async (key, value) => {
+    try {
+      await setCommand(key, value);
+    } catch (error) {
+      await errorHandler.handleCommandError(error as Error, 'set', {
+        exitCode: 1,
+      });
+    }
+  });
 
 (async () => {
-  const isLatest = await isLatestVersion();
-  if (!isLatest) {
-    Logger.log(
-      'UPDATE AVAILABLE : A new version of 2501 CLI is available. Run `npm i -g @2501-ai/cli` to update'
-    );
-  }
+  try {
+    const isLatest = await isLatestVersion();
+    if (!isLatest) {
+      Logger.log(
+        'UPDATE AVAILABLE : A new version of 2501 CLI is available. Run `npm i -g @2501-ai/cli` to update'
+      );
+    }
 
-  program.parse(process.argv);
+    program.parse(process.argv);
+  } catch (error) {
+    await errorHandler.handleCommandError(error as Error, 'main', {
+      exitCode: 1,
+    });
+  }
 })();
