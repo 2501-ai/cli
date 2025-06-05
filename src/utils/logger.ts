@@ -180,9 +180,11 @@ export default class Logger {
       }
 
       const axiosError = e as AxiosError;
+      const errorData = axiosError.response?.data as { code?: string };
       trackError(axiosError, {
         metadata: {
           defaultMsg,
+          errorData,
         },
       });
       Logger.error('Command error - Axios error', {

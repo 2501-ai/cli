@@ -168,7 +168,7 @@ const handleReasoningSteps = (streamResponse: Readable) => {
         logger.start('Processing');
       }
     } catch (e) {
-      Logger.error('Failed to parse reasoning step:', e);
+      // Do nothing on purpose
     }
   });
 };

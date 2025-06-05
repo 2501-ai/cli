@@ -51,11 +51,6 @@ Join our Discord server: ${DISCORD_LINK}
   )
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   .version(require('../package.json').version)
-  .on('*', (commandName) => {
-    Logger.error(`Unknown command: ${commandName}`);
-    Logger.log('Run @2501 --help to see available commands');
-    process.exit(1);
-  })
   .hook('postAction', async () => {
     // The shutdown makes sure the Telemetry timer is cleared, to allow the process to exit.
     await TelemetryManager.instance.shutdown();
@@ -81,19 +76,32 @@ Join our Discord server: ${DISCORD_LINK}
     }
   });
 
+// Monkey-patch Commander.js's .action to auto-wrap all actions in try/catch
+const originalAction = Command.prototype.action;
+Command.prototype.action = function (fn) {
+  return originalAction.call(this, function (...args) {
+    // Use a regular function to preserve 'this' context
+    return (async () => {
+      try {
+        await fn.apply(this, args);
+      } catch (error) {
+        await errorHandler.handleCommandError(
+          error as Error,
+          this.name ? this.name() : 'unknown',
+          { exitCode: 1 }
+        );
+      }
+    })();
+  });
+};
+
 // Config command
 program
   .command('config')
   .description('Fetch configuration from API')
   .hook('preAction', authMiddleware)
   .action(async () => {
-    try {
-      await configCommand();
-    } catch (error) {
-      await errorHandler.handleCommandError(error as Error, 'config', {
-        exitCode: 1,
-      });
-    }
+    await configCommand();
   });
 
 // Query command
@@ -103,20 +111,14 @@ program
   .description('Execute a query using the specified agent')
   .option('--workspace <path>', 'Specify a different workspace path')
   .option('--agentId <id>', 'Specify the agent ID')
-  .option('--stream [stream]', 'Stream the output of the query', true) // if you run it "@2501 query --stream false" - it will pass stream as 'false' string
+  .option('--stream [stream]', 'Stream the output of the query', true)
   .option('--plugins <path>', 'Path to plugins configuration file')
   .option('--env <path>', 'Path to .env file containing credentials')
   .hook('preAction', authMiddleware)
   .hook('preAction', initPlugins)
   .hook('preAction', initPluginCredentials)
   .action(async (query, options) => {
-    try {
-      await queryCommand(query, options);
-    } catch (error) {
-      await errorHandler.handleCommandError(error as Error, 'query', {
-        exitCode: 1,
-      });
-    }
+    await queryCommand(query, options);
   });
 
 // Init command
@@ -131,15 +133,8 @@ program
   )
   .option('--config <configKey>', 'Specify the configuration Key to use')
   .hook('preAction', authMiddleware)
-  .action(async (options, command) => {
-    try {
-      console.log('initCommand', options);
-      await initCommand(options);
-    } catch (error) {
-      await errorHandler.handleCommandError(error as Error, command.name(), {
-        exitCode: 1,
-      });
-    }
+  .action(async (options) => {
+    await initCommand(options);
   });
 
 // Agents command
@@ -152,13 +147,7 @@ program
   .option('--all', 'Parameter to target all agents during list or flush action')
   .option('--flush', 'Flush all agents from the configuration')
   .action(async (options) => {
-    try {
-      await agentsCommand(options);
-    } catch (error) {
-      await errorHandler.handleCommandError(error as Error, 'agents', {
-        exitCode: 1,
-      });
-    }
+    await agentsCommand(options);
   });
 
 // Tasks command
@@ -179,13 +168,7 @@ program
   .hook('preAction', initPlugins)
   .hook('preAction', initPluginCredentials)
   .action(async (options) => {
-    try {
-      await tasksSubscriptionCommand(options);
-    } catch (error) {
-      await errorHandler.handleCommandError(error as Error, 'tasks', {
-        exitCode: 1,
-      });
-    }
+    await tasksSubscriptionCommand(options);
   });
 
 program
@@ -194,13 +177,7 @@ program
   .argument('<key>', 'The key to set')
   .argument('<value>', 'The value to set')
   .action(async (key, value) => {
-    try {
-      await setCommand(key, value);
-    } catch (error) {
-      await errorHandler.handleCommandError(error as Error, 'set', {
-        exitCode: 1,
-      });
-    }
+    await setCommand(key, value);
   });
 
 (async () => {
@@ -215,7 +192,7 @@ program
     program.parse(process.argv);
   } catch (error) {
     await errorHandler.handleCommandError(error as Error, 'main', {
-      exitCode: 1,
+      exitCode: 0,
     });
   }
 })();
