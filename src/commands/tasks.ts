@@ -1,6 +1,7 @@
 import {
   ERRORFILE_PATH,
   hasError,
+  LOG_DIR,
   LOGFILE_PATH,
   run_shell,
 } from '../helpers/actions';
@@ -60,7 +61,7 @@ export async function tasksSubscriptionCommand(options: {
 
     const crontabOutput = await run_shell({
       shell: true,
-      command: `(crontab -l 2>/dev/null; echo "* * * * * ${shellOutput} -c \\"${soureCommandOutput} && cd ${workspace} && ${whichNode} ${whichTFZO} tasks --listen\\" >> ${LOGFILE_PATH} 2>>${ERRORFILE_PATH}") | crontab -`,
+      command: `(crontab -l 2>/dev/null; echo "* * * * * mkdir -p ${LOG_DIR} && ${shellOutput} -c \\"${soureCommandOutput} && cd ${workspace} && ${whichNode} ${whichTFZO} tasks --listen\\" >> ${LOGFILE_PATH} 2>>${ERRORFILE_PATH}") | crontab -`,
     });
 
     if (hasError(crontabOutput)) {
