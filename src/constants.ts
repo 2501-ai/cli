@@ -75,12 +75,16 @@ export const IGNORED_FILE_PATTERNS = [
   '(?:^|/).[^/]*$', // Ignore directories starting with .
 ];
 
-// We don't want to include Microsot files, as these are proprietary binary files.
+// We don't want to include Microsoft files, as these are proprietary binary files.
 export const INCLUDED_FILE_EXTENSIONS = [
   '.tf',
   '.tfvars',
   '.tfstate',
   '.tfstate.backup',
+  '.ps1',
+  '.sh',
+  '.bat',
+  '.cmd',
 ];
 
 export const DEFAULT_MAX_DEPTH = 5;
