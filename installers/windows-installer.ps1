@@ -11,8 +11,11 @@ try {
     
     Write-Host "Winget result: $wingetResult" -ForegroundColor Yellow
     
-    if ($LASTEXITCODE -eq 0) {
-        Write-Host "fnm installed successfully via Winget!" -ForegroundColor Green
+    # Check if fnm is available regardless of winget exit code
+    $fnmExists = Get-Command fnm -ErrorAction SilentlyContinue
+
+    if ($fnmExists) {
+        Write-Host "fnm is available!" -ForegroundColor Green
     } else {
         Write-Host "Winget failed, trying alternative installation..." -ForegroundColor Yellow
         
