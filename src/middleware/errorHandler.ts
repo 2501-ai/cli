@@ -1,6 +1,5 @@
 import { trackError } from '../telemetry';
 import Logger from '../utils/logger';
-import { TelemetryManager } from '../managers/telemetryManager';
 
 /**
  * Global error handler for CLI application
@@ -128,9 +127,6 @@ export class ErrorHandler {
   private async gracefulShutdown(exitCode: number): Promise<void> {
     try {
       Logger.debug('Initiating graceful shutdown...');
-
-      // Cleanup telemetry
-      await TelemetryManager.instance.shutdown();
 
       Logger.debug('Graceful shutdown completed');
     } catch (shutdownError) {

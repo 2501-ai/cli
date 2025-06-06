@@ -5,18 +5,11 @@ import axios from 'axios';
 
 /**
  * ErrorTracker
- * Handles batching, context, flush, and HTTP logic for error telemetry events.
+ * Gère l'envoi immédiat des erreurs à l'API de télémétrie.
  */
 class ErrorTracker {
-  /** Unique session identifier for telemetry events */
+  /** Identifiant unique de session pour la télémétrie */
   private sessionId = uuidv4();
-  /** Batched error events */
-  private events: ErrorTelemetryEvent[] = [];
-  /** Number of events before auto-flush */
-  private batchSize = 3;
-  /** Interval (ms) for auto-flush */
-  private flushInterval = 10000; // 10 seconds
-  private flushTimer?: NodeJS.Timeout;
 
   // Context fields for telemetry
   private agentId?: string;
@@ -25,15 +18,12 @@ class ErrorTracker {
   private command?: string;
 
   /**
-   * Initializes the error tracker and starts the flush timer.
+   * Initialise le tracker d'erreur.
    */
-  constructor() {
-    this.startFlushTimer();
-  }
+  constructor() {}
 
   /**
-   * Update the context for future error events.
-   * @param context Partial context to update (agentId, taskId, workspacePath, command)
+   * Met à jour le contexte pour les futurs événements d'erreur.
    */
   updateContext(context: {
     agentId?: string;
@@ -49,9 +39,7 @@ class ErrorTracker {
   }
 
   /**
-   * Track an error event. Adds to batch and flushes if needed.
-   * @param error The error to track
-   * @param context Optional metadata for the event
+   * Envoie immédiatement une erreur à l'API de télémétrie.
    */
   async trackError(
     error: Error,
@@ -63,21 +51,15 @@ class ErrorTracker {
     }
     try {
       const event = this.createEvent(error, context?.metadata);
-      this.events.push(event);
-      Logger.debug(`Error event tracked: ${event.id}`);
-      if (this.events.length >= this.batchSize) {
-        await this.flush();
-      }
+      await this.sendToEndpoint([event]);
+      Logger.debug(`Error event sent: ${event.id}`);
     } catch (err) {
-      Logger.error('Failed to track error event:', err);
+      Logger.error('Failed to send error event:', err);
     }
   }
 
   /**
-   * Create an error telemetry event with current context.
-   * @param error The error object
-   * @param metadata Optional metadata
-   * @returns ErrorTelemetryEvent
+   * Crée un événement d'erreur avec le contexte courant.
    */
   private createEvent(
     error: Error,
@@ -101,8 +83,7 @@ class ErrorTracker {
   }
 
   /**
-   * Build the current telemetry context for events.
-   * @returns TelemetryContext
+   * Construit le contexte de télémétrie courant.
    */
   private buildContext(): TelemetryContext {
     return {
@@ -116,18 +97,10 @@ class ErrorTracker {
     };
   }
 
-  /**
-   * Get the current CLI command as a string.
-   * @returns Command string
-   */
   private getCurrentCommand(): string {
     return process.argv.slice(2).join(' ') || 'unknown';
   }
 
-  /**
-   * Get the CLI version from package.json.
-   * @returns CLI version string
-   */
   private getCliVersion(): string {
     try {
       return require('../../package.json').version;
@@ -136,58 +109,12 @@ class ErrorTracker {
     }
   }
 
-  /**
-   * Check if error telemetry is enabled.
-   * @returns Always true (errors are always tracked)
-   */
   isEnabled(): boolean {
     return true;
   }
 
   /**
-   * Start the automatic flush timer for batching.
-   */
-  private startFlushTimer(): void {
-    if (this.flushInterval > 0) {
-      this.flushTimer = setInterval(() => {
-        this.flush().catch((error) => {
-          Logger.debug('Auto-flush failed for error:', error);
-        });
-      }, this.flushInterval);
-    }
-  }
-
-  /**
-   * Flush all batched error events to the backend.
-   */
-  async flush(): Promise<void> {
-    if (this.events.length === 0) return;
-    const eventsToSend = [...this.events];
-    this.events = [];
-    try {
-      await this.sendEvents(eventsToSend);
-      Logger.debug(`Flushed ${eventsToSend.length} error events`);
-    } catch (error) {
-      Logger.error('Failed to send error events:', error);
-    }
-  }
-
-  /**
-   * Send error events to the backend (logs in dev, sends in prod).
-   * @param events Array of error events
-   */
-  private async sendEvents(events: ErrorTelemetryEvent[]): Promise<void> {
-    if (process.env.TFZO_NODE_ENV === 'dev') {
-      // Dev mode: log events to debug output
-      Logger.debug('Error telemetry events (dev mode):', events);
-    }
-    await this.sendToEndpoint(events);
-  }
-
-  /**
-   * Send error events to the telemetry HTTP endpoint.
-   * @param events Array of error events
-   * @throws If the HTTP request fails
+   * Envoie un ou plusieurs événements d'erreur à l'endpoint HTTP de télémétrie.
    */
   private async sendToEndpoint(events: ErrorTelemetryEvent[]): Promise<void> {
     const response = await axios.post(
@@ -206,19 +133,7 @@ class ErrorTracker {
   }
 
   /**
-   * Cleanup resources and flush remaining events.
-   */
-  async shutdown(): Promise<void> {
-    if (this.flushTimer) {
-      clearInterval(this.flushTimer);
-      this.flushTimer = undefined;
-    }
-    await this.flush();
-  }
-
-  /**
-   * Get the current session ID for telemetry.
-   * @returns Session ID string
+   * Retourne l'ID de session courant.
    */
   getSessionId(): string {
     return this.sessionId;
@@ -226,14 +141,12 @@ class ErrorTracker {
 }
 
 /**
- * Singleton instance of ErrorTracker for global use.
+ * Instance singleton d'ErrorTracker pour usage global.
  */
 export const errorTracker = new ErrorTracker();
 
 /**
- * Helper function to track an error event using the global errorTracker.
- * @param error The error to track
- * @param context Optional metadata for the event
+ * Fonction utilitaire pour envoyer une erreur via le tracker global.
  */
 export function trackError(
   error: Error,

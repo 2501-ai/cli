@@ -10,7 +10,6 @@ import { tasksSubscriptionCommand } from './commands/tasks';
 
 import { authMiddleware } from './middleware/auth';
 import { errorHandler } from './middleware/errorHandler';
-import { TelemetryManager } from './managers/telemetryManager';
 import { initPluginCredentials } from './utils/credentials';
 import Logger from './utils/logger';
 import { DISCORD_LINK } from './utils/messaging';
@@ -21,12 +20,10 @@ import { isLatestVersion } from './utils/versioning';
 errorHandler.initializeGlobalHandlers();
 
 process.on('SIGINT', async () => {
-  await TelemetryManager.instance.shutdown();
   process.exit(0);
 });
 
 process.on('SIGTERM', async () => {
-  await TelemetryManager.instance.shutdown();
   process.exit(0);
 });
 
@@ -51,10 +48,6 @@ Join our Discord server: ${DISCORD_LINK}
   )
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   .version(require('../package.json').version)
-  .hook('postAction', async () => {
-    // The shutdown makes sure the Telemetry timer is cleared, to allow the process to exit.
-    await TelemetryManager.instance.shutdown();
-  })
   .on('command:*', async (args, options) => {
     const query = args?.join(' ');
     if (!query) {

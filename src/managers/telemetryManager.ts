@@ -23,13 +23,6 @@ export class TelemetryManager {
   }
 
   /**
-   * Shutdown all trackers gracefully
-   */
-  async shutdown(): Promise<void> {
-    await Promise.all([errorTracker.shutdown()]);
-  }
-
-  /**
    * Get status of all trackers
    */
   getStatus(): Record<string, boolean> {
