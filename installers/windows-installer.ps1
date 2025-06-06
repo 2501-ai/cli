@@ -47,8 +47,7 @@ try {
     
     # Set up fnm environment properly for current session
     Write-Host "Setting up fnm environment..." -ForegroundColor Yellow
-    $fnmEnv = & fnm env --shell powershell | Invoke-Expression
-    Invoke-Expression $fnmEnv
+    & fnm env --shell powershell | Invoke-Expression
     
     # Wait a moment for environment to be set up
     Start-Sleep -Seconds 2
