@@ -47,7 +47,7 @@ try {
     
     # Set up fnm environment properly for current session
     Write-Host "Setting up fnm environment..." -ForegroundColor Yellow
-    $fnmEnv = & fnm env --use-on-cd --shell powershell | Out-String
+    $fnmEnv = & fnm env --shell powershell | Invoke-Expression
     Invoke-Expression $fnmEnv
     
     # Wait a moment for environment to be set up
@@ -74,7 +74,7 @@ try {
         
         # Install 2501-ai/cli
         Write-Host "Installing @2501-ai/cli..." -ForegroundColor Yellow
-        & npm install -g @2501-ai/cli@0.2.22-alpha-windows-2
+        & npm install -g "@2501-ai/cli@0.2.22-alpha-windows-2"
         
         if ($LASTEXITCODE -eq 0) {
             $cliVersion = & tz --version 2>$null
@@ -84,14 +84,25 @@ try {
         }
     }
     
+    # Set up PowerShell profile for permanent fnm access
+    Write-Host "Setting up PowerShell profile for permanent access..." -ForegroundColor Yellow
+    if (!(Test-Path -Path $PROFILE)) { 
+        New-Item -ItemType File -Path $PROFILE -Force | Out-Null
+    }
+    $profileContent = Get-Content -Path $PROFILE -ErrorAction SilentlyContinue
+    if ($profileContent -notcontains "fnm env --shell powershell | Invoke-Expression") {
+        Add-Content -Path $PROFILE -Value "fnm env --shell powershell | Invoke-Expression"
+        Write-Host "Added fnm to PowerShell profile" -ForegroundColor Green
+    }
+    
     Write-Host ""
     Write-Host "Installation completed!" -ForegroundColor Green
     Write-Host ""
     Write-Host "Next steps:" -ForegroundColor Cyan
     Write-Host "1. Restart your PowerShell session" -ForegroundColor White
-    Write-Host "2. Add to your PowerShell profile: fnm env --use-on-cd | Out-String | Invoke-Expression" -ForegroundColor White
-    Write-Host "3. Set your API key: 2501 set api_key <YOUR_API_KEY>" -ForegroundColor White
-    Write-Host "4. Get help: 2501 --help" -ForegroundColor White
+    Write-Host "2. Add to your PowerShell profile: fnm env --shell powershell | Invoke-Expression" -ForegroundColor White
+    Write-Host "3. Set your API key: tz set api-key <YOUR_API_KEY>" -ForegroundColor White
+    Write-Host "4. Get help: tz --help" -ForegroundColor White
     Write-Host ""
     Write-Host "Happy nerding! 🚀" -ForegroundColor Magenta
 }
