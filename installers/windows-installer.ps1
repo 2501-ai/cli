@@ -111,5 +111,4 @@ catch {
     Write-Host "1. Download from: https://github.com/Schniz/fnm/releases" -ForegroundColor White
     Write-Host "2. Or use: winget install Schniz.fnm" -ForegroundColor White
     Write-Host "3. Or use: choco install fnm" -ForegroundColor White
-    exit 1
 } 
