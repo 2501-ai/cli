@@ -102,9 +102,8 @@ try {
     Write-Host ""
     Write-Host "Next steps:" -ForegroundColor Cyan
     Write-Host "1. Restart your PowerShell session" -ForegroundColor White
-    Write-Host "2. Add to your PowerShell profile: fnm env --shell powershell | Invoke-Expression" -ForegroundColor White
-    Write-Host "3. Set your API key: tz set api-key <YOUR_API_KEY>" -ForegroundColor White
-    Write-Host "4. Get help: tz --help" -ForegroundColor White
+    Write-Host "2. Set your API key: tz set api-key <YOUR_API_KEY>" -ForegroundColor White
+    Write-Host "3. Get help: tz --help" -ForegroundColor White
     Write-Host ""
     Write-Host "Happy nerding! 🚀" -ForegroundColor Magenta
 }
