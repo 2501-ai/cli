@@ -35,6 +35,26 @@ export enum QueryStatus {
 
 export const DISABLE_SPINNER = process.env.TFZO_DISABLE_SPINNER === 'true';
 
+export const IGNORED_WINDOWS_FILE_EXTENSIONS = [
+  '.exe',
+  '.dll',
+  '.msi',
+  '.bat',
+  '.cmd',
+  '.com',
+  '.scr',
+  '.pif',
+];
+
+export const IGNORED_WINDOWS_FILE_NAMES = [
+  'desktop.ini',
+  'thumbs.db',
+  '~$*', // Office temp files
+  '*.tmp',
+  '*.temp',
+  '*.lnk', // Windows shortcuts
+];
+
 export const IGNORED_FILE_PATTERNS = [
   '.env',
   '.git',
@@ -73,6 +93,8 @@ export const IGNORED_FILE_PATTERNS = [
   'secrets.json',
   'credentials.xml',
   '(?:^|/).[^/]*$', // Ignore directories starting with .
+  ...IGNORED_WINDOWS_FILE_EXTENSIONS,
+  ...IGNORED_WINDOWS_FILE_NAMES,
 ];
 
 // We don't want to include Microsoft files, as these are proprietary binary files.
