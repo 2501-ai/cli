@@ -11,7 +11,7 @@ echo "
 ░▒▓█▓▒░             ░▒▓█▓▒░▒▓█▓▒░░▒▓█▓▒░  ░▒▓█▓▒░
 ░▒▓████████▓▒░▒▓███████▓▒░░▒▓████████▓▒░  ░▒▓█▓▒░
 
-    ---- AI Autonomous Systems INSTALLER ----"
+---- AI Autonomous Systems INSTALLER ----"
 
 # Function to check if a command exists
 command_exists() {
@@ -22,7 +22,7 @@ command_exists() {
 install_homebrew() {
     echo "Installing Homebrew..."
     /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-
+    
     # Add Homebrew to PATH
     echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> ~/.zprofile
     eval "$(/opt/homebrew/bin/brew shellenv)"
@@ -91,7 +91,7 @@ You can now use the @2501 CLI to interact with AI Autonomous Systems.
 Note : you may need to restart your shell to see changes.
 
 !!! Don't forget to set 1st your API key using:
-==> @2501 set api-key <API_KEY>
+==> @2501 set api_key <API_KEY>
 
 Usage:
 ==> @2501 --help

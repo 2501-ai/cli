@@ -1,5 +1,6 @@
 import path from 'path';
 import fs from 'fs';
+import { getExampleWorkspacePath } from '../utils/platform';
 
 const WINDOWS_UNSAFE_DIRS = [
   'C:\\',
@@ -95,7 +96,7 @@ export function isDirUnsafe(dir: string, throwOnly = false) {
   const unsafe = isUnsafe(normalizedWorkspace, unsafeDirectories, exceptions);
   if (throwOnly && unsafe) {
     throw new Error(
-      `Cannot use system directory "${normalizedWorkspace}" as workspace, please choose another one (e.g. "/tmp/workspace" or "C:\\\\workspace)"`
+      `Cannot use system directory "${normalizedWorkspace}" as workspace, please choose another one (e.g. "${getExampleWorkspacePath()}")"`
     );
   }
 

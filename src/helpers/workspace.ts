@@ -12,6 +12,7 @@ import {
 import { IgnoreManager } from '../utils/ignore';
 import { zipUtility } from '../utils/zip';
 import { toReadableSize } from '../utils/files';
+import { getTempPath2501 } from '../utils/platform';
 
 export function resolveWorkspacePath(options: { workspace?: string }): string {
   let finalPath = options.workspace || process.cwd();
@@ -182,7 +183,10 @@ export async function generateWorkspaceZip(
   workspaceFiles?: { fileHashes: Map<string, string>; totalSize: number }
 ): Promise<{ path: string; data: Buffer }[]> {
   const fileId = Math.floor(Math.random() * 100000);
-  const outputFilePath = `/tmp/2501/_files/workspace_${fileId}.zip`;
+  const outputFilePath = path.join(
+    getTempPath2501('_files'),
+    `workspace_${fileId}.zip`
+  );
 
   // Create output directory if it doesn't exist
   const dir = path.dirname(outputFilePath);

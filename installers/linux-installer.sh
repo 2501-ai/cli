@@ -8,7 +8,7 @@ echo "
 ░▒▓█▓▒░             ░▒▓█▓▒░▒▓█▓▒░░▒▓█▓▒░  ░▒▓█▓▒░
 ░▒▓████████▓▒░▒▓███████▓▒░░▒▓████████▓▒░  ░▒▓█▓▒░
 
-    ---- AI Autonomous Systems INSTALLER ----"
+---- AI Autonomous Systems INSTALLER ----"
 
 # Function to check if a command exists
 command_exists() {
@@ -20,13 +20,13 @@ install_nvm() {
     echo "Installing NVM..."
     if command_exists curl; then
         curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.0/install.sh | bash
-    elif command_exists wget; then
+        elif command_exists wget; then
         wget -qO- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.0/install.sh | bash
     else
         echo "Error: Neither curl nor wget is installed. Please install one of them and try again."
         exit 1
     fi
-
+    
     # Load NVM
     export NVM_DIR="$HOME/.nvm"
     [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
@@ -100,7 +100,7 @@ You can now use the @2501 CLI to interact with AI Autonomous Systems.
 Note : you may need to restart your shell to see changes.
 
 !!! Don't forget to set 1st your API key using:
-==> @2501 set api-key <API_KEY>
+==> @2501 set api_key <API_KEY>
 
 Usage:
 ==> @2501 --help

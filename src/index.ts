@@ -14,6 +14,7 @@ import Logger from './utils/logger';
 import { DISCORD_LINK } from './utils/messaging';
 import { initPluginCredentials } from './utils/credentials';
 import { initPlugins } from './utils/plugins';
+import { getTempPath2501 } from './utils/platform';
 
 process.on('SIGINT', () => {
   console.log('Process interrupted with Ctrl+C');
@@ -91,7 +92,7 @@ program
   .option('--workspace <path>', 'Specify a different workspace path')
   .option(
     '--no-workspace',
-    'Will not sync the current workspace and will create a temporary one in /tmp/2501/'
+    `Will not sync the current workspace and will create a temporary one in ${getTempPath2501()}`
   )
   .option('--config <configKey>', 'Specify the configuration Key to use')
   .hook('preAction', authMiddleware)
