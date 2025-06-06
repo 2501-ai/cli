@@ -8,11 +8,12 @@ import Logger from '../utils/logger';
 
 import { modifyCodeSections } from '../utils/sectionUpdate';
 import { IgnoreManager } from '../utils/ignore';
+import { getLogDir } from '../utils/platform';
 
 /**
  * Directory to store logs
  */
-export const LOG_DIR = `/tmp/2501/logs`;
+export const LOG_DIR = getLogDir();
 
 /**
  * File to log the output of the command
