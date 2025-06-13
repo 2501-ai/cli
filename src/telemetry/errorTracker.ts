@@ -1,7 +1,7 @@
+import axios, { AxiosError } from 'axios';
 import { v4 as uuidv4 } from 'uuid';
 import Logger from '../utils/logger';
 import { ErrorTelemetryEvent, TelemetryContext } from './types';
-import axios, { AxiosError } from 'axios';
 
 /**
  * Safely stringifies an object, handling circular references
@@ -56,16 +56,6 @@ function sanitizeError(error: Error | AxiosError): {
     }
     if (axiosError.code) {
       details.push(`Code: ${axiosError.code}`);
-    }
-
-    // Safely include response data in the message
-    if (axiosError.response?.data) {
-      try {
-        const dataStr = JSON.stringify(axiosError.response.data);
-        details.push(`Response: ${dataStr}`);
-      } catch (e) {
-        details.push('Response: [Circular or non-serializable response data]');
-      }
     }
 
     // Enhance the message with axios-specific details
