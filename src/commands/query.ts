@@ -24,11 +24,13 @@ import {
   writeWorkspaceState,
 } from '../helpers/workspace';
 import { AgentManager } from '../managers/agentManager';
+import { ConfigManager } from '../managers/configManager';
+import { TelemetryManager } from '../managers/telemetryManager';
 import { getFunctionArgs } from '../utils/actions';
 import { getEligibleAgent } from '../utils/conf';
 import { credentialsService } from '../utils/credentials';
 import { getDirectoryMd5Hash } from '../utils/files';
-import Logger, { getTerminalWidth } from '../utils/logger';
+import Logger from '../utils/logger';
 import { isLooping } from '../utils/loopDetection';
 import { generateTree } from '../utils/tree';
 import {
@@ -38,7 +40,6 @@ import {
   WorkspaceState,
 } from '../utils/types';
 import { initCommand } from './init';
-import { ConfigManager } from '../managers/configManager';
 
 marked.use(markedTerminal() as MarkedExtension);
 
@@ -144,8 +145,6 @@ const synchronizeWorkspace = async (
       agent_id: agentId,
     };
     writeWorkspaceState(newState);
-
-    await new Promise((resolve) => setTimeout(resolve, 2000));
     logger.stop('Workspace synchronized');
     return true;
   }
@@ -169,7 +168,7 @@ const handleReasoningSteps = (streamResponse: Readable) => {
         logger.start('Processing');
       }
     } catch (e) {
-      // Ignore
+      // Do nothing on purpose
     }
   });
 };
@@ -207,6 +206,15 @@ export const queryCommand = async (
   }
 ) => {
   Logger.debug('Options:', options);
+
+  const context = {
+    command: query,
+    taskId: options.taskId,
+    workspacePath: options.workspace,
+    agentId: options.agentId,
+  };
+
+  TelemetryManager.instance.updateContext(context);
 
   try {
     const configManager = ConfigManager.instance;
@@ -296,11 +304,6 @@ export const queryCommand = async (
       if (actions.length && finalResponse) {
         logger.stop(finalResponse);
       }
-    }
-
-    if (finalResponse) {
-      logger.stop(chalk.italic.gray('-'.repeat(getTerminalWidth() - 10)));
-      Logger.agent(finalResponse);
     }
   } catch (error) {
     logger.handleError(error as Error);

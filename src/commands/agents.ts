@@ -7,11 +7,11 @@ import {
 } from '../utils/conf';
 import { resolveWorkspacePath } from '../helpers/workspace';
 
-export async function agentsCommand(options: {
+export const agentsCommand = async (options: {
   all?: boolean;
   flush?: boolean;
   workspace?: string;
-}): Promise<void> {
+}): Promise<void> => {
   const workspaceUrl = resolveWorkspacePath({ workspace: options.workspace });
 
   if (options.flush) {
@@ -52,4 +52,4 @@ export async function agentsCommand(options: {
   } else {
     terminal('No agents found.\n');
   }
-}
+};

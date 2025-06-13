@@ -6,11 +6,10 @@ import { LocalConfigKey } from '../utils/types';
 const KEYS_WITH_PARSING: LocalConfigKey[] = ['stream', 'disable_spinner'];
 const logger = new Logger();
 
-export function setCommand() {
-  const key = process.argv[3] as LocalConfigKey;
-  let value = process.argv[4];
+export function setCommand(key: string, value: string) {
+  const configKey = key as LocalConfigKey;
 
-  if (!key) {
+  if (!configKey) {
     logger.cancel('Please provide a key to set.');
     return;
   }
@@ -22,12 +21,13 @@ export function setCommand() {
 
   try {
     // Parse boolean values
-    if (KEYS_WITH_PARSING.includes(key)) {
-      value = JSON.parse(value);
+    let parsedValue: any = value;
+    if (KEYS_WITH_PARSING.includes(configKey)) {
+      parsedValue = JSON.parse(value);
     }
 
-    ConfigManager.instance.set(key, value);
-    logger.log(`${key} set successfully to ${value}.`);
+    ConfigManager.instance.set(configKey, parsedValue);
+    logger.log(`${configKey} set successfully to ${parsedValue}.`);
   } catch (error) {
     logger.cancel((error as Error).message);
   }
