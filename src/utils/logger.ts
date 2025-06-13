@@ -180,7 +180,7 @@ export default class Logger {
       }
 
       const axiosError = e as AxiosError;
-      const errorData = axiosError.response?.data as { code?: string };
+      const errorData = axiosError.toJSON();
       trackError(axiosError, {
         metadata: {
           defaultMsg,
@@ -213,7 +213,7 @@ export default class Logger {
     }
 
     const axiosError = e as AxiosError;
-    const errorData = axiosError.response?.data as { code?: string };
+    const errorData = axiosError.toJSON();
 
     trackError(axiosError, {
       metadata: {
@@ -227,7 +227,8 @@ export default class Logger {
     }
 
     if (axiosError.response?.status === 403) {
-      if (errorData?.code === 'TOKEN_LIMIT') {
+      const errorResponse = axiosError.response?.data as { code?: string };
+      if (errorResponse?.code === 'TOKEN_LIMIT') {
         defaultMsg =
           'Monthly token usage limit reached. Please upgrade your plan or contact us !';
       }
