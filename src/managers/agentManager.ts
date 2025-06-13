@@ -150,8 +150,16 @@ export class AgentManager {
       }
 
       if (output.length > 20000) {
-        output = `Content is too big, if you need this content, please find an alternative method to retrieve the relevant information (for example grep and sample the content first). Below are two samples of the content:
-        \n\nFirst 500 chars:\n${output.slice(0, 500)}\n\nLast 500 chars:\n${output.slice(-500)}`;
+        output = `
+        ERROR: The output is too large to display to prevent performance issues.
+        Use an alternative method to retrieve the relevant information for the user (for example grep, an another command or sample the content first).
+        `;
+
+        return {
+          tool_call_id: action.id,
+          output,
+          success: false,
+        };
       }
 
       return {

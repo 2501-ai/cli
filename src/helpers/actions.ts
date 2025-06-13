@@ -12,7 +12,7 @@ import { IgnoreManager } from '../utils/ignore';
 /**
  * Directory to store logs
  */
-const LOG_DIR = `/tmp/2501/logs`;
+export const LOG_DIR = `/tmp/2501/logs`;
 
 /**
  * File to log the output of the command

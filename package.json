@@ -1,6 +1,6 @@
 {
   "name": "@2501-ai/cli",
-  "version": "0.2.22",
+  "version": "0.2.25",
   "description": "",
   "main": "dist/index.js",
   "bin": {
@@ -9,7 +9,7 @@
   "scripts": {
     "build": "tsc",
     "build:clean": "rm -rf dist && tsc",
-    "build:link": "npm run build && npm link",
+    "build:link": "npm run build && npm link && npm link @2501-ai/cli",
     "unlink": "npm unlink -g @2501-ai/cli",
     "start": "node .",
     "lint": "tsc --noEmit && eslint . --ext .ts,.tsx --fix",
