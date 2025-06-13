@@ -39,6 +39,8 @@ export async function tasksSubscriptionCommand(options: {
     return Logger.error(whichTFZO);
   }
 
+  const tfzoExecPath = `${whichNode.trim()} ${whichTFZO.trim()}`;
+
   if (options.subscribe) {
     logger.start('Subscribing for new tasks');
     const shellOutput = await run_shell({
@@ -61,7 +63,7 @@ export async function tasksSubscriptionCommand(options: {
 
     const crontabOutput = await run_shell({
       shell: true,
-      command: `(crontab -l 2>/dev/null; echo "* * * * * mkdir -p ${LOG_DIR} && ${shellOutput} -c \\"${soureCommandOutput} && cd ${workspace} && ${whichNode} ${whichTFZO} tasks --listen\\" >> ${LOGFILE_PATH} 2>>${ERRORFILE_PATH}") | crontab -`,
+      command: `(crontab -l 2>/dev/null; echo "* * * * * mkdir -p ${LOG_DIR} && ${shellOutput} -c \\"${soureCommandOutput} && cd ${workspace} && ${tfzoExecPath} tasks --listen\\" >> ${LOGFILE_PATH} 2>>${ERRORFILE_PATH}") | crontab -`,
     });
 
     if (hasError(crontabOutput)) {
@@ -78,7 +80,7 @@ export async function tasksSubscriptionCommand(options: {
 
     const crontabOutput = await run_shell({
       shell: true,
-      command: `crontab -l | grep -v "cd ${workspace} && ${whichNode} ${whichTFZO} tasks --listen" | crontab -`,
+      command: `crontab -l | grep -v "cd ${workspace} && ${tfzoExecPath} tasks --listen" | crontab -`,
     });
 
     if (hasError(crontabOutput)) {
