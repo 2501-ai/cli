@@ -165,23 +165,3 @@ export const updateTask = async (
   const response = await axios.put(`/agents/${agentId}/tasks/${taskId}`, data);
   return response.data;
 };
-
-// export const sendErrorToEngine = async (
-//   agent: AgentConfig,
-//   stacktrace: string
-// ) => {
-//   const response = await axios.post(`/agents/${agent.id}/errors`, {
-//     error: stacktrace,
-//     agent: {
-//       id: agent.id,
-//       name: agent.name,
-//       workspace: agent.workspace,
-//       engine: agent.engine,
-//       configuration: agent.configuration,
-//       capabilities: agent.capabilities,
-//       host_id: agent.host_id,
-//       key: agent.key,
-//     },
-//   });
-//   return response.data;
-// };

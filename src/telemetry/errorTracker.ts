@@ -1,7 +1,96 @@
 import { v4 as uuidv4 } from 'uuid';
 import Logger from '../utils/logger';
 import { ErrorTelemetryEvent, TelemetryContext } from './types';
-import axios from 'axios';
+import axios, { AxiosError } from 'axios';
+
+/**
+ * Safely stringifies an object, handling circular references
+ */
+function safeStringify(obj: any): any {
+  const seen = new WeakSet();
+  return JSON.parse(
+    JSON.stringify(obj, (key, value) => {
+      if (typeof value === 'object' && value !== null) {
+        if (seen.has(value)) {
+          return '[Circular Reference]';
+        }
+        seen.add(value);
+      }
+      // Handle non-serializable types
+      if (typeof value === 'function') {
+        return '[Function]';
+      }
+      if (value instanceof Error) {
+        return {
+          message: value.message,
+          name: value.name,
+          stack: value.stack,
+        };
+      }
+      return value;
+    })
+  );
+}
+
+/**
+ * Sanitizes an error object to remove circular references and non-serializable properties
+ */
+function sanitizeError(error: Error | AxiosError): {
+  message: string;
+  stack?: string;
+  name: string;
+} {
+  const baseError = {
+    message: error.message,
+    name: error.name,
+    stack: error.stack,
+  };
+
+  // For Axios errors, enhance the error message with additional context
+  if (axios.isAxiosError(error)) {
+    const axiosError = error as AxiosError;
+    const details = [];
+
+    if (axiosError.response?.status) {
+      details.push(`Status: ${axiosError.response.status}`);
+    }
+    if (axiosError.code) {
+      details.push(`Code: ${axiosError.code}`);
+    }
+
+    // Safely include response data in the message
+    if (axiosError.response?.data) {
+      try {
+        const dataStr = JSON.stringify(axiosError.response.data);
+        details.push(`Response: ${dataStr}`);
+      } catch (e) {
+        details.push('Response: [Circular or non-serializable response data]');
+      }
+    }
+
+    // Enhance the message with axios-specific details
+    if (details.length > 0) {
+      baseError.message = `${baseError.message} (${details.join(', ')})`;
+    }
+  }
+
+  return baseError;
+}
+
+/**
+ * Sanitizes the context object to ensure it's serializable
+ */
+function sanitizeContext(context: any): any {
+  try {
+    return safeStringify(context);
+  } catch (e) {
+    Logger.debug('Error sanitizing context:', e);
+    return {
+      error: 'Context contained non-serializable data',
+      sanitized: false,
+    };
+  }
+}
 
 /**
  * ErrorTracker
@@ -55,11 +144,7 @@ class ErrorTracker {
       type: 'error',
       timestamp: Date.now(),
       sessionId: this.sessionId,
-      error: {
-        message: error.message,
-        stack: error.stack,
-        name: error.name,
-      },
+      error: sanitizeError(error),
       context: {
         ...this.buildContext(),
         metadata,
@@ -96,18 +181,30 @@ class ErrorTracker {
   }
 
   private async sendToEndpoint(events: ErrorTelemetryEvent[]): Promise<void> {
-    const response = await axios.post(
-      `/telemetry`,
-      {
-        sessionId: this.sessionId,
-        eventType: 'error',
-        context: this.buildContext(),
-        events,
-      },
-      { timeout: 3_000 }
-    );
-    if (response.status !== 200 && response.status !== 201) {
-      throw new Error(`Telemetry upload failed: ${response.status}`);
+    try {
+      const sanitizedEvents = events.map((event) => ({
+        ...event,
+        error: sanitizeError(event.error as Error),
+        context: sanitizeContext(event.context),
+      }));
+
+      const response = await axios.post(
+        `/telemetry`,
+        {
+          sessionId: this.sessionId,
+          eventType: 'error',
+          context: sanitizeContext(this.buildContext()),
+          events: sanitizedEvents,
+        },
+        { timeout: 3_000 }
+      );
+
+      if (response.status !== 200 && response.status !== 201) {
+        throw new Error(`Telemetry upload failed: ${response.status}`);
+      }
+    } catch (error) {
+      // Log the error but don't rethrow to prevent infinite loops
+      Logger.debug('Failed to send telemetry:', error);
     }
   }
 

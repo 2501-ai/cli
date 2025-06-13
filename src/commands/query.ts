@@ -30,7 +30,7 @@ import { getFunctionArgs } from '../utils/actions';
 import { getEligibleAgent } from '../utils/conf';
 import { credentialsService } from '../utils/credentials';
 import { getDirectoryMd5Hash } from '../utils/files';
-import Logger, { getTerminalWidth } from '../utils/logger';
+import Logger from '../utils/logger';
 import { isLooping } from '../utils/loopDetection';
 import { generateTree } from '../utils/tree';
 import {
@@ -304,11 +304,6 @@ export const queryCommand = async (
       if (actions.length && finalResponse) {
         logger.stop(finalResponse);
       }
-    }
-
-    if (finalResponse) {
-      logger.stop(chalk.italic.gray('-'.repeat(getTerminalWidth() - 10)));
-      Logger.agent(finalResponse);
     }
   } catch (error) {
     logger.handleError(error as Error);
