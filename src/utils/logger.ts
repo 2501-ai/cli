@@ -4,6 +4,7 @@ import { marked } from 'marked';
 
 import { terminal } from 'terminal-kit';
 import { ConfigManager } from '../managers/configManager';
+import { trackError } from '../telemetry';
 const isDebug = process.env.TFZO_DEBUG === 'true';
 
 enum Colors {
@@ -170,10 +171,22 @@ export default class Logger {
     if (isDebug) {
       if (!axios.isAxiosError(e)) {
         Logger.error('Command error', e);
+        trackError(e, {
+          metadata: {
+            defaultMsg,
+          },
+        });
         return this.cancel(defaultMsg);
       }
 
       const axiosError = e as AxiosError;
+      const errorData = axiosError.toJSON();
+      trackError(axiosError, {
+        metadata: {
+          defaultMsg,
+          errorData,
+        },
+      });
       Logger.error('Command error - Axios error', {
         code: axiosError.code,
         message: axiosError.message,
@@ -191,18 +204,31 @@ export default class Logger {
     }
 
     if (!axios.isAxiosError(e)) {
+      trackError(e, {
+        metadata: {
+          defaultMsg,
+        },
+      });
       return this.cancel(defaultMsg);
     }
 
     const axiosError = e as AxiosError;
-    const errorData = axiosError.response?.data as { code?: string };
+    const errorData = axiosError.toJSON();
+
+    trackError(axiosError, {
+      metadata: {
+        defaultMsg,
+        errorData,
+      },
+    });
 
     if (axiosError.response?.status === 401) {
       defaultMsg = 'Unauthorized. Please verify your API key.';
     }
 
     if (axiosError.response?.status === 403) {
-      if (errorData?.code === 'TOKEN_LIMIT') {
+      const errorResponse = axiosError.response?.data as { code?: string };
+      if (errorResponse?.code === 'TOKEN_LIMIT') {
         defaultMsg =
           'Monthly token usage limit reached. Please upgrade your plan or contact us !';
       }

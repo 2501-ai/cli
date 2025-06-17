@@ -1,7 +1,7 @@
 import { terminal } from 'terminal-kit';
+import { initAxios } from '../helpers/api';
 import { ConfigManager } from '../managers/configManager';
 import Logger from '../utils/logger';
-import { initAxios } from '../helpers/api';
 
 const logger = new Logger();
 

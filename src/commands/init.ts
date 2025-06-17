@@ -3,17 +3,18 @@ import fs from 'fs';
 import { terminal } from 'terminal-kit';
 
 // Local imports
-import Logger from '../utils/logger';
-import { addAgent } from '../utils/conf';
-import { ConfigManager } from '../managers/configManager';
 import { API_HOST, API_VERSION } from '../constants';
-import { isDirUnsafe } from '../helpers/security';
-import { Configuration } from '../utils/types';
 import { createAgent } from '../helpers/api';
-import { DISCORD_LINK } from '../utils/messaging';
+import { isDirUnsafe } from '../helpers/security';
 import { resolveWorkspacePath } from '../helpers/workspace';
+import { ConfigManager } from '../managers/configManager';
+import { TelemetryManager } from '../managers/telemetryManager';
+import { addAgent } from '../utils/conf';
+import Logger from '../utils/logger';
+import { DISCORD_LINK } from '../utils/messaging';
 import { getSystemInfo } from '../utils/systemInfo';
 import { getTempPath2501 } from '../utils/platform';
+import { Configuration } from '../utils/types';
 
 axios.defaults.baseURL = `${API_HOST}${API_VERSION}`;
 axios.defaults.timeout = 120 * 1000;
@@ -80,7 +81,9 @@ export async function getWorkspacePath(
 }
 
 // This function will be called when the `init` command is executed
-export async function initCommand(options?: InitCommandOptions) {
+export const initCommand = async (
+  options: InitCommandOptions
+): Promise<void> => {
   try {
     const configManager = ConfigManager.instance;
 
@@ -116,6 +119,10 @@ export async function initCommand(options?: InitCommandOptions) {
     const [workspacePath, systemInfo, agentConfig] =
       await Promise.all(parallelPromises);
 
+    TelemetryManager.instance.updateContext({
+      workspacePath: workspacePath,
+    });
+
     Logger.debug('systemInfo results:', { systemInfo });
 
     const createResponse = await createAgent(
@@ -136,8 +143,11 @@ export async function initCommand(options?: InitCommandOptions) {
       engine: configManager.get('engine'),
     });
 
+    TelemetryManager.instance.updateContext({
+      agentId: createResponse.id,
+    });
     logger.stop(`Agent ${createResponse.id} created`);
   } catch (e: unknown) {
     logger.handleError(e as Error, (e as Error).message);
   }
-}
+};

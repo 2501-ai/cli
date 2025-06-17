@@ -4,7 +4,7 @@ import { terminal } from 'terminal-kit';
 import { API_HOST, API_VERSION } from '../constants';
 import Logger from '../utils/logger';
 
-export async function configCommand() {
+export const configCommand = async () => {
   const logger = new Logger();
   try {
     logger.start('Fetching configurations...');
@@ -37,4 +37,4 @@ export async function configCommand() {
   } catch (error) {
     Logger.error('Failed to fetch configurations:');
   }
-}
+};
