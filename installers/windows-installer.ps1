@@ -80,9 +80,20 @@ try {
         & npm install -g "@2501-ai/cli"
         
         if ($LASTEXITCODE -eq 0) {
-            $cliVersion = & tz --version 2>$null
-            if ($LASTEXITCODE -eq 0) {
-                Write-Host "@2501-ai/cli version: $cliVersion" -ForegroundColor Green
+            # Add npm global bin to PATH
+            $npmGlobalBin = & npm config get prefix
+            $npmGlobalBin = "$npmGlobalBin\node_modules\.bin"
+            $env:PATH = "$npmGlobalBin;$env:PATH"
+            
+            # Verify tz command is available
+            $tzExists = Get-Command tz -ErrorAction SilentlyContinue
+            if ($tzExists) {
+                $cliVersion = & tz --version 2>$null
+                if ($LASTEXITCODE -eq 0) {
+                    Write-Host "@2501-ai/cli version: $cliVersion" -ForegroundColor Green
+                }
+            } else {
+                Write-Host "Warning: tz command not found in PATH. Please restart your PowerShell session." -ForegroundColor Yellow
             }
         }
     }
