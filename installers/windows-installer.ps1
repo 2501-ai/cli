@@ -94,15 +94,15 @@ try {
             # Wait a moment for PATH to update
             Start-Sleep -Seconds 2
             
-            # Verify tz command is available
-            $tzExists = Get-Command tz -ErrorAction SilentlyContinue
-            if ($tzExists) {
-                $cliVersion = & tz --version 2>$null
+            # Verify a2501 command is available
+            $a2501Exists = Get-Command a2501 -ErrorAction SilentlyContinue
+            if ($a2501Exists) {
+                $cliVersion = & a2501 --version 2>$null
                 if ($LASTEXITCODE -eq 0) {
                     Write-Host "@2501-ai/cli version: $cliVersion" -ForegroundColor Green
                 }
             } else {
-                Write-Host "Warning: tz command not found. Please restart your PowerShell session and try again." -ForegroundColor Yellow
+                Write-Host "Warning: a2501 command not found. Please restart your PowerShell session and try again." -ForegroundColor Yellow
                 Write-Host "If the issue persists, try running: npm install -g @2501-ai/cli" -ForegroundColor Yellow
             }
         }
@@ -124,8 +124,8 @@ try {
     Write-Host ""
     Write-Host "Next steps:" -ForegroundColor Cyan
     Write-Host "1. Restart your PowerShell session" -ForegroundColor White
-    Write-Host "2. Set your API key: tz set api-key <YOUR_API_KEY>" -ForegroundColor White
-    Write-Host "3. Get help: tz --help" -ForegroundColor White
+    Write-Host "2. Set your API key: a2501 set api-key <YOUR_API_KEY>" -ForegroundColor White
+    Write-Host "3. Get help: a2501 --help" -ForegroundColor White
     Write-Host ""
     Write-Host "Happy nerding! 🚀" -ForegroundColor Magenta
 }
