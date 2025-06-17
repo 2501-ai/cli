@@ -243,9 +243,18 @@ async function detectPackageManagers(
   const pmChecks = await Promise.all(
     packageManagers.map(async (pm) => {
       try {
-        await execAsync(`which ${pm.cmd}`);
+        if (os.platform() === 'win32') {
+          await execAsync(`where ${pm.cmd}`);
+        } else {
+          await execAsync(`which ${pm.cmd}`);
+        }
         return pm;
-      } catch {
+      } catch (error) {
+        Logger.debug(`Failed to find ${pm.cmd}`, {
+          error: error,
+          pm,
+          platform: os.platform(),
+        });
         return null;
       }
     })
