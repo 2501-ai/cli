@@ -78,16 +78,21 @@ const WINDOWS_PACKAGE_MANAGERS = [
 ] as const;
 
 /**
- * Get the list of global packages installed on the system for mnetrics.
+ * Get the list of global packages installed on the system for metrics.
  */
 async function getGlobalNpmPackages() {
   try {
     // Execute the command and get the output as a string
-    const command = "npm list -g --depth=0 | awk '{print $2}' | grep '@'";
+    const command = 'npm list -g --depth=0 --json';
     const output = await execAsync(command, { encoding: 'utf8' });
 
-    // Split the output into lines and remove empty lines
-    return output.stdout.split('\n').filter((line) => line.trim() !== '');
+    // Parse the JSON output
+    const packages = JSON.parse(output.stdout);
+
+    // Extract package names and filter for scoped packages
+    return Object.keys(packages.dependencies || {}).filter((pkg) =>
+      pkg.includes('@')
+    );
   } catch (error) {
     Logger.debug('Error executing command:', (error as Error).message);
     return [];
