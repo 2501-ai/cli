@@ -37,5 +37,5 @@ export function isWindows(): boolean {
  * Get platform-specific example workspace path for error messages
  */
 export function getExampleWorkspacePath(): string {
-  return isWindows() ? 'C:\\workspace' : '/tmp/workspace';
+  return isWindows() ? path.join(os.tmpdir(), 'workspace') : '/tmp/workspace';
 }
