@@ -81,7 +81,7 @@ try {
         
         # Install 2501-ai/cli
         Write-Host "Installing @2501-ai/cli..." -ForegroundColor Yellow
-        & npm install -g "@2501-ai/cli@0.2.27-alpha-windows-1"
+        & npm install -g "@2501-ai/cli"
         
         if ($LASTEXITCODE -eq 0) {
             # Get npm global prefix and add to PATH
