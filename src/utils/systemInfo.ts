@@ -59,6 +59,24 @@ const MACOS_PACKAGE_MANAGERS = [
   },
 ] as const;
 
+const WINDOWS_PACKAGE_MANAGERS = [
+  {
+    cmd: 'winget',
+    listCmd: (exclusionPattern: string) =>
+      `winget list --accept-source-agreements | findstr /v "${exclusionPattern}" | findstr /v "Name" | findstr /v "---"`,
+  },
+  {
+    cmd: 'choco',
+    listCmd: (exclusionPattern: string) =>
+      `choco list -lo | findstr /v "${exclusionPattern}" | findstr /v "Chocolatey" | findstr /v "packages"`,
+  },
+  {
+    cmd: 'scoop',
+    listCmd: (exclusionPattern: string) =>
+      `scoop list | findstr /v "${exclusionPattern}" | findstr /v "Name" | findstr /v "---"`,
+  },
+] as const;
+
 /**
  * Get the list of global packages installed on the system for mnetrics.
  */
@@ -175,6 +193,11 @@ function getPackageManagersForPlatform(
         ...pm,
         listCmd: pm.listCmd(exclusionPattern),
       }));
+    case 'win32':
+      return WINDOWS_PACKAGE_MANAGERS.map((pm) => ({
+        ...pm,
+        listCmd: pm.listCmd(exclusionPattern),
+      }));
     default:
       return [];
   }
@@ -287,6 +310,16 @@ export function getHostInfo(): HostInfo {
       )
         .toString()
         .trim();
+    } else if (process.platform === 'win32') {
+      // For Windows, use the machine GUID from registry
+      unique_id =
+        execSync(
+          'reg query "HKLM\\SOFTWARE\\Microsoft\\Cryptography" /v MachineGuid'
+        )
+          .toString()
+          .trim()
+          .split(/\s+/)
+          .pop() || '';
     } else {
       // Check for Docker environment
       if (fs.existsSync('/.dockerenv')) {

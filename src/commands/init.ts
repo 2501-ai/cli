@@ -108,7 +108,7 @@ export const initCommand = async (
     }
 
     logger.start('Creating agent');
-    const configKey = options?.config || 'CODING_AGENT';
+    const configKey = options?.config || 'SYSOPS';
 
     const parallelPromises = [
       getWorkspacePath(options),
