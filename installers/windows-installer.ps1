@@ -9,14 +9,21 @@ try {
     
     $wingetResult = winget install Schniz.fnm --accept-source-agreements --accept-package-agreements 2>$null
     
-    Write-Host "Winget result: $wingetResult" -ForegroundColor Yellow
-    
     # Check if fnm is available or if it was already installed
-    $fnmExists = Get-Command fnm -ErrorAction SilentlyContinue
     $alreadyInstalled = $wingetResult -match "Found an existing package already installed"
+    $successfullyInstalled = $wingetResult -match "Successfully installed"
 
-    if ($fnmExists -or $alreadyInstalled) {
+    if ($alreadyInstalled -or $successfullyInstalled) {
         Write-Host "fnm is available!" -ForegroundColor Green
+        
+        # Refresh PATH to make fnm available in current session
+        $env:PATH = [System.Environment]::GetEnvironmentVariable("PATH", "Machine") + ";" + [System.Environment]::GetEnvironmentVariable("PATH", "User")
+        
+        # Verify fnm is now available
+        $fnmExists = Get-Command fnm -ErrorAction SilentlyContinue
+        if (-not $fnmExists) {
+            Write-Host "Note: You need to restart your PowerShell session for fnm to be available." -ForegroundColor Yellow
+        }
     } else {
         Write-Host "Winget installation failed, trying alternative installation..." -ForegroundColor Yellow
         
@@ -31,9 +38,6 @@ try {
             throw "Neither Winget nor Chocolatey are available. Please install fnm manually from: https://github.com/Schniz/fnm/releases"
         }
     }
-    
-    # Refresh environment variables
-    $env:PATH = [System.Environment]::GetEnvironmentVariable("PATH", "Machine") + ";" + [System.Environment]::GetEnvironmentVariable("PATH", "User")
     
     # Verify fnm installation
     Write-Host "Verifying fnm installation..." -ForegroundColor Yellow
