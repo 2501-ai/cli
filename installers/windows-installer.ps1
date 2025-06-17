@@ -11,13 +11,14 @@ try {
     
     Write-Host "Winget result: $wingetResult" -ForegroundColor Yellow
     
-    # Check if fnm is available regardless of winget exit code
+    # Check if fnm is available or if it was already installed
     $fnmExists = Get-Command fnm -ErrorAction SilentlyContinue
+    $alreadyInstalled = $wingetResult -match "Found an existing package already installed"
 
-    if ($fnmExists) {
+    if ($fnmExists -or $alreadyInstalled) {
         Write-Host "fnm is available!" -ForegroundColor Green
     } else {
-        Write-Host "Winget failed, trying alternative installation..." -ForegroundColor Yellow
+        Write-Host "Winget installation failed, trying alternative installation..." -ForegroundColor Yellow
         
         # Fallback: Try Chocolatey if it's available
         if (Get-Command choco -ErrorAction SilentlyContinue) {
