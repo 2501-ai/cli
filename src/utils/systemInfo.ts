@@ -63,17 +63,17 @@ const WINDOWS_PACKAGE_MANAGERS = [
   {
     cmd: 'winget',
     listCmd: (exclusionPattern: string) =>
-      `winget list --accept-source-agreements | findstr /v "${exclusionPattern}" | findstr /v "Name" | findstr /v "---"`,
+      `winget list --accept-source-agreements | findstr /v "Name --- ${exclusionPattern}"`,
   },
   {
     cmd: 'choco',
     listCmd: (exclusionPattern: string) =>
-      `choco list -lo | findstr /v "${exclusionPattern}" | findstr /v "Chocolatey" | findstr /v "packages"`,
+      `choco list -lo | findstr /v "Chocolatey packages ${exclusionPattern}"`,
   },
   {
     cmd: 'scoop',
     listCmd: (exclusionPattern: string) =>
-      `scoop list | findstr /v "${exclusionPattern}" | findstr /v "Name" | findstr /v "---"`,
+      `scoop list | findstr /v "Name --- ${exclusionPattern}"`,
   },
 ] as const;
 
@@ -178,7 +178,7 @@ export async function getSystemInfo(): Promise<SystemInfo> {
 }
 
 function getPackageManagersForPlatform(
-  exclusionPattern: string
+  exclusionPattern = ''
 ): PackageManagerInfo[] {
   const platform = os.platform();
 
