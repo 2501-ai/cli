@@ -1,6 +1,6 @@
 {
   "name": "@2501-ai/cli",
-  "version": "0.2.29-alpha-windows-3",
+  "version": "0.2.29-alpha-windows-4",
   "description": "",
   "main": "dist/index.js",
   "bin": {

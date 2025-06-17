@@ -89,7 +89,7 @@ async function getGlobalNpmPackages() {
     // Split the output into lines and remove empty lines
     return output.stdout.split('\n').filter((line) => line.trim() !== '');
   } catch (error) {
-    // Logger.error('Error executing command:', (error as Error).message);
+    Logger.debug('Error executing command:', (error as Error).message);
     return [];
   }
 }
@@ -99,10 +99,15 @@ async function getGlobalNpmPackages() {
  */
 async function getOSInfo() {
   try {
-    const { stdout } = await execAsync('uname -a');
-    return stdout.trim();
+    if (os.platform() === 'win32') {
+      const { stdout } = await execAsync('systeminfo');
+      return stdout.trim();
+    } else {
+      const { stdout } = await execAsync('uname -a');
+      return stdout.trim();
+    }
   } catch (error) {
-    // Logger.error('Error executing uname -a:', (error as Error).message);
+    Logger.debug('Error getting OS info:', (error as Error).message);
     return (
       os.type() + ' ' + os.release() + ' ' + os.arch() + ' ' + os.platform()
     );
