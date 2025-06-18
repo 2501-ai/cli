@@ -31,6 +31,35 @@ export function read_file(args: { path: string }): string | null {
   return fs.readFileSync(args.path, 'utf8');
 }
 
+/**
+ * Write file with sudo privileges using temp file approach
+ * Avoids shell escaping issues and command length limits
+ */
+async function writeSudoFile(filePath: string, content: string): Promise<void> {
+  const tempFile = `/tmp/2501-${Date.now()}-${Math.random().toString(36).substring(2)}.tmp`;
+
+  try {
+    // Write content to temp file (no escaping needed)
+    fs.writeFileSync(tempFile, content);
+
+    // Ensure target directory exists with sudo
+    const targetDir = path.dirname(filePath);
+    await execa('sudo', ['mkdir', '-p', targetDir], {
+      stdio: 'inherit', // Allows password prompt
+    });
+
+    // Copy with sudo (more reliable than echo | tee)
+    await execa('sudo', ['cp', tempFile, filePath], {
+      stdio: 'inherit', // Allows password prompt
+    });
+  } finally {
+    // Always cleanup temp file
+    if (fs.existsSync(tempFile)) {
+      fs.unlinkSync(tempFile);
+    }
+  }
+}
+
 export async function write_file(args: { path: string; content: string }) {
   Logger.debug(`Writing file at "${args.path}"`);
   try {
@@ -39,11 +68,8 @@ export async function write_file(args: { path: string; content: string }) {
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === 'EACCES') {
       try {
-        // Attempt to write with sudo
-        const escapedContent = args.content.replace(/"/g, '\\"');
-        await run_shell({
-          command: `echo "${escapedContent}" | sudo tee "${args.path}" > /dev/null`,
-        });
+        // Use robust sudo fallback
+        await writeSudoFile(args.path, args.content);
       } catch (e) {
         throw new Error(`Failed to write file with sudo: ${e}`);
       }
@@ -84,10 +110,8 @@ export async function update_file({
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code === 'EACCES') {
         try {
-          const escapedContent = newContent.replace(/"/g, '\\"');
-          await run_shell({
-            command: `echo "${escapedContent}" | sudo tee "${path}" > /dev/null`,
-          });
+          // Use robust sudo fallback
+          await writeSudoFile(path, newContent);
         } catch (e) {
           throw new Error(`Failed to write file with sudo: ${e}`);
         }
