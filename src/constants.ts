@@ -39,8 +39,6 @@ export const IGNORED_WINDOWS_FILE_EXTENSIONS = [
   '.exe',
   '.dll',
   '.msi',
-  '.bat',
-  '.cmd',
   '.com',
   '.scr',
   '.pif',

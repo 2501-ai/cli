@@ -128,7 +128,7 @@ try {
     Write-Host ""
     Write-Host "Next steps:" -ForegroundColor Cyan
     Write-Host "1. Restart your PowerShell session" -ForegroundColor White
-    Write-Host "2. Set your API key: a2501 set api-key <YOUR_API_KEY>" -ForegroundColor White
+    Write-Host "2. Set your API key: a2501 set api_key <YOUR_API_KEY>" -ForegroundColor White
     Write-Host "3. Get help: a2501 --help" -ForegroundColor White
     Write-Host ""
     Write-Host "Happy nerding! 🚀" -ForegroundColor Magenta
