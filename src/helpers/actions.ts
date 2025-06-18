@@ -39,27 +39,35 @@ export function read_file(args: { path: string }): string | null {
 async function writeSudoFile(filePath: string, content: string): Promise<void> {
   const tempFile = path.join(
     os.tmpdir(),
-    `2501/tmp/2501-${Date.now()}-${Math.random().toString(36).substring(2)}.tmp`
+    `2501/cache/2501-${Date.now()}-${Math.random().toString(36).substring(2)}.tmp`
   );
+
+  Logger.debug(`Creating temp file for sudo write: ${tempFile}`);
+  Logger.debug(`Target file: ${filePath}`);
 
   try {
     // Write content to temp file (no escaping needed)
+    fs.mkdirSync(path.dirname(tempFile), { recursive: true });
     fs.writeFileSync(tempFile, content);
 
     // Ensure target directory exists with sudo
     const targetDir = path.dirname(filePath);
-    await execa('sudo', ['mkdir', '-p', targetDir], {
-      stdio: 'inherit', // Allows password prompt
-    });
+    Logger.debug(`Creating target directory with sudo: ${targetDir}`);
+    await execa('sudo', ['mkdir', '-p', targetDir]);
 
     // Copy with sudo (more reliable than echo | tee)
-    await execa('sudo', ['cp', tempFile, filePath], {
-      stdio: 'inherit', // Allows password prompt
-    });
+    Logger.debug(`Copying with sudo: ${tempFile} -> ${filePath}`);
+    await execa('sudo', ['cp', tempFile, filePath]);
+
+    Logger.debug(`File written successfully with sudo`);
+  } catch (error) {
+    Logger.debug(`Sudo write failed: ${error}`);
+    throw error;
   } finally {
     // Always cleanup temp file
     if (fs.existsSync(tempFile)) {
       fs.unlinkSync(tempFile);
+      Logger.debug(`Temp file cleaned up: ${tempFile}`);
     }
   }
 }
