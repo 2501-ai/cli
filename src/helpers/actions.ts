@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import os from 'os';
 import TurndownService from 'turndown';
 import execa from 'execa';
 import * as cheerio from 'cheerio';
@@ -36,7 +37,10 @@ export function read_file(args: { path: string }): string | null {
  * Avoids shell escaping issues and command length limits
  */
 async function writeSudoFile(filePath: string, content: string): Promise<void> {
-  const tempFile = `/tmp/2501-${Date.now()}-${Math.random().toString(36).substring(2)}.tmp`;
+  const tempFile = path.join(
+    os.tmpdir(),
+    `2501/tmp/2501-${Date.now()}-${Math.random().toString(36).substring(2)}.tmp`
+  );
 
   try {
     // Write content to temp file (no escaping needed)
