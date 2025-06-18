@@ -192,25 +192,20 @@ function getPackageManagersForPlatform(
 ): PackageManagerInfo[] {
   const platform = os.platform();
 
-  switch (platform) {
-    case 'linux':
-      return LINUX_PACKAGE_MANAGERS.map((pm) => ({
-        ...pm,
-        listCmd: pm.listCmd(exclusionPattern),
-      }));
-    case 'darwin':
-      return MACOS_PACKAGE_MANAGERS.map((pm) => ({
-        ...pm,
-        listCmd: pm.listCmd(exclusionPattern),
-      }));
-    case 'win32':
-      return WINDOWS_PACKAGE_MANAGERS.map((pm) => ({
-        ...pm,
-        listCmd: pm.listCmd(exclusionPattern),
-      }));
-    default:
-      return [];
-  }
+  const platformPackageManagers = {
+    linux: LINUX_PACKAGE_MANAGERS,
+    darwin: MACOS_PACKAGE_MANAGERS,
+    win32: WINDOWS_PACKAGE_MANAGERS,
+  } as const;
+
+  const packageManagers =
+    platformPackageManagers[platform as keyof typeof platformPackageManagers] ||
+    [];
+
+  return packageManagers.map((pm) => ({
+    ...pm,
+    listCmd: pm.listCmd(exclusionPattern),
+  }));
 }
 
 // Default patterns to exclude
