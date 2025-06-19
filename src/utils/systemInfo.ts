@@ -291,7 +291,8 @@ function commandExists(command: string): boolean {
 
   try {
     // Use execFileSync which doesn't invoke a shell
-    execFileSync('which', [command], {
+    const whichCommand = process.platform === 'win32' ? 'where' : 'which';
+    execFileSync(whichCommand, [command], {
       stdio: ['ignore', 'ignore', 'ignore'],
     });
     return true;
@@ -308,6 +309,9 @@ function isValidIPv4(ip: string): boolean {
   if (parts.length !== 4) return false;
 
   return parts.every((part) => {
+    // Reject empty parts or parts with leading zeros (except "0" itself)
+    if (!part || (part.length > 1 && part[0] === '0')) return false;
+
     const num = parseInt(part, 10);
     return !isNaN(num) && num >= 0 && num <= 255 && part === num.toString();
   });
