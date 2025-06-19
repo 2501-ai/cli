@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import os from 'os';
 import TurndownService from 'turndown';
 import execa from 'execa';
 import * as cheerio from 'cheerio';
@@ -31,6 +32,46 @@ export function read_file(args: { path: string }): string | null {
   return fs.readFileSync(args.path, 'utf8');
 }
 
+/**
+ * Write file with sudo privileges using temp file approach
+ * Avoids shell escaping issues and command length limits
+ */
+async function writeSudoFile(filePath: string, content: string): Promise<void> {
+  const tempFile = path.join(
+    os.tmpdir(),
+    `2501/cache/2501-${Date.now()}-${Math.random().toString(36).substring(2)}.tmp`
+  );
+
+  Logger.debug(`Creating temp file for sudo write: ${tempFile}`);
+  Logger.debug(`Target file: ${filePath}`);
+
+  try {
+    // Write content to temp file (no escaping needed)
+    fs.mkdirSync(path.dirname(tempFile), { recursive: true });
+    fs.writeFileSync(tempFile, content);
+
+    // Ensure target directory exists with sudo
+    const targetDir = path.dirname(filePath);
+    Logger.debug(`Creating target directory with sudo: ${targetDir}`);
+    await execa('sudo', ['mkdir', '-p', targetDir]);
+
+    // Copy with sudo (more reliable than echo | tee)
+    Logger.debug(`Copying with sudo: ${tempFile} -> ${filePath}`);
+    await execa('sudo', ['cp', tempFile, filePath]);
+
+    Logger.debug(`File written successfully with sudo`);
+  } catch (error) {
+    Logger.debug(`Sudo write failed: ${error}`);
+    throw error;
+  } finally {
+    // Always cleanup temp file
+    if (fs.existsSync(tempFile)) {
+      fs.unlinkSync(tempFile);
+      Logger.debug(`Temp file cleaned up: ${tempFile}`);
+    }
+  }
+}
+
 export async function write_file(args: { path: string; content: string }) {
   Logger.debug(`Writing file at "${args.path}"`);
   try {
@@ -39,11 +80,8 @@ export async function write_file(args: { path: string; content: string }) {
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === 'EACCES') {
       try {
-        // Attempt to write with sudo
-        const escapedContent = args.content.replace(/"/g, '\\"');
-        await run_shell({
-          command: `echo "${escapedContent}" | sudo tee "${args.path}" > /dev/null`,
-        });
+        // Use robust sudo fallback
+        await writeSudoFile(args.path, args.content);
       } catch (e) {
         throw new Error(`Failed to write file with sudo: ${e}`);
       }
@@ -84,10 +122,8 @@ export async function update_file({
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code === 'EACCES') {
         try {
-          const escapedContent = newContent.replace(/"/g, '\\"');
-          await run_shell({
-            command: `echo "${escapedContent}" | sudo tee "${path}" > /dev/null`,
-          });
+          // Use robust sudo fallback
+          await writeSudoFile(path, newContent);
         } catch (e) {
           throw new Error(`Failed to write file with sudo: ${e}`);
         }
