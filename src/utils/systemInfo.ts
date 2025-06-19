@@ -83,16 +83,32 @@ const WINDOWS_PACKAGE_MANAGERS = [
 async function getGlobalNpmPackages() {
   try {
     // Execute the command and get the output as a string
-    const command = 'npm list -g --depth=0 --json';
+    const platform = os.platform();
+    const command =
+      platform === 'win32'
+        ? 'npm list -g --depth=0 | findstr /R "^[├└]" | findstr "@"'
+        : 'npm list -g --depth=0 | awk "{print $2}" | grep @';
     const output = await execAsync(command, { encoding: 'utf8' });
 
-    // Parse the JSON output
-    const packages = JSON.parse(output.stdout);
+    // Parse the output - it's not JSON, it's a list of package names
+    const packageLines = output.stdout.trim().split('\n').filter(Boolean);
 
-    // Extract package names and filter for scoped packages
-    return Object.keys(packages.dependencies || {}).filter((pkg) =>
-      pkg.includes('@')
-    );
+    if (platform === 'win32') {
+      // Extract package names from Windows output format
+      // example output:
+      // +-- corepack@0.32.0
+      return packageLines
+        .map(
+          (line) =>
+            line.replace(/^[+--\s]+/, '').split('@')[0] +
+            '@' +
+            line.split('@')[1]
+        )
+        .filter((pkg) => pkg.includes('@'));
+    } else {
+      // Unix/Linux output is already clean package names
+      return packageLines.filter((pkg) => pkg.includes('@'));
+    }
   } catch (error) {
     Logger.debug('Error executing command:', (error as Error).message);
     return [];
