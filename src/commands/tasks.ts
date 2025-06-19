@@ -1,3 +1,5 @@
+import os from 'os';
+
 import {
   ERRORFILE_PATH,
   hasError,
@@ -12,6 +14,29 @@ import Logger from '../utils/logger';
 import { unixSourceCommand } from '../utils/shellCommands';
 import { queryCommand } from './query';
 
+async function getTfzoExecPath() {
+  const whichCommand = os.platform() === 'win32' ? 'where' : 'which';
+
+  const whichNode = await run_shell({
+    command: `${whichCommand} node`,
+    shell: true,
+  });
+
+  if (hasError(whichNode)) {
+    return Logger.error(whichNode);
+  }
+
+  const whichTFZO = await run_shell({
+    command: `${whichCommand} @2501`,
+    shell: true,
+  });
+  if (hasError(whichTFZO)) {
+    return Logger.error(whichTFZO);
+  }
+
+  return `${whichNode.trim()} ${whichTFZO.trim()}`;
+}
+
 export async function tasksSubscriptionCommand(options: {
   subscribe?: boolean;
   unsubscribe?: boolean;
@@ -23,23 +48,7 @@ export async function tasksSubscriptionCommand(options: {
 
   logger.intro('2501 - Tasks Subscription');
 
-  const whichNode = await run_shell({
-    command: `which node`,
-    shell: true,
-  });
-  if (hasError(whichNode)) {
-    return Logger.error(whichNode);
-  }
-
-  const whichTFZO = await run_shell({
-    command: `which @2501`,
-    shell: true,
-  });
-  if (hasError(whichTFZO)) {
-    return Logger.error(whichTFZO);
-  }
-
-  const tfzoExecPath = `${whichNode.trim()} ${whichTFZO.trim()}`;
+  const tfzoExecPath = await getTfzoExecPath();
 
   if (options.subscribe) {
     logger.start('Subscribing for new tasks');
