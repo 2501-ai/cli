@@ -48,7 +48,7 @@ install_nodejs() {
 # Function to install @2501
 install_2501_cli() {
     echo "Installing @2501..."
-    npm install -g @2501-ai/cli
+    npm install -g @2501-ai/cli@latest
 }
 
 # Install NVM if not already installed

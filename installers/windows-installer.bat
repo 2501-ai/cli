@@ -37,7 +37,7 @@ if %errorlevel% neq 0 (
 
 REM Install @2501-ai/cli globally
 echo Installing @2501-ai/cli...
-call npm install -g @2501-ai/cli
+call npm install -g @2501-ai/cli@latest
 
 REM Verify @2501-ai/cli installation
 echo Verifying @2501-ai/cli installation...
