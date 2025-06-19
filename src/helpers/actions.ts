@@ -104,8 +104,6 @@ export async function update_file({
     ${newContent}
     \`\`\``;
 
-    fs.writeFileSync(path, newContent);
-
     return `
     File updated: ${path}
     ${content}`;
