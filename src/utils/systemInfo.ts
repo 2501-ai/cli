@@ -294,30 +294,22 @@ function commandExists(command: string): boolean {
 }
 
 async function getPublicIp(): Promise<string | null> {
-  const ipServices = [
-    'https://api.ipify.org',
-    'https://ifconfig.me/ip',
-    'https://api.ipify.org?format=text',
-    'https://checkip.amazonaws.com',
-  ];
+  const service = 'https://checkip.amazonaws.com';
 
-  for (const service of ipServices) {
-    try {
-      if (commandExists('curl')) {
-        const { stdout } = await execAsync(`curl -s --max-time 3 ${service}`);
-        const result = stdout.trim();
-        if (result && /^[0-9.]+$/.test(result)) return result;
-      }
-
-      if (commandExists('wget')) {
-        const { stdout } = await execAsync(`wget -qO- --timeout=3 ${service}`);
-        const result = stdout.trim();
-        if (result && /^[0-9.]+$/.test(result)) return result;
-      }
-    } catch (error) {
-      console.error(`Failed to fetch IP from ${service}:`, error);
-      continue; // Try next service
+  try {
+    if (commandExists('curl')) {
+      const { stdout } = await execAsync(`curl -s --max-time 3 ${service}`);
+      const result = stdout.trim();
+      if (result && /^[0-9.]+$/.test(result)) return result;
     }
+
+    if (commandExists('wget')) {
+      const { stdout } = await execAsync(`wget -qO- --timeout=3 ${service}`);
+      const result = stdout.trim();
+      if (result && /^[0-9.]+$/.test(result)) return result;
+    }
+  } catch (error) {
+    console.error(`Failed to fetch IP from ${service}:`, error);
   }
 
   return null;
@@ -375,9 +367,9 @@ export async function getHostInfo(): Promise<HostInfo> {
   return {
     unique_id,
     name: os.hostname(),
-    private_ip: private_ip || undefined,
-    mac: mac || undefined,
-    public_ip: public_ip || undefined,
-    public_ip_note: public_ip_note || undefined,
+    private_ip,
+    mac,
+    public_ip,
+    public_ip_note,
   };
 }
