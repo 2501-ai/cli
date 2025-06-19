@@ -2,7 +2,7 @@
 import fs from 'fs';
 import os from 'os';
 import { promisify } from 'node:util';
-import { exec, execSync } from 'child_process';
+import { exec, execSync, execFileSync } from 'child_process';
 
 // Local utilities
 import Logger from './logger';
@@ -278,7 +278,68 @@ async function getInstalledPackages(
   }
 }
 
-export function getHostInfo(): HostInfo {
+/**
+ * Safely check if a command exists in the system PATH
+ * Only allows alphanumeric characters and common safe symbols
+ */
+function commandExists(command: string): boolean {
+  // Only allow alphanumeric characters, dash and underscore
+  if (!/^[a-zA-Z0-9\-_]+$/.test(command)) {
+    Logger.error(`Invalid command name: ${command}`);
+    return false;
+  }
+
+  try {
+    // Use execFileSync which doesn't invoke a shell
+    const whichCommand = process.platform === 'win32' ? 'where' : 'which';
+    execFileSync(whichCommand, [command], {
+      stdio: ['ignore', 'ignore', 'ignore'],
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Validates an IPv4 address
+ */
+function isValidIPv4(ip: string): boolean {
+  const parts = ip.split('.');
+  if (parts.length !== 4) return false;
+
+  return parts.every((part) => {
+    // Reject empty parts or parts with leading zeros (except "0" itself)
+    if (!part || (part.length > 1 && part[0] === '0')) return false;
+
+    const num = parseInt(part, 10);
+    return !isNaN(num) && num >= 0 && num <= 255 && part === num.toString();
+  });
+}
+
+async function getPublicIp(): Promise<string | null> {
+  const service = 'https://checkip.amazonaws.com';
+
+  try {
+    if (commandExists('curl')) {
+      const { stdout } = await execAsync('curl -s --max-time 3 ' + service);
+      const result = stdout.trim();
+      if (result && isValidIPv4(result)) return result;
+    }
+
+    if (commandExists('wget')) {
+      const { stdout } = await execAsync('wget -qO- --timeout=3 ' + service);
+      const result = stdout.trim();
+      if (result && isValidIPv4(result)) return result;
+    }
+  } catch (error) {
+    Logger.error('Failed to fetch public IP:', (error as Error).message);
+  }
+
+  return null;
+}
+
+export async function getHostInfo(): Promise<HostInfo> {
   let unique_id: string;
   try {
     if (process.platform === 'darwin') {
@@ -308,11 +369,31 @@ export function getHostInfo(): HostInfo {
     unique_id = `${os.hostname()}-${mac}`;
   }
 
+  // Private IP
+  const private_ip: string | null =
+    Object.values(os.networkInterfaces())
+      .flat()
+      .find((iface) => !iface?.internal && iface?.family === 'IPv4')?.address ||
+    null;
+
+  // MAC address
+  const mac: string | null =
+    Object.values(os.networkInterfaces())
+      .flat()
+      .find((iface) => !iface?.internal && iface?.mac)?.mac || null;
+
+  // Public IP
+  const public_ip: string | null = await getPublicIp();
+  const public_ip_note: string | null = public_ip
+    ? null
+    : 'Not available: no Internet access or external service unreachable.';
+
   return {
     unique_id,
     name: os.hostname(),
-    private_ip: Object.values(os.networkInterfaces())
-      .flat()
-      .find((iface) => !iface?.internal && iface?.family === 'IPv4')?.address,
+    private_ip,
+    mac,
+    public_ip,
+    public_ip_note,
   };
 }
