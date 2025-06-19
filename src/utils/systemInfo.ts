@@ -2,7 +2,7 @@
 import fs from 'fs';
 import os from 'os';
 import { promisify } from 'node:util';
-import { exec, execSync } from 'child_process';
+import { exec, execSync, execFileSync } from 'child_process';
 
 // Local utilities
 import Logger from './logger';
@@ -279,18 +279,38 @@ async function getInstalledPackages(
 }
 
 /**
- * Check if a command exists in the system PATH
+ * Safely check if a command exists in the system PATH
+ * Only allows alphanumeric characters and common safe symbols
  */
 function commandExists(command: string): boolean {
-  try {
-    const result = execSync(`which ${command}`, {
-      encoding: 'utf8',
-      stdio: ['pipe', 'pipe', 'pipe'],
-    });
-    return !!result;
-  } catch (error) {
+  // Only allow alphanumeric characters, dash and underscore
+  if (!/^[a-zA-Z0-9\-_]+$/.test(command)) {
+    Logger.error(`Invalid command name: ${command}`);
     return false;
   }
+
+  try {
+    // Use execFileSync which doesn't invoke a shell
+    execFileSync('which', [command], {
+      stdio: ['ignore', 'ignore', 'ignore'],
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Validates an IPv4 address
+ */
+function isValidIPv4(ip: string): boolean {
+  const parts = ip.split('.');
+  if (parts.length !== 4) return false;
+
+  return parts.every((part) => {
+    const num = parseInt(part, 10);
+    return !isNaN(num) && num >= 0 && num <= 255 && part === num.toString();
+  });
 }
 
 async function getPublicIp(): Promise<string | null> {
@@ -298,18 +318,18 @@ async function getPublicIp(): Promise<string | null> {
 
   try {
     if (commandExists('curl')) {
-      const { stdout } = await execAsync(`curl -s --max-time 3 ${service}`);
+      const { stdout } = await execAsync('curl -s --max-time 3 ' + service);
       const result = stdout.trim();
-      if (result && /^[0-9.]+$/.test(result)) return result;
+      if (result && isValidIPv4(result)) return result;
     }
 
     if (commandExists('wget')) {
-      const { stdout } = await execAsync(`wget -qO- --timeout=3 ${service}`);
+      const { stdout } = await execAsync('wget -qO- --timeout=3 ' + service);
       const result = stdout.trim();
-      if (result && /^[0-9.]+$/.test(result)) return result;
+      if (result && isValidIPv4(result)) return result;
     }
   } catch (error) {
-    console.error(`Failed to fetch IP from ${service}:`, error);
+    Logger.error('Failed to fetch public IP:', (error as Error).message);
   }
 
   return null;
