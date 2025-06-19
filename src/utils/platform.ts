@@ -2,20 +2,13 @@ import os from 'os';
 import path from 'path';
 
 /**
- * Get the platform-specific temporary directory
- * - Windows: Uses TEMP or TMP environment variable (e.g., C:\Users\Username\AppData\Local\Temp)
- * - Unix (Linux/Mac): Uses /tmp
- */
-export function getTempDir(): string {
-  return os.tmpdir();
-}
-
-/**
  * Get a temporary directory path for 2501 CLI
  * Creates a platform-specific path for storing temporary 2501 files
+ * on windows: C:\Users\Username\AppData\Local\Temp\2501
+ * on unix: /tmp/2501
  */
 export function getTempPath2501(subPath?: string): string {
-  const basePath = path.join(getTempDir(), '2501');
+  const basePath = path.join(os.tmpdir(), '2501');
   return subPath ? path.join(basePath, subPath) : basePath;
 }
 
