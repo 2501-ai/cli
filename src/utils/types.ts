@@ -113,6 +113,9 @@ export interface HostInfo {
   name: string; // Matches Host.name
   private_ip?: string; // Optional, matches Host.private_ip
   additional_names?: string[]; // Optional, matches Host.additional_names
+  mac?: string; // Optional, matches Host.mac
+  public_ip?: string; // Optional, matches Host.public_ip
+  public_ip_note?: string; // Optional, matches Host.public_ip_note
 }
 
 export interface AgentConfig {

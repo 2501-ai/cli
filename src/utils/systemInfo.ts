@@ -278,7 +278,52 @@ async function getInstalledPackages(
   }
 }
 
-export function getHostInfo(): HostInfo {
+/**
+ * Check if a command exists in the system PATH
+ */
+function commandExists(command: string): boolean {
+  try {
+    const result = execSync(`which ${command}`, {
+      encoding: 'utf8',
+      stdio: ['pipe', 'pipe', 'pipe'],
+    });
+    return !!result;
+  } catch (error) {
+    return false;
+  }
+}
+
+async function getPublicIp(): Promise<string | null> {
+  const ipServices = [
+    'https://api.ipify.org',
+    'https://ifconfig.me/ip',
+    'https://api.ipify.org?format=text',
+    'https://checkip.amazonaws.com',
+  ];
+
+  for (const service of ipServices) {
+    try {
+      if (commandExists('curl')) {
+        const { stdout } = await execAsync(`curl -s --max-time 3 ${service}`);
+        const result = stdout.trim();
+        if (result && /^[0-9.]+$/.test(result)) return result;
+      }
+
+      if (commandExists('wget')) {
+        const { stdout } = await execAsync(`wget -qO- --timeout=3 ${service}`);
+        const result = stdout.trim();
+        if (result && /^[0-9.]+$/.test(result)) return result;
+      }
+    } catch (error) {
+      console.error(`Failed to fetch IP from ${service}:`, error);
+      continue; // Try next service
+    }
+  }
+
+  return null;
+}
+
+export async function getHostInfo(): Promise<HostInfo> {
   let unique_id: string;
   try {
     if (process.platform === 'darwin') {
@@ -308,11 +353,31 @@ export function getHostInfo(): HostInfo {
     unique_id = `${os.hostname()}-${mac}`;
   }
 
+  // Private IP
+  const private_ip: string | null =
+    Object.values(os.networkInterfaces())
+      .flat()
+      .find((iface) => !iface?.internal && iface?.family === 'IPv4')?.address ||
+    null;
+
+  // MAC address
+  const mac: string | null =
+    Object.values(os.networkInterfaces())
+      .flat()
+      .find((iface) => !iface?.internal && iface?.mac)?.mac || null;
+
+  // Public IP
+  const public_ip: string | null = await getPublicIp();
+  const public_ip_note: string | null = public_ip
+    ? null
+    : 'Not available: no Internet access or external service unreachable.';
+
   return {
     unique_id,
     name: os.hostname(),
-    private_ip: Object.values(os.networkInterfaces())
-      .flat()
-      .find((iface) => !iface?.internal && iface?.family === 'IPv4')?.address,
+    private_ip: private_ip || undefined,
+    mac: mac || undefined,
+    public_ip: public_ip || undefined,
+    public_ip_note: public_ip_note || undefined,
   };
 }
