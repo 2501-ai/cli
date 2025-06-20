@@ -91,7 +91,7 @@ You can now use the @2501 CLI to interact with AI Autonomous Systems.
 Note : you may need to restart your shell to see changes.
 
 !!! Don't forget to set 1st your API key using:
-==> @2501 set api-key <API_KEY>
+==> @2501 set api_key <API_KEY>
 
 Usage:
 ==> @2501 --help
