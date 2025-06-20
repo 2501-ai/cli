@@ -7,14 +7,13 @@ import { initCommand } from './commands/init';
 import { queryCommand } from './commands/query';
 import { setCommand } from './commands/set';
 import { tasksSubscriptionCommand } from './commands/tasks';
-
+import { isAutoUpdate } from './utils/cliUpdate';
 import { authMiddleware } from './middleware/auth';
 import { errorHandler } from './middleware/errorHandler';
 import { initPluginCredentials } from './utils/credentials';
 import Logger from './utils/logger';
 import { DISCORD_LINK } from './utils/messaging';
 import { initPlugins } from './utils/plugins';
-import { isLatestVersion } from './utils/versioning';
 
 // Initialize global error handlers before any other code
 errorHandler.initializeGlobalHandlers();
@@ -175,13 +174,7 @@ program
 
 (async () => {
   try {
-    const isLatest = await isLatestVersion();
-    if (!isLatest) {
-      Logger.log(
-        'UPDATE AVAILABLE : A new version of 2501 CLI is available. Run `npm i -g @2501-ai/cli` to update'
-      );
-    }
-
+    await isAutoUpdate();
     program.parse(process.argv);
   } catch (error) {
     await errorHandler.handleCommandError(error as Error, 'main', {

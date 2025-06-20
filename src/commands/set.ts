@@ -3,7 +3,11 @@ import Logger from '../utils/logger';
 import { LocalConfigKey } from '../utils/types';
 
 // Keys that need to be parsed as JSON (boolean)
-const KEYS_WITH_PARSING: LocalConfigKey[] = ['stream', 'disable_spinner'];
+const KEYS_WITH_PARSING: LocalConfigKey[] = [
+  'stream',
+  'disable_spinner',
+  'auto_update',
+];
 const logger = new Logger();
 
 export function setCommand(key: string, value: string) {
