@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { Command } from 'commander';
+import os from 'os';
 import { agentsCommand } from './commands/agents';
 import { configCommand } from './commands/config';
 import { initCommand } from './commands/init';
@@ -13,8 +14,8 @@ import { errorHandler } from './middleware/errorHandler';
 import { initPluginCredentials } from './utils/credentials';
 import Logger from './utils/logger';
 import { DISCORD_LINK } from './utils/messaging';
-import { initPlugins } from './utils/plugins';
 import { getTempPath2501 } from './utils/platform';
+import { initPlugins } from './utils/plugins';
 import { isLatestVersion } from './utils/versioning';
 
 // Initialize global error handlers before any other code
@@ -29,9 +30,10 @@ process.on('SIGTERM', async () => {
 });
 
 const program = new Command();
+const programName = os.platform() === 'win32' ? 'a2501' : '@2501';
 
 program
-  .name('@2501')
+  .name(programName)
   .description(
     `
 ░▒▓███████▓▒░░▒▓████████▓▒░▒▓████████▓▒░  ░▒▓█▓▒░ 

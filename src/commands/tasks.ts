@@ -30,10 +30,13 @@ async function getTfzoExecPath(): Promise<string | null> {
     return null;
   }
 
+  // On Windows, explicitly look for the .cmd file to avoid Unix shell script
+  const binary = os.platform() === 'win32' ? 'a2501.cmd' : '@2501';
   const whichTFZO = await run_shell({
-    command: `${whichCommand} @2501`,
+    command: `${whichCommand} ${binary}`,
     shell: true,
   });
+
   if (hasError(whichTFZO)) {
     Logger.error(whichTFZO);
     return null;
@@ -147,6 +150,9 @@ async function subscribeWindows(
   const currentPath = process.env.PATH || '';
 
   // Write batch file using Node.js fs - much simpler and reliable
+  // For Windows, use the .cmd file directly, not through node.exe
+  const scriptPath = tfzoExecPath.split(' ').slice(1).join(' ');
+
   const batchContent = `@echo off
 REM Preserve current user environment for scheduled task
 set "PATH=${currentPath}"
@@ -154,8 +160,8 @@ set "PATH=${currentPath}"
 REM Change to workspace directory
 cd /d "${workspace}"
 
-REM Run the task - use timestamped logs to avoid conflicts
-${tfzoExecPath} tasks --listen >> "${timestampedLogFile}" 2>> "${timestampedErrorFile}"`;
+REM Run the task - execute .cmd file directly
+"${scriptPath}" tasks --listen >> "${timestampedLogFile}" 2>> "${timestampedErrorFile}"`;
 
   try {
     // Create directory if it doesn't exist
