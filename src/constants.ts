@@ -35,15 +35,6 @@ export enum QueryStatus {
 
 export const DISABLE_SPINNER = process.env.TFZO_DISABLE_SPINNER === 'true';
 
-export const IGNORED_WINDOWS_FILE_EXTENSIONS = [
-  '.exe',
-  '.dll',
-  '.msi',
-  '.com',
-  '.scr',
-  '.pif',
-];
-
 export const IGNORED_WINDOWS_FILE_NAMES = [
   'desktop.ini',
   'thumbs.db',
@@ -91,7 +82,6 @@ export const IGNORED_FILE_PATTERNS = [
   'secrets.json',
   'credentials.xml',
   '(?:^|/).[^/]*$', // Ignore directories starting with .
-  ...IGNORED_WINDOWS_FILE_EXTENSIONS,
   ...IGNORED_WINDOWS_FILE_NAMES,
 ];
 
