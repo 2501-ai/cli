@@ -33,7 +33,7 @@ export const createAgent = async (
   sysinfo: SystemInfo,
   engine: EngineType
 ) => {
-  const hostInfo = getHostInfo();
+  const hostInfo = await getHostInfo();
 
   const { data: createResponse } = await axios.post('/agents', {
     workspace,
