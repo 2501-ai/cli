@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { Command } from 'commander';
+import os from 'os';
 import { agentsCommand } from './commands/agents';
 import { configCommand } from './commands/config';
 import { initCommand } from './commands/init';
@@ -13,6 +14,7 @@ import { errorHandler } from './middleware/errorHandler';
 import { initPluginCredentials } from './utils/credentials';
 import Logger from './utils/logger';
 import { DISCORD_LINK } from './utils/messaging';
+import { getTempPath2501 } from './utils/platform';
 import { initPlugins } from './utils/plugins';
 import { isLatestVersion } from './utils/versioning';
 
@@ -28,9 +30,10 @@ process.on('SIGTERM', async () => {
 });
 
 const program = new Command();
+const programName = os.platform() === 'win32' ? 'a2501' : '@2501';
 
 program
-  .name('@2501')
+  .name(programName)
   .description(
     `
 ░▒▓███████▓▒░░▒▓████████▓▒░▒▓████████▓▒░  ░▒▓█▓▒░ 
@@ -122,7 +125,7 @@ program
   .option('--workspace <path>', 'Specify a different workspace path')
   .option(
     '--no-workspace',
-    'Will not sync the current workspace and will create a temporary one in /tmp/2501/'
+    `Will not sync the current workspace and will create a temporary one in ${getTempPath2501()}`
   )
   .option('--config <configKey>', 'Specify the configuration Key to use')
   .hook('preAction', authMiddleware)
@@ -169,9 +172,7 @@ program
   .description('Set a configuration value')
   .argument('<key>', 'The key to set')
   .argument('<value>', 'The value to set')
-  .action(async (key, value) => {
-    await setCommand(key, value);
-  });
+  .action((key, value) => setCommand(key, value));
 
 (async () => {
   try {

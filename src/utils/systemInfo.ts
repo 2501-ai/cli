@@ -59,19 +59,58 @@ const MACOS_PACKAGE_MANAGERS = [
   },
 ] as const;
 
+const WINDOWS_PACKAGE_MANAGERS = [
+  {
+    cmd: 'winget',
+    listCmd: (exclusionPattern: string) =>
+      `winget list --accept-source-agreements | findstr /v "Name --- ${exclusionPattern}"`,
+  },
+  {
+    cmd: 'choco',
+    listCmd: (exclusionPattern: string) =>
+      `choco list -lo | findstr /v "Chocolatey packages ${exclusionPattern}"`,
+  },
+  {
+    cmd: 'scoop',
+    listCmd: (exclusionPattern: string) =>
+      `scoop list | findstr /v "Name --- ${exclusionPattern}"`,
+  },
+] as const;
+
 /**
- * Get the list of global packages installed on the system for mnetrics.
+ * Get the list of global packages installed on the system for metrics.
  */
 async function getGlobalNpmPackages() {
   try {
     // Execute the command and get the output as a string
-    const command = "npm list -g --depth=0 | awk '{print $2}' | grep '@'";
+    const platform = os.platform();
+    const command =
+      platform === 'win32'
+        ? 'npm list -g --depth=0 | findstr /R "^[├└]" | findstr "@"'
+        : 'npm list -g --depth=0 | awk "{print $2}" | grep @';
     const output = await execAsync(command, { encoding: 'utf8' });
 
-    // Split the output into lines and remove empty lines
-    return output.stdout.split('\n').filter((line) => line.trim() !== '');
+    // Parse the output - it's not JSON, it's a list of package names
+    const packageLines = output.stdout.trim().split('\n').filter(Boolean);
+
+    if (platform === 'win32') {
+      // Extract package names from Windows output format
+      // example output:
+      // +-- corepack@0.32.0
+      return packageLines
+        .map(
+          (line) =>
+            line.replace(/^[+--\s]+/, '').split('@')[0] +
+            '@' +
+            line.split('@')[1]
+        )
+        .filter((pkg) => pkg.includes('@'));
+    } else {
+      // Unix/Linux output is already clean package names
+      return packageLines.filter((pkg) => pkg.includes('@'));
+    }
   } catch (error) {
-    // Logger.error('Error executing command:', (error as Error).message);
+    Logger.debug('Error executing command:', (error as Error).message);
     return [];
   }
 }
@@ -81,10 +120,15 @@ async function getGlobalNpmPackages() {
  */
 async function getOSInfo() {
   try {
-    const { stdout } = await execAsync('uname -a');
-    return stdout.trim();
+    if (os.platform() === 'win32') {
+      const { stdout } = await execAsync('systeminfo');
+      return stdout.trim();
+    } else {
+      const { stdout } = await execAsync('uname -a');
+      return stdout.trim();
+    }
   } catch (error) {
-    // Logger.error('Error executing uname -a:', (error as Error).message);
+    Logger.debug('Error getting OS info:', (error as Error).message);
     return (
       os.type() + ' ' + os.release() + ' ' + os.arch() + ' ' + os.platform()
     );
@@ -160,24 +204,24 @@ export async function getSystemInfo(): Promise<SystemInfo> {
 }
 
 function getPackageManagersForPlatform(
-  exclusionPattern: string
+  exclusionPattern = ''
 ): PackageManagerInfo[] {
   const platform = os.platform();
 
-  switch (platform) {
-    case 'linux':
-      return LINUX_PACKAGE_MANAGERS.map((pm) => ({
-        ...pm,
-        listCmd: pm.listCmd(exclusionPattern),
-      }));
-    case 'darwin':
-      return MACOS_PACKAGE_MANAGERS.map((pm) => ({
-        ...pm,
-        listCmd: pm.listCmd(exclusionPattern),
-      }));
-    default:
-      return [];
-  }
+  const platformPackageManagers = {
+    linux: LINUX_PACKAGE_MANAGERS,
+    darwin: MACOS_PACKAGE_MANAGERS,
+    win32: WINDOWS_PACKAGE_MANAGERS,
+  } as const;
+
+  const packageManagers =
+    platformPackageManagers[platform as keyof typeof platformPackageManagers] ||
+    [];
+
+  return packageManagers.map((pm) => ({
+    ...pm,
+    listCmd: pm.listCmd(exclusionPattern),
+  }));
 }
 
 // Default patterns to exclude
@@ -217,12 +261,18 @@ async function detectPackageManagers(
 
   // Check all package managers in parallel
 
+  const whichCommand = os.platform() === 'win32' ? 'where' : 'which';
   const pmChecks = await Promise.all(
     packageManagers.map(async (pm) => {
       try {
-        await execAsync(`which ${pm.cmd}`);
+        await execAsync(`${whichCommand} ${pm.cmd}`);
         return pm;
-      } catch {
+      } catch (error) {
+        Logger.debug(`Failed to find ${pm.cmd}`, {
+          error: error,
+          pm,
+          platform: os.platform(),
+        });
         return null;
       }
     })
@@ -348,6 +398,16 @@ export async function getHostInfo(): Promise<HostInfo> {
       )
         .toString()
         .trim();
+    } else if (process.platform === 'win32') {
+      // For Windows, use the machine GUID from registry
+      unique_id =
+        execSync(
+          'reg query "HKLM\\SOFTWARE\\Microsoft\\Cryptography" /v MachineGuid'
+        )
+          .toString()
+          .trim()
+          .split(/\s+/)
+          .pop() || '';
     } else {
       // Check for Docker environment
       if (fs.existsSync('/.dockerenv')) {

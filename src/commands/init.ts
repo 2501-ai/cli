@@ -13,6 +13,7 @@ import { addAgent } from '../utils/conf';
 import Logger from '../utils/logger';
 import { DISCORD_LINK } from '../utils/messaging';
 import { getSystemInfo } from '../utils/systemInfo';
+import { getTempPath2501 } from '../utils/platform';
 import { Configuration } from '../utils/types';
 
 axios.defaults.baseURL = `${API_HOST}${API_VERSION}`;
@@ -46,7 +47,7 @@ export async function getWorkspacePath(
   options?: InitCommandOptions
 ): Promise<string> {
   if (options?.workspace === false) {
-    const path = `/tmp/2501/${Date.now()}`;
+    const path = getTempPath2501(Date.now().toString());
     fs.mkdirSync(path, { recursive: true });
     logger.log(`Using workspace at ${path}`);
     return path;
