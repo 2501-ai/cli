@@ -7,7 +7,7 @@ import { initCommand } from './commands/init';
 import { queryCommand } from './commands/query';
 import { setCommand } from './commands/set';
 import { tasksSubscriptionCommand } from './commands/tasks';
-import { isAutoUpdate } from './utils/cliUpdate';
+import { handleAutoUpdate } from './utils/cliUpdate';
 import { authMiddleware } from './middleware/auth';
 import { errorHandler } from './middleware/errorHandler';
 import { initPluginCredentials } from './utils/credentials';
@@ -174,7 +174,7 @@ program
 
 (async () => {
   try {
-    await isAutoUpdate();
+    await handleAutoUpdate();
     program.parse(process.argv);
   } catch (error) {
     await errorHandler.handleCommandError(error as Error, 'main', {
