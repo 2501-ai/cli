@@ -1,4 +1,4 @@
-import { run_shell } from '../helpers/actions';
+import { run_shell, hasError } from '../helpers/actions';
 import { isLatestVersion } from './versioning';
 import Logger from './logger';
 import { ConfigManager } from '../managers/configManager';
@@ -21,7 +21,8 @@ const autoUpdate = async () => {
       shell: true,
     });
 
-    if (updateCommand.includes('ERROR')) {
+    // Check if the command failed using the hasError helper
+    if (hasError(updateCommand)) {
       Logger.warn('Failed to auto-update 2501 CLI', updateCommand);
       return false;
     }
@@ -46,7 +47,7 @@ export async function handleAutoUpdate(): Promise<boolean> {
     const isLatest = await isLatestVersion();
     if (!isLatest) {
       Logger.log(
-        'UPDATE AVAILABLE: A new version of 2501 CLI is available. Run `npm i -g @2501-ai/cli` to update or enable auto-update with `@2501 set auto-update true`'
+        'UPDATE AVAILABLE: A new version of 2501 CLI is available. Run `npm i -g @2501-ai/cli` to update or enable auto-update with `@2501 set auto_update true`'
       );
     }
     return false;
@@ -54,30 +55,30 @@ export async function handleAutoUpdate(): Promise<boolean> {
 
   const wasUpdated = await autoUpdate();
 
-  if (wasUpdated) {
-    Logger.log('Auto-update completed. Restarting task with new process.');
-
-    // Get the original command arguments
-    const args = process.argv.slice(2);
-    const command = `@2501 ${args.join(' ')}`;
-
-    // Execute the new process with TFZO_UPDATED in env
-    const result = await run_shell({
-      command,
-      shell: true,
-      env: {
-        ...process.env,
-        TFZO_UPDATED: 'true',
-      },
-    });
-
-    // Print the result and exit
-    if (result) {
-      Logger.log(result);
-    }
-
-    process.exit(0);
+  if (!wasUpdated) {
+    return false;
   }
 
-  return false;
+  Logger.log('Auto-update completed. Restarting task with new process.');
+
+  // Preserve original command structure by using the full command line
+  // This maintains proper quoting and escaping of arguments
+  const originalCommand = process.argv.join(' ');
+
+  // Execute the new process with TFZO_UPDATED in env
+  const result = await run_shell({
+    command: originalCommand,
+    shell: true,
+    env: {
+      ...process.env,
+      TFZO_UPDATED: 'true',
+    },
+  });
+
+  // Print the result and exit
+  if (result) {
+    Logger.log(result);
+  }
+
+  process.exit(0);
 }
