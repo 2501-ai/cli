@@ -149,6 +149,7 @@ export class AgentManager {
         output += `\n\n NOTE: your original content for ${args.path} was corrected with the new version below before running the function: \n\n${args.content}`;
       }
 
+      // TODO: in codex they use 10kb as limit or 250 lines. Maybe we should investigate.
       if (output.length > 50_000) {
         output = `
         ERROR: The output is too large to display to prevent performance issues.
