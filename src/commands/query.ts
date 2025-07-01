@@ -181,13 +181,21 @@ const parseAgentResponse = async (
   let queryResponse = '';
 
   if (isStreamingContext(stream, agentResponse)) {
-    // TODO: stream doesnt bring any benefit here since we wait for the whole stream to be processed.
     const res = await parseStreamedResponse(agentResponse);
     if (res.actions.length) actions = res.actions;
     if (res.message) queryResponse = res.message;
   } else {
     if (agentResponse.actions) actions = agentResponse.actions;
     if (agentResponse.response) queryResponse = agentResponse.response;
+  }
+
+  // Completion is a special action that is used to indicate that the task is completed.
+  const completion = actions.find((a) => a.function === 'task_completed');
+  if (completion) {
+    return [
+      actions.filter((a) => a.function !== 'task_completed'),
+      completion.args.response || 'Task completed.',
+    ];
   }
 
   return [actions, queryResponse];
@@ -292,17 +300,6 @@ export const queryCommand = async (
         );
       }
 
-      // If we find a 'task_completed' action, we execute it, display the result, and exit the loop
-      const completion = actions.find((a) => a.function === 'task_completed');
-      if (completion) {
-        const result = await agentManager.executeAction(
-          completion,
-          completion.args
-        );
-        logger.stop(result.output || 'Task completed.');
-        break;
-      }
-
       // If there are normal actions to execute, process them and submit their outputs to the backend.
       // Then, parse the engine's response for the next set of actions and continue the loop.
       const toolOutputs = await executeActions(actions, agentManager);
@@ -317,9 +314,12 @@ export const queryCommand = async (
         submitResponse,
         stream
       );
+      if (actions.length && finalResponse) {
+        logger.stop(finalResponse);
+      }
     }
 
-    if (actions.length && finalResponse) {
+    if (finalResponse) {
       logger.stop(chalk.italic.gray('-'.repeat(getTerminalWidth() - 10)));
       Logger.agent(finalResponse);
     }
