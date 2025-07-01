@@ -284,7 +284,7 @@ export const queryCommand = async (
     }
 
     let finalResponse = '';
-    while (true) {
+    while (actions.length) {
       if (isLooping(actions)) {
         return logger.stop(
           'Unfortunately, a loop has been detected. Please try again.',
@@ -319,7 +319,7 @@ export const queryCommand = async (
       );
     }
 
-    if (finalResponse) {
+    if (actions.length && finalResponse) {
       logger.stop(chalk.italic.gray('-'.repeat(getTerminalWidth() - 10)));
       Logger.agent(finalResponse);
     }
