@@ -149,7 +149,7 @@ export class AgentManager {
         output += `\n\n NOTE: your original content for ${args.path} was corrected with the new version below before running the function: \n\n${args.content}`;
       }
 
-      if (output.length > 20000) {
+      if (output.length > 30000) {
         output = `
         ERROR: The output is too large to display to prevent performance issues.
         Use an alternative method to retrieve the relevant information for the user (for example grep, an another command or sample the content first).
