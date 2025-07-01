@@ -284,28 +284,66 @@ export const queryCommand = async (
     }
 
     let finalResponse = '';
-    while (actions.length) {
+    while (true) {
+      // Detect and prevent infinite loops by checking for repeated actions
       if (isLooping(actions)) {
         return logger.stop(
           'Unfortunately, a loop has been detected. Please try again.',
           1
         );
       }
-      const toolOutputs = await executeActions(actions, agentManager);
-      logger.start('Reviewing the job');
-      // Submit the tool outputs to the agent
-      const submitResponse = toolOutputs.length
-        ? await submitToolOutputs(agentManager.id, taskId, toolOutputs, stream)
-        : undefined;
-      [actions, finalResponse] = await parseAgentResponse(
-        submitResponse,
-        stream
+
+      // Separate normal actions from the completion action ('task_completed')
+      const toRun = actions.filter(
+        (a) =>
+          !(
+            a.function === 'task_completed' ||
+            (typeof a.function === 'object' &&
+              a.function.name === 'task_completed')
+          )
       );
-      if (actions.length && finalResponse) {
-        logger.stop(finalResponse);
+      const completion = actions.find(
+        (a) =>
+          a.function === 'task_completed' ||
+          (typeof a.function === 'object' &&
+            a.function.name === 'task_completed')
+      );
+
+      // If there are normal actions to execute, process them and submit their outputs to the backend.
+      // Then, parse the backend's response for the next set of actions and continue the loop.
+      if (toRun.length) {
+        const toolOutputs = await executeActions(toRun, agentManager);
+        logger.start('Reviewing the job');
+        const submitResponse = await submitToolOutputs(
+          agentManager.id,
+          taskId,
+          toolOutputs,
+          stream
+        );
+        [actions, finalResponse] = await parseAgentResponse(
+          submitResponse,
+          stream
+        );
+        continue;
       }
+
+      // If the only remaining action is 'task_completed', execute it, display the result, and exit the loop.
+      // Do NOT submit any further outputs after this point, as the backend expects no more events.
+      if (completion) {
+        const result = await agentManager.executeAction(
+          completion,
+          completion.args
+        );
+        logger.stop(result.output || 'Task completed.');
+        break;
+      }
+
+      // If there are no actions left and no completion action, stop gracefully and exit the loop.
+      logger.stop('No actions to execute and no completion action found.');
+      break;
     }
 
+    // After the loop, if there is a final response message, display it in the CLI.
     if (finalResponse) {
       logger.stop(chalk.italic.gray('-'.repeat(getTerminalWidth() - 10)));
       Logger.agent(finalResponse);

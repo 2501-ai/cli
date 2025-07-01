@@ -7,6 +7,7 @@ import {
   run_shell,
   update_file,
   write_file,
+  task_completed,
 } from '../helpers/actions';
 
 import Logger from '../utils/logger';
@@ -27,6 +28,7 @@ export const ACTION_FNS = {
   run_shell,
   write_file,
   update_file,
+  task_completed,
 } as const;
 
 function isBlacklistedCommand(command: string): boolean {

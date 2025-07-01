@@ -171,3 +171,10 @@ export async function browse_url(args: { url: string }) {
     ${md.replace(/\s+/g, '')}
   `;
 }
+
+export async function task_completed(args: {
+  output?: string;
+  summary?: string;
+}) {
+  return args?.summary || args?.output || 'Task completed!';
+}
