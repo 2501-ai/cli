@@ -11,6 +11,7 @@ export const DEFAULT_CONFIG: LocalConfig = {
   api_key: '',
   engine: 'rhino',
   telemetry_enabled: true,
+  auto_update: true,
 };
 
 // Configuration validation rules
@@ -23,6 +24,7 @@ const CONFIG_VALIDATORS: Record<LocalConfigKey, (value: any) => boolean> = {
   api_key: (value) => typeof value === 'string',
   engine: (value) => typeof value === 'string',
   telemetry_enabled: (value) => typeof value === 'boolean',
+  auto_update: (value) => typeof value === 'boolean',
 };
 
 export class ConfigManager {

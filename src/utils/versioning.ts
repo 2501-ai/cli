@@ -1,4 +1,5 @@
 import axios from 'axios';
+import Logger from './logger';
 
 export async function isLatestVersion() {
   try {
@@ -8,8 +9,14 @@ export async function isLatestVersion() {
     const latestVersion = data.version;
     const currentVersion = require('../../package.json').version;
 
-    return latestVersion === currentVersion;
+    const isLatest = latestVersion === currentVersion;
+    Logger.debug(
+      `Version check: current=${currentVersion}, latest=${latestVersion}, isLatest=${isLatest}`
+    );
+
+    return isLatest;
   } catch (e) {
+    Logger.debug('Failed to check for latest version:', e);
     throw new Error('Failed to check for latest version');
   }
 }
