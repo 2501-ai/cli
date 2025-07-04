@@ -181,13 +181,21 @@ const parseAgentResponse = async (
   let queryResponse = '';
 
   if (isStreamingContext(stream, agentResponse)) {
-    // TODO: stream doesnt bring any benefit here since we wait for the whole stream to be processed.
     const res = await parseStreamedResponse(agentResponse);
     if (res.actions.length) actions = res.actions;
     if (res.message) queryResponse = res.message;
   } else {
     if (agentResponse.actions) actions = agentResponse.actions;
     if (agentResponse.response) queryResponse = agentResponse.response;
+  }
+
+  // Completion is a special action that is used to indicate that the task is completed.
+  const completion = actions.find((a) => a.function === 'task_completed');
+  if (completion) {
+    return [
+      actions.filter((a) => a.function !== 'task_completed'),
+      completion.args.response || 'Task completed.',
+    ];
   }
 
   return [actions, queryResponse];
@@ -291,12 +299,17 @@ export const queryCommand = async (
           1
         );
       }
+
+      // If there are normal actions to execute, process them and submit their outputs to the backend.
+      // Then, parse the engine's response for the next set of actions and continue the loop.
       const toolOutputs = await executeActions(actions, agentManager);
       logger.start('Reviewing the job');
-      // Submit the tool outputs to the agent
-      const submitResponse = toolOutputs.length
-        ? await submitToolOutputs(agentManager.id, taskId, toolOutputs, stream)
-        : undefined;
+      const submitResponse = await submitToolOutputs(
+        agentManager.id,
+        taskId,
+        toolOutputs,
+        stream
+      );
       [actions, finalResponse] = await parseAgentResponse(
         submitResponse,
         stream
