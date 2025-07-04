@@ -139,6 +139,7 @@ export type LocalConfig = {
   join_discord_shown: boolean;
   disable_spinner: boolean;
   telemetry_enabled: boolean;
+  auto_update: boolean;
 };
 
 export type LocalConfigKey = keyof LocalConfig;
