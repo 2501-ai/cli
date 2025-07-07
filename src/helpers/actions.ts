@@ -9,6 +9,8 @@ import Logger from '../utils/logger';
 import { modifyCodeSections } from '../utils/sectionUpdate';
 import { IgnoreManager } from '../utils/ignore';
 import { getLogDir } from '../utils/platform';
+import { ConfigManager } from '../managers/configManager';
+import { RemoteExecutor } from '../managers/remoteExecutor';
 
 /**
  * Directory to store logs
@@ -114,21 +116,46 @@ export async function update_file({
   }
 }
 
-export async function run_shell(args: {
+export async function run_shell({
+  command,
+  shell,
+  env,
+}: {
   command: string;
   shell?: boolean | string;
   env?: { [key: string]: string };
 }): Promise<string> {
-  let output: string = '';
-  Logger.debug(`    Running shell command: ${args.command}`);
+  Logger.debug(`Running shell command: ${command}`);
 
+  const config = ConfigManager.instance;
+
+  // Check if remote execution is enabled
+  if (config.get('remote_exec')) {
+    try {
+      const result = await RemoteExecutor.instance.executeCommand(command);
+
+      // Log to file (keep existing logging)
+      if (!fs.existsSync(LOG_DIR)) {
+        fs.mkdirSync(LOG_DIR, { recursive: true });
+      }
+      fs.writeFileSync(LOGFILE_PATH, result);
+
+      return result;
+    } catch (error) {
+      Logger.error('Remote execution failed, falling back to local:', error);
+      // Fall through to local execution
+    }
+  }
+
+  // Local execution (restore original logic)
   try {
-    const { stderr, stdout } = await execa(args.command, {
-      shell: args.shell ?? true,
-      env: args.env,
+    const { stderr, stdout } = await execa(command, {
+      shell: shell || true,
       preferLocal: true,
+      env,
     });
 
+    let output = '';
     if (stdout) output += stdout;
     if (stderr) output += stderr;
 
@@ -139,7 +166,7 @@ export async function run_shell(args: {
 
     return output;
   } catch (error) {
-    return `${ERROR_BOL} I failed to run ${args.command}, please fix the situation, errors below.\n ${(error as Error).message}
+    return `${ERROR_BOL} I failed to run ${command}, please fix the situation, errors below.\n ${(error as Error).message}
     ${error}`;
   }
 }

@@ -1,6 +1,6 @@
 import { readConfig, writeConfig } from '../utils/conf';
-import { LocalConfig, LocalConfigKey } from '../utils/types';
 import Logger from '../utils/logger';
+import { LocalConfig, LocalConfigKey, REMOTE_EXEC_TYPES } from '../utils/types';
 
 export const DEFAULT_CONFIG: LocalConfig = {
   workspace_disabled: false,
@@ -12,6 +12,13 @@ export const DEFAULT_CONFIG: LocalConfig = {
   engine: 'rhino',
   telemetry_enabled: true,
   auto_update: true,
+  remote_exec: false,
+  remote_exec_target: '',
+  remote_exec_port: 22,
+  remote_exec_type: 'unix',
+  remote_exec_private_key: '',
+  remote_exec_user: 'root',
+  remote_exec_password: '',
 };
 
 // Configuration validation rules
@@ -25,6 +32,13 @@ const CONFIG_VALIDATORS: Record<LocalConfigKey, (value: any) => boolean> = {
   engine: (value) => typeof value === 'string',
   telemetry_enabled: (value) => typeof value === 'boolean',
   auto_update: (value) => typeof value === 'boolean',
+  remote_exec: (value) => typeof value === 'boolean',
+  remote_exec_target: (value) => typeof value === 'string',
+  remote_exec_private_key: (value) => typeof value === 'string',
+  remote_exec_port: (value) => typeof value === 'number',
+  remote_exec_user: (value) => typeof value === 'string',
+  remote_exec_type: (value) => REMOTE_EXEC_TYPES.includes(value),
+  remote_exec_password: (value) => typeof value === 'string',
 };
 
 export class ConfigManager {
@@ -47,12 +61,8 @@ export class ConfigManager {
       config = DEFAULT_CONFIG;
     }
 
-    // Set default telemetry enabled if not set
-    if (config.telemetry_enabled === undefined) {
-      config.telemetry_enabled = DEFAULT_CONFIG.telemetry_enabled;
-    }
-
-    this._config = config;
+    // Make sure the config is up to date with the default config.
+    this._config = { ...DEFAULT_CONFIG, ...config };
   }
 
   /**

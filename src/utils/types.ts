@@ -130,6 +130,8 @@ export interface AgentConfig {
   cli_data?: Record<string, any>; // Matches Agent.cli_data
 }
 
+export const REMOTE_EXEC_TYPES = ['unix', 'win'] as const;
+
 export type LocalConfig = {
   workspace_disabled: boolean;
   api_key?: string;
@@ -140,6 +142,13 @@ export type LocalConfig = {
   disable_spinner: boolean;
   telemetry_enabled: boolean;
   auto_update: boolean;
+  remote_exec: boolean;
+  remote_exec_target: string;
+  remote_exec_port: number;
+  remote_exec_type: (typeof REMOTE_EXEC_TYPES)[number];
+  remote_exec_private_key: string;
+  remote_exec_user: string;
+  remote_exec_password: string;
 };
 
 export type LocalConfigKey = keyof LocalConfig;

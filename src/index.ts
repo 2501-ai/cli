@@ -16,15 +16,18 @@ import Logger from './utils/logger';
 import { DISCORD_LINK } from './utils/messaging';
 import { getTempPath2501 } from './utils/platform';
 import { initPlugins } from './utils/plugins';
+import { RemoteExecutor } from './managers/remoteExecutor';
 
 // Initialize global error handlers before any other code
 errorHandler.initializeGlobalHandlers();
 
 process.on('SIGINT', async () => {
+  RemoteExecutor.instance.disconnect();
   process.exit(0);
 });
 
 process.on('SIGTERM', async () => {
+  RemoteExecutor.instance.disconnect();
   process.exit(0);
 });
 
@@ -171,7 +174,8 @@ program
   .description('Set a configuration value')
   .argument('<key>', 'The key to set')
   .argument('<value>', 'The value to set')
-  .action((key, value) => setCommand(key, value));
+  .argument('[extra]', 'Additional parameter (e.g., type for remote_exec)')
+  .action(async (key, value, extra) => await setCommand(key, value, extra));
 
 (async () => {
   try {
