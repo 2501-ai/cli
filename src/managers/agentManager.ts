@@ -151,18 +151,7 @@ export class AgentManager {
         output += `\n\n NOTE: your original content for ${args.path} was corrected with the new version below before running the function: \n\n${args.content}`;
       }
 
-      if (output.length > 20000) {
-        output = `
-        ERROR: The output is too large to display to prevent performance issues.
-        Use an alternative method to retrieve the relevant information for the user (for example grep, an another command or sample the content first).
-        `;
-
-        return {
-          tool_call_id: action.id,
-          output,
-          success: false,
-        };
-      }
+      /*M */
 
       return {
         tool_call_id: action.id,
