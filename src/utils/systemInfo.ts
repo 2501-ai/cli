@@ -12,13 +12,18 @@ import { HostInfo, SystemInfo } from './types';
 
 const execAsync = promisify(exec);
 
-type PackageManagerInfo = {
+export type PackageManagerDefinition = {
+  cmd: string;
+  listCmd: (exclusionPattern: string) => string;
+};
+
+export type PackageManagerInfo = {
   cmd: string;
   listCmd: string;
 };
 
 // Package manager definitions per OS
-const LINUX_PACKAGE_MANAGERS = [
+export const LINUX_PACKAGE_MANAGERS: readonly PackageManagerDefinition[] = [
   {
     cmd: 'apt',
     listCmd: (exclusionPattern: string) =>
@@ -46,7 +51,7 @@ const LINUX_PACKAGE_MANAGERS = [
   },
 ] as const;
 
-const MACOS_PACKAGE_MANAGERS = [
+export const MACOS_PACKAGE_MANAGERS: readonly PackageManagerDefinition[] = [
   {
     cmd: 'brew',
     listCmd: (exclusionPattern: string) =>
@@ -59,7 +64,7 @@ const MACOS_PACKAGE_MANAGERS = [
   },
 ] as const;
 
-const WINDOWS_PACKAGE_MANAGERS = [
+export const WINDOWS_PACKAGE_MANAGERS: readonly PackageManagerDefinition[] = [
   {
     cmd: 'winget',
     listCmd: (exclusionPattern: string) =>
@@ -208,24 +213,23 @@ function getPackageManagersForPlatform(
 ): PackageManagerInfo[] {
   const platform = os.platform();
 
-  const platformPackageManagers = {
+  const platformMapping = {
     linux: LINUX_PACKAGE_MANAGERS,
     darwin: MACOS_PACKAGE_MANAGERS,
     win32: WINDOWS_PACKAGE_MANAGERS,
-  } as const;
+  };
 
-  const packageManagers =
-    platformPackageManagers[platform as keyof typeof platformPackageManagers] ||
-    [];
+  const packageDefs: readonly PackageManagerDefinition[] =
+    platformMapping[platform as keyof typeof platformMapping] || [];
 
-  return packageManagers.map((pm) => ({
-    ...pm,
+  return packageDefs.map((pm) => ({
+    cmd: pm.cmd,
     listCmd: pm.listCmd(exclusionPattern),
   }));
 }
 
 // Default patterns to exclude
-const DEFAULT_PACKAGE_EXCLUSIONS = [
+export const DEFAULT_PACKAGE_EXCLUSIONS = [
   '^lib', // Libraries
   '^python[0-9]?[@]?', // Python packages
   '^gcc-', // GCC compiler related

@@ -15,6 +15,8 @@ import { DISCORD_LINK } from '../utils/messaging';
 import { getSystemInfo } from '../utils/systemInfo';
 import { getTempPath2501 } from '../utils/platform';
 import { Configuration } from '../utils/types';
+import { getRemoteSystemInfo } from '../utils/remoteSystemInfo';
+import { RemoteExecutor } from '../managers/remoteExecutor';
 
 axios.defaults.baseURL = `${API_HOST}${API_VERSION}`;
 axios.defaults.timeout = 120 * 1000;
@@ -117,9 +119,14 @@ export const initCommand = async (
     logger.start('Creating agent');
     const configKey = options.config || 'SYSOPS';
 
+    await RemoteExecutor.instance.connect();
+    const systemInfoPromise = ConfigManager.instance.get('remote_exec')
+      ? getRemoteSystemInfo()
+      : getSystemInfo();
+
     const parallelPromises = [
       getWorkspacePath(options),
-      getSystemInfo(),
+      systemInfoPromise,
       fetchConfiguration(configKey),
     ] as const;
 

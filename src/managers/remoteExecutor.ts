@@ -36,7 +36,7 @@ export class RemoteExecutor {
     return connectionConfig;
   }
 
-  private async connect(): Promise<void> {
+  async connect(): Promise<void> {
     if (this.isConnected && this.client) {
       return;
     }
