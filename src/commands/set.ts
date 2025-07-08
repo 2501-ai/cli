@@ -91,6 +91,8 @@ async function handleRemoteExecSet(
   configManager.set('remote_exec_port', parseInt(port));
   configManager.set('remote_exec_type', type as any);
 
+  logger.log(`Remote execution enabled: ${user}@${host}:${port} (${type})`);
+
   // Test connection
   logger.start('Testing connection...');
   const isValid = await RemoteExecutor.instance.validateConnection();
@@ -100,9 +102,6 @@ async function handleRemoteExecSet(
   }
 
   logger.stop('Connection successful');
-  RemoteExecutor.instance.disconnect();
-
-  logger.log(`Remote execution enabled: ${user}@${host}:${port} (${type})`);
 }
 
 function validateConnectionString(connectionString: string): boolean {

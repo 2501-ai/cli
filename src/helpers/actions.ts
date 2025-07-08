@@ -143,7 +143,8 @@ export async function run_shell({
       return result;
     } catch (error) {
       Logger.error('Remote execution failed, falling back to local:', error);
-      // Fall through to local execution
+      return `${ERROR_BOL} I failed to run ${command}, please fix the situation, errors below.\n ${(error as Error).message}
+    ${error}`;
     }
   }
 

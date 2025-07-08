@@ -121,6 +121,7 @@ export class RemoteExecutor {
   async validateConnection(): Promise<boolean> {
     try {
       const result = await this.executeCommand('echo "connection_test"');
+      this.disconnect();
       return result.trim() === 'connection_test';
     } catch (error) {
       Logger.error('Connection validation failed:', error);
