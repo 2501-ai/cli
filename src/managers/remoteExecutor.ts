@@ -66,7 +66,7 @@ export class RemoteExecutor {
     });
   }
 
-  async executeCommand(command: string): Promise<string> {
+  async executeCommand(command: string, stdin?: string): Promise<string> {
     try {
       await this.connect();
 
@@ -102,6 +102,15 @@ export class RemoteExecutor {
           stream.stderr.on('data', (data: Buffer) => {
             stderr += data.toString();
           });
+
+          if (stdin) {
+            Logger.debug('Writing content to stdin:', { content: stdin });
+            // Write the content to the stdin of the stream.
+            stream.stdin.write(stdin);
+
+            // End the stdin of the stream.
+            stream.stdin.end();
+          }
         });
       });
     } catch (error) {

@@ -2,6 +2,7 @@ import { ConfigManager } from '../managers/configManager';
 import Logger from '../utils/logger';
 import { LocalConfigKey, REMOTE_EXEC_TYPES } from '../utils/types';
 import { RemoteExecutor } from '../managers/remoteExecutor';
+import { WinRMExecutor } from '../managers/winrmExecutor';
 
 // Keys that need to be parsed as JSON (boolean)
 const KEYS_WITH_PARSING: LocalConfigKey[] = [
@@ -93,9 +94,13 @@ async function handleRemoteExecSet(
 
   logger.log(`Remote execution enabled: ${user}@${host}:${port} (${type})`);
 
-  // Test connection
+  // Test connection with appropriate executor
   logger.start('Testing connection...');
-  const isValid = await RemoteExecutor.instance.validateConnection();
+
+  const isValid =
+    type === 'win'
+      ? WinRMExecutor.instance.validateConnection()
+      : RemoteExecutor.instance.validateConnection();
   if (!isValid) {
     logger.cancel('Connection failed. Please check your settings.');
     return;

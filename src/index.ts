@@ -71,6 +71,8 @@ Join our Discord server: ${DISCORD_LINK}
       await errorHandler.handleCommandError(error as Error, 'fallback-query', {
         exitCode: 1,
       });
+    } finally {
+      RemoteExecutor.instance.disconnect();
     }
   });
 
@@ -88,6 +90,8 @@ Command.prototype.action = function (fn) {
           this.name ? this.name() : 'unknown',
           { exitCode: 1 }
         );
+      } finally {
+        RemoteExecutor.instance.disconnect();
       }
     })();
   });
@@ -115,6 +119,7 @@ program
   .hook('preAction', authMiddleware)
   .hook('preAction', initPlugins)
   .hook('preAction', initPluginCredentials)
+  .hook('postAction', RemoteExecutor.instance.disconnect)
   .action(async (query, options) => {
     await queryCommand(query, options);
   });
@@ -131,6 +136,7 @@ program
   )
   .option('--config <configKey>', 'Specify the configuration Key to use')
   .hook('preAction', authMiddleware)
+  .hook('postAction', RemoteExecutor.instance.disconnect)
   .action(async (options) => {
     await initCommand(options);
   });

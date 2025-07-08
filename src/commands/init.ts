@@ -21,7 +21,7 @@ axios.defaults.timeout = 120 * 1000;
 
 interface InitCommandOptions {
   name?: string;
-  workspace?: string | boolean;
+  workspace?: string;
   config?: string;
   ignoreUnsafe?: boolean;
 }
@@ -46,20 +46,18 @@ async function fetchConfiguration(configKey: string): Promise<Configuration> {
 export async function getWorkspacePath(
   options?: InitCommandOptions
 ): Promise<string> {
-  if (options?.workspace === false) {
+  if (ConfigManager.instance.get('remote_exec')) {
+    return resolveWorkspacePath({ workspace: options?.workspace });
+  }
+
+  if (!options?.workspace) {
     const path = getTempPath2501(Date.now().toString());
     fs.mkdirSync(path, { recursive: true });
     logger.log(`Using workspace at ${path}`);
     return path;
   }
 
-  let finalPath;
-  if (typeof options?.workspace === 'string' && !!options.workspace) {
-    // Convert relative path to absolute path if necessary
-    finalPath = resolveWorkspacePath({ workspace: options.workspace });
-  } else {
-    finalPath = process.cwd();
-  }
+  const finalPath = resolveWorkspacePath({ workspace: options?.workspace });
 
   if (!options?.ignoreUnsafe && isDirUnsafe(finalPath)) {
     logger.log(

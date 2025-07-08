@@ -11,6 +11,7 @@ import { IgnoreManager } from '../utils/ignore';
 import { getLogDir } from '../utils/platform';
 import { ConfigManager } from '../managers/configManager';
 import { RemoteExecutor } from '../managers/remoteExecutor';
+import { WinRMExecutor } from '../managers/winrmExecutor';
 
 /**
  * Directory to store logs
@@ -34,7 +35,26 @@ export function read_file(args: { path: string }): string | null {
   return fs.readFileSync(args.path, 'utf8');
 }
 
-export async function write_file(args: { path: string; content: string }) {
+export async function write_file(args: {
+  path: string;
+  content: string;
+}): Promise<string> {
+  if (ConfigManager.instance.get('remote_exec')) {
+    const escapedContent = args.content.replace(/"/g, '\\"');
+    try {
+      await RemoteExecutor.instance.executeCommand(
+        `tee "${args.path}"`,
+        escapedContent
+      );
+    } catch (error) {
+      throw new Error(`Failed to write file: ${error}`);
+    }
+
+    return `
+    File written: ${args.path}
+    ${escapedContent}`;
+  }
+
   Logger.debug(`Writing file at "${args.path}"`);
   try {
     fs.mkdirSync(path.dirname(args.path), { recursive: true });
@@ -76,26 +96,33 @@ export async function update_file({
   Logger.debug('Updating sections:', sectionsDiff);
 
   try {
-    const fileContent = fs.readFileSync(path, 'utf8');
+    const fileContent = ConfigManager.instance.get('remote_exec')
+      ? await RemoteExecutor.instance.executeCommand(`cat "${path}"`)
+      : fs.readFileSync(path, 'utf8');
+
     const newContent = modifyCodeSections({
       originalContent: fileContent,
       diffSections: sectionsDiff,
     });
 
-    try {
-      fs.writeFileSync(path, newContent);
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === 'EACCES') {
-        try {
-          const escapedContent = newContent.replace(/"/g, '\\"');
-          await run_shell({
-            command: `echo "${escapedContent}" | sudo tee "${path}" > /dev/null`,
-          });
-        } catch (e) {
-          throw new Error(`Failed to write file with sudo: ${e}`);
+    if (ConfigManager.instance.get('remote_exec')) {
+      await write_file({ path, content: newContent });
+    } else {
+      try {
+        fs.writeFileSync(path, newContent);
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code === 'EACCES') {
+          try {
+            const escapedContent = newContent.replace(/"/g, '\\"');
+            await run_shell({
+              command: `echo "${escapedContent}" | sudo tee "${path}" > /dev/null`,
+            });
+          } catch (e) {
+            throw new Error(`Failed to write file with sudo: ${e}`);
+          }
+        } else {
+          throw error;
         }
-      } else {
-        throw error;
       }
     }
 
@@ -116,6 +143,12 @@ export async function update_file({
   }
 }
 
+function logExecution(result: string) {
+  // Recursive creation of log directory, doesn't throw an error if it already exists.
+  fs.mkdirSync(LOG_DIR, { recursive: true });
+  fs.appendFileSync(LOGFILE_PATH, result + '\n');
+}
+
 export async function run_shell({
   command,
   shell,
@@ -132,23 +165,26 @@ export async function run_shell({
   // Check if remote execution is enabled
   if (config.get('remote_exec')) {
     try {
-      const result = await RemoteExecutor.instance.executeCommand(command);
+      const remoteType = config.get('remote_exec_type');
+      let result: string;
 
-      // Log to file (keep existing logging)
-      if (!fs.existsSync(LOG_DIR)) {
-        fs.mkdirSync(LOG_DIR, { recursive: true });
+      if (remoteType === 'win') {
+        result = await WinRMExecutor.instance.executeCommand(command);
+      } else {
+        result = await RemoteExecutor.instance.executeCommand(command);
       }
-      fs.writeFileSync(LOGFILE_PATH, result);
+
+      logExecution(result);
 
       return result;
     } catch (error) {
-      Logger.error('Remote execution failed, falling back to local:', error);
+      Logger.error('Remote execution failed:', error);
       return `${ERROR_BOL} I failed to run ${command}, please fix the situation, errors below.\n ${(error as Error).message}
     ${error}`;
     }
   }
 
-  // Local execution (restore original logic)
+  // Local execution
   try {
     const { stderr, stdout } = await execa(command, {
       shell: shell || true,
@@ -160,10 +196,7 @@ export async function run_shell({
     if (stdout) output += stdout;
     if (stderr) output += stderr;
 
-    if (!fs.existsSync(LOG_DIR)) {
-      fs.mkdirSync(LOG_DIR, { recursive: true });
-    }
-    fs.writeFileSync(LOGFILE_PATH, output);
+    logExecution(output);
 
     return output;
   } catch (error) {
