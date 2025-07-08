@@ -48,7 +48,10 @@ export async function setCommand(
     logger.cancel((error as Error).message);
   }
 }
-
+/**
+ * Parse the remote exec set command.
+ * ex; `@2501 set remote_exec user@host:port [unix|win]`
+ */
 async function handleRemoteExecSet(
   value?: string,
   extraValue?: string
@@ -99,8 +102,8 @@ async function handleRemoteExecSet(
 
   const isValid =
     type === 'win'
-      ? WinRMExecutor.instance.validateConnection()
-      : RemoteExecutor.instance.validateConnection();
+      ? await WinRMExecutor.instance.validateConnection()
+      : await RemoteExecutor.instance.validateConnection();
   if (!isValid) {
     logger.cancel('Connection failed. Please check your settings.');
     return;
