@@ -37,7 +37,10 @@ export class RemoteExecutor {
   }
 
   async connect(): Promise<void> {
-    if (this.isConnected && this.client) {
+    if (
+      (this.isConnected && this.client) ||
+      !ConfigManager.instance.get('remote_exec')
+    ) {
       return;
     }
 
