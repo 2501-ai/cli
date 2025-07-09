@@ -11,6 +11,44 @@ import {
 } from './systemInfo';
 import { SystemInfo } from './types';
 
+async function getRemoteGlobalNpmPackages(
+  executor: { executeCommand: (cmd: string) => Promise<string> },
+  remoteType: 'unix' | 'win'
+): Promise<string[]> {
+  try {
+    const command =
+      remoteType === 'win'
+        ? 'npm list -g --depth=0 | findstr /R "^[├└]" | findstr "@"'
+        : 'npm list -g --depth=0 | awk "{print $2}" | grep @';
+
+    const output = await executor.executeCommand(command);
+    const packageLines = output.trim().split('\n').filter(Boolean);
+
+    if (remoteType === 'win') {
+      // Extract package names from Windows output format
+      // example output:
+      // +-- corepack@0.32.0
+      return packageLines
+        .map(
+          (line) =>
+            line.replace(/^[+--\s]+/, '').split('@')[0] +
+            '@' +
+            line.split('@')[1]
+        )
+        .filter((pkg) => pkg.includes('@'));
+    } else {
+      // Unix/Linux output is already clean package names
+      return packageLines.filter((pkg) => pkg.includes('@'));
+    }
+  } catch (error) {
+    Logger.debug(
+      'Error executing npm list command on remote:',
+      (error as Error).message
+    );
+    return [];
+  }
+}
+
 async function getRemoteVersion(
   command: string,
   executor: { executeCommand: (cmd: string) => Promise<string> }
@@ -195,13 +233,19 @@ export async function getRemoteSystemInfo(): Promise<SystemInfo> {
 
   Logger.debug(`Getting remote system info for type: ${remoteType}`);
 
-  const [installed_packages, os_info, pythonVersion, phpVersion] =
-    await Promise.all([
-      getRemoteInstalledPackages(),
-      getRemoteOSInfo(executor, remoteType),
-      getRemotePythonVersion(executor, remoteType),
-      getRemoteVersion('php --version', executor),
-    ]);
+  const [
+    installed_packages,
+    os_info,
+    pythonVersion,
+    phpVersion,
+    globalNpmPackages,
+  ] = await Promise.all([
+    getRemoteInstalledPackages(),
+    getRemoteOSInfo(executor, remoteType),
+    getRemotePythonVersion(executor, remoteType),
+    getRemoteVersion('php --version', executor),
+    getRemoteGlobalNpmPackages(executor, remoteType),
+  ]);
 
   const sysInfo: SystemInfo['sysInfo'] = {
     platform: remoteType,
@@ -212,8 +256,8 @@ export async function getRemoteSystemInfo(): Promise<SystemInfo> {
   return {
     sysInfo,
     nodeInfo: {
-      version: '(local only)',
-      global_packages: [],
+      version: await getRemoteVersion('node --version', executor),
+      global_packages: globalNpmPackages,
     },
     pythonInfo: {
       version: pythonVersion,
