@@ -32,7 +32,6 @@ import { credentialsService } from '../utils/credentials';
 import { getDirectoryMd5Hash } from '../utils/files';
 import Logger, { getTerminalWidth } from '../utils/logger';
 import { isLooping } from '../utils/loopDetection';
-import { generateTree } from '../utils/tree';
 import {
   AgentConfig,
   FunctionAction,
@@ -103,12 +102,19 @@ const executeActions = async (
   return results;
 };
 
+/**
+ * Synchronize the workspace with the remote server.
+ * @returns True if the workspace was synchronized, false otherwise.
+ */
 const synchronizeWorkspace = async (
   agentId: string,
   workspace: string,
   force: boolean = false
 ): Promise<boolean> => {
   Logger.debug('Synchronizing workspace:', workspace);
+  if (ConfigManager.instance.get('remote_exec')) {
+    return false;
+  }
 
   // Get both state and changes in a single pass
   const { currentState, diff: workspaceDiff } = await getWorkspaceState(
@@ -264,8 +270,13 @@ export const queryCommand = async (
     const workspaceData = getDirectoryMd5Hash({
       directoryPath: workspace,
     });
-    const workspaceTree = generateTree(
-      Array.from(workspaceData.fileHashes.keys())
+
+    /**
+     * A plain text list with forward slashes, one file per line.
+     * This appears to be the optimal format for an LLM agent to process.
+     */
+    const workspaceTree = Array.from(workspaceData.fileHashes.keys()).join(
+      ' \n '
     );
 
     logger.start('Thinking');

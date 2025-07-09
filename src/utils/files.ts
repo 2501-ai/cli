@@ -1,17 +1,18 @@
 import crypto from 'crypto';
 import fs from 'fs';
-import path from 'path';
 import { Dirent } from 'node:fs';
+import path from 'path';
 
-import Logger from '../utils/logger';
+import { isText } from 'istextorbinary';
 import {
   DEFAULT_MAX_DEPTH,
   DEFAULT_MAX_DIR_SIZE,
   DEFAULT_MAX_FILE_SIZE,
   INCLUDED_FILE_EXTENSIONS,
 } from '../constants';
+import { ConfigManager } from '../managers/configManager';
+import Logger from '../utils/logger';
 import { IgnoreManager } from './ignore';
-import { isText } from 'istextorbinary';
 
 /**
  * Options for computing the MD5 hash of a directory and its contents.
@@ -173,6 +174,14 @@ export function getDirectoryMd5Hash({
   maxDepth = DEFAULT_MAX_DEPTH,
   maxDirSize = DEFAULT_MAX_DIR_SIZE, // 50MB
 }: DirectoryMd5HashOptions) {
+  if (ConfigManager.instance.get('remote_exec')) {
+    return {
+      md5: '',
+      fileHashes: new Map<string, string>(),
+      directoryPath,
+      totalSize: 0,
+    };
+  }
   // Initialize ignore manager at root level
   const ignoreManager = IgnoreManager.getInstance();
 

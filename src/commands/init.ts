@@ -44,9 +44,16 @@ async function fetchConfiguration(configKey: string): Promise<Configuration> {
 }
 
 export async function getWorkspacePath(
-  options?: InitCommandOptions
+  options: InitCommandOptions
 ): Promise<string> {
-  if (options?.workspace === false) {
+  if (ConfigManager.instance.get('remote_exec')) {
+    return resolveWorkspacePath({
+      workspace:
+        typeof options.workspace === 'string' ? options.workspace : undefined,
+    });
+  }
+
+  if (options.workspace === false) {
     const path = getTempPath2501(Date.now().toString());
     fs.mkdirSync(path, { recursive: true });
     logger.log(`Using workspace at ${path}`);
@@ -54,14 +61,14 @@ export async function getWorkspacePath(
   }
 
   let finalPath;
-  if (typeof options?.workspace === 'string' && !!options.workspace) {
+  if (typeof options.workspace === 'string' && !!options.workspace) {
     // Convert relative path to absolute path if necessary
     finalPath = resolveWorkspacePath({ workspace: options.workspace });
   } else {
     finalPath = process.cwd();
   }
 
-  if (!options?.ignoreUnsafe && isDirUnsafe(finalPath)) {
+  if (!options.ignoreUnsafe && isDirUnsafe(finalPath)) {
     logger.log(
       `Files in the workspace "${finalPath}" are considered sensitive`
     );
@@ -108,7 +115,7 @@ export const initCommand = async (
     }
 
     logger.start('Creating agent');
-    const configKey = options?.config || 'SYSOPS';
+    const configKey = options.config || 'SYSOPS';
 
     const parallelPromises = [
       getWorkspacePath(options),

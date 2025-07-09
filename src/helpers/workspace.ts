@@ -13,8 +13,17 @@ import { IgnoreManager } from '../utils/ignore';
 import { zipUtility } from '../utils/zip';
 import { toReadableSize } from '../utils/files';
 import { getTempPath2501 } from '../utils/platform';
+import { ConfigManager } from '../managers/configManager';
 
 export function resolveWorkspacePath(options: { workspace?: string }): string {
+  const remoteExec = ConfigManager.instance.get('remote_exec');
+  if (remoteExec) {
+    //TODO implement the windows path.
+    const remoteWorkspace = `/home/${ConfigManager.instance.get('remote_exec_user')}`;
+    // still use the workspace if provided.
+    return options.workspace || remoteWorkspace;
+  }
+
   let finalPath = options.workspace || process.cwd();
   // Convert relative path to absolute path if necessary
   finalPath = path.isAbsolute(finalPath)
