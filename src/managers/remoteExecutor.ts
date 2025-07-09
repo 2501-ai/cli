@@ -112,7 +112,6 @@ export class RemoteExecutor {
             stream.stdin.write(stdin);
             stream.stdin.end();
           }
-          stream.end();
         });
       });
     } catch (error) {
