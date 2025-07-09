@@ -49,6 +49,9 @@ async function getRemoteGlobalNpmPackages(
   }
 }
 
+/**
+ * Command execution wrapper to handle errors and return a consistent format.
+ */
 async function getRemoteVersion(
   command: string,
   executor: { executeCommand: (cmd: string) => Promise<string> }
