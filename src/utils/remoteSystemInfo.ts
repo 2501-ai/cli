@@ -41,7 +41,7 @@ async function getRemoteGlobalNpmPackages(
       return packageLines.filter((pkg) => pkg.includes('@'));
     }
   } catch (error) {
-    Logger.debug(
+    Logger.error(
       'Error executing npm list command on remote:',
       (error as Error).message
     );
@@ -57,7 +57,18 @@ async function getRemoteVersion(
     const result = await executor.executeCommand(command);
     return result.trim();
   } catch (error) {
-    return '(not installed)';
+    if (
+      error instanceof Error &&
+      error.message.toLowerCase().includes('command not found')
+    ) {
+      return '(not found)';
+    }
+
+    Logger.error(
+      `Failed to get remote version for command "${command}":`,
+      error
+    );
+    return '(error)';
   }
 }
 
@@ -68,7 +79,7 @@ async function getRemotePythonVersion(
   // For Unix-like systems, python3 is preferred.
   if (remoteType === 'unix') {
     const py3Version = await getRemoteVersion('python3 --version', executor);
-    if (py3Version !== '(not installed)') {
+    if (py3Version !== '(error)') {
       return py3Version;
     }
   }
@@ -144,6 +155,7 @@ async function getUnixRemotePackages(): Promise<Record<string, string>> {
     detectedPms.map(async (pm) => {
       try {
         const listCmd = pm.listCmd(exclusionPattern);
+        // No need to escape spaces since RemoteExecutor handles the command properly
         const stdout = await remoteExecutor.executeCommand(listCmd);
         const packages = stdout.split('\n').filter(Boolean).sort();
         if (packages.length > 0) {
@@ -194,6 +206,7 @@ async function getWindowsRemotePackages(): Promise<Record<string, string>> {
     detectedPms.map(async (pm) => {
       try {
         const listCmd = pm.listCmd(exclusionPattern);
+        // No need to escape spaces since WinRMExecutor handles the command properly
         const stdout = await remoteExecutor.executeCommand(listCmd);
         const packages = stdout.split('\n').filter(Boolean).sort();
         if (packages.length > 0) {
