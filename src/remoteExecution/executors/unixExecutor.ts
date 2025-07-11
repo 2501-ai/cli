@@ -36,7 +36,6 @@ export class UnixExecutor {
       password: this.currentAgent.remote_exec.password,
       // debug: (message: string) => Logger.debug(message),
     };
-    Logger.debug('Connection config:', { connectionConfig });
     // Add private key if specified
     if (this.currentAgent.remote_exec.private_key) {
       Logger.debug(
