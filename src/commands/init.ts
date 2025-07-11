@@ -51,8 +51,12 @@ async function fetchConfiguration(configKey: string): Promise<Configuration> {
 export async function getWorkspacePath(
   options: InitCommandOptions
 ): Promise<string> {
-  // For now, we'll handle remote workspace resolution in the actions
-  // when they have access to the agent configuration
+  if (RemoteExecutor.instance.isInitialized()) {
+    return resolveWorkspacePath({
+      workspace:
+        typeof options.workspace === 'string' ? options.workspace : undefined,
+    });
+  }
 
   if (options.workspace === false) {
     const path = getTempPath2501(Date.now().toString());
