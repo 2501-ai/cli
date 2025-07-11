@@ -1,10 +1,11 @@
 import { runCommand } from 'nodejs-winrm';
 import Logger from '../../utils/logger';
-import { AgentConfig } from '../../utils/types';
+import { RemoteExecConfig } from '../../utils/types';
+import { IRemoteExecutor } from '../remoteExecutor';
 
-export class WinRMExecutor {
+export class WinRMExecutor implements IRemoteExecutor {
   private static _instance: WinRMExecutor;
-  private currentAgent: AgentConfig | null = null;
+  private config: RemoteExecConfig | null = null;
 
   static get instance() {
     if (!WinRMExecutor._instance) {
@@ -15,25 +16,22 @@ export class WinRMExecutor {
 
   private constructor() {}
 
-  init(agent: AgentConfig): void {
-    this.currentAgent = agent;
+  init(config: RemoteExecConfig): void {
+    this.config = config;
   }
 
   async executeCommand(command: string): Promise<string> {
     try {
-      if (
-        !this.currentAgent?.remote_exec ||
-        !this.currentAgent?.remote_exec.enabled
-      ) {
+      if (!this.config || !this.config.enabled) {
         throw new Error('Remote execution not configured for this agent');
       }
 
       const result = await runCommand(
         command,
-        this.currentAgent.remote_exec.target,
-        this.currentAgent.remote_exec.user,
-        this.currentAgent.remote_exec.password || '',
-        this.currentAgent.remote_exec.port
+        this.config.target,
+        this.config.user,
+        this.config.password || '',
+        this.config.port
       );
 
       return result || '';

@@ -1,10 +1,10 @@
 import { UnixExecutor } from './executors/unixExecutor';
 import { WinRMExecutor } from './executors/winrmExecutor';
-import { AgentConfig } from '../utils/types';
+import { RemoteExecConfig } from '../utils/types';
 import Logger from '../utils/logger';
 
-interface IRemoteExecutor {
-  init(agent: AgentConfig): void;
+export interface IRemoteExecutor {
+  init(config: RemoteExecConfig): void;
   executeCommand(command: string, stdin?: string): Promise<string>;
   validateConnection(): Promise<boolean>;
   disconnect?(): void;
@@ -12,7 +12,7 @@ interface IRemoteExecutor {
 
 export class RemoteExecutor {
   private static _instance: RemoteExecutor;
-  private currentAgent: AgentConfig | null = null;
+  private config: RemoteExecConfig | null = null;
   private executor: IRemoteExecutor | null = null;
 
   static get instance() {
@@ -22,28 +22,26 @@ export class RemoteExecutor {
     return RemoteExecutor._instance;
   }
 
-  init(agent: AgentConfig): void {
-    if (!agent.remote_exec || !agent.remote_exec.enabled) {
-      throw new Error('Remote execution not configured for this agent');
+  init(config: RemoteExecConfig): void {
+    if (!config || !config.enabled) {
+      throw new Error('Remote execution not configured');
     }
 
     // Initialize appropriate executor based on type
-    if (agent.remote_exec.type === 'win') {
+    if (config.type === 'win') {
       this.executor = WinRMExecutor.instance;
     } else {
       this.executor = UnixExecutor.instance;
     }
 
-    this.currentAgent = agent;
-    this.executor.init(agent);
+    this.config = config;
+    this.executor.init(config);
 
-    Logger.debug(
-      `Initialized ${agent.remote_exec.type} remote executor for agent: ${agent.id}`
-    );
+    Logger.debug(`Initialized ${config.type} remote executor.`);
   }
 
   async executeCommand(command: string, stdin?: string): Promise<string> {
-    if (!this.executor || !this.currentAgent) {
+    if (!this.executor || !this.config) {
       throw new Error('Remote executor not initialized. Call init() first.');
     }
 
@@ -52,11 +50,11 @@ export class RemoteExecutor {
   }
 
   async validateConnection(): Promise<boolean> {
-    if (!this.executor || !this.currentAgent) {
+    if (!this.executor || !this.config) {
       throw new Error('Remote executor not initialized. Call init() first.');
     }
 
-    Logger.debug(`Validating connection for agent: ${this.currentAgent.id}`);
+    Logger.debug(`Validating connection for host: ${this.config.target}`);
     return this.executor.validateConnection();
   }
 
@@ -69,19 +67,25 @@ export class RemoteExecutor {
       this.executor.disconnect();
     }
     this.executor = null;
-    this.currentAgent = null;
+    this.config = null;
     Logger.debug('Remote executor disconnected');
   }
 
   isInitialized(): boolean {
-    return this.executor !== null && this.currentAgent !== null;
+    return this.executor !== null && this.config !== null;
   }
 
-  getCurrentAgent(): AgentConfig | null {
-    return this.currentAgent;
+  getConfig(): RemoteExecConfig {
+    if (!this.executor || !this.config) {
+      throw new Error('Remote executor not initialized. Call init() first.');
+    }
+    return this.config;
   }
 
-  getExecutorType(): 'unix' | 'win' | null {
-    return this.currentAgent?.remote_exec?.type || null;
+  getExecutorType(): 'unix' | 'win' {
+    if (!this.executor || !this.config) {
+      throw new Error('Remote executor not initialized. Call init() first.');
+    }
+    return this.config?.type || null;
   }
 }

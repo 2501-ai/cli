@@ -23,9 +23,9 @@ export function resolveWorkspacePath(options: { workspace?: string }): string {
   const executor = RemoteExecutor.instance;
   if (executor.isInitialized()) {
     // from this point we know that the agent exists.
-    const agent = executor.getCurrentAgent()!;
+    const { user } = executor.getConfig();
     //TODO implement the windows path.
-    const remoteWorkspace = `/home/${agent.remote_exec?.user}`;
+    const remoteWorkspace = `/home/${user}`;
     // still use the workspace if provided.
     return options.workspace || remoteWorkspace;
   }

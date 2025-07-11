@@ -1,4 +1,3 @@
-import { RemoteExecutor } from './remoteExecutor';
 import Logger from '../utils/logger';
 import {
   DEFAULT_PACKAGE_EXCLUSIONS,
@@ -7,7 +6,8 @@ import {
   PackageManagerDefinition,
   WINDOWS_PACKAGE_MANAGERS,
 } from '../utils/systemInfo';
-import { AgentConfig, SystemInfo } from '../utils/types';
+import { SystemInfo } from '../utils/types';
+import { RemoteExecutor } from './remoteExecutor';
 
 async function getRemoteGlobalNpmPackages(
   remoteType: 'unix' | 'win'
@@ -229,12 +229,10 @@ async function getRemoteInstalledPackages(
   }
 }
 
-export async function getRemoteSystemInfo(
-  agent: AgentConfig
-): Promise<SystemInfo> {
-  const remoteType = RemoteExecutor.instance.getExecutorType() || 'unix';
+export async function getRemoteSystemInfo(): Promise<SystemInfo> {
+  const { type, target } = RemoteExecutor.instance.getConfig();
 
-  Logger.debug(`Getting remote system info for agent: ${agent.id}`);
+  Logger.debug(`Getting remote system info for host: ${target}`);
 
   const [
     installed_packages,
@@ -243,15 +241,15 @@ export async function getRemoteSystemInfo(
     phpVersion,
     globalNpmPackages,
   ] = await Promise.all([
-    getRemoteInstalledPackages(remoteType),
-    getRemoteOSInfo(remoteType),
-    getRemotePythonVersion(remoteType),
+    getRemoteInstalledPackages(type),
+    getRemoteOSInfo(type),
+    getRemotePythonVersion(type),
     getRemoteVersion('php --version'),
-    getRemoteGlobalNpmPackages(remoteType),
+    getRemoteGlobalNpmPackages(type),
   ]);
 
   const sysInfo: SystemInfo['sysInfo'] = {
-    platform: remoteType,
+    platform: type,
     os_info,
     installed_packages,
   };

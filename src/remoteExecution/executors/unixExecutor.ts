@@ -1,12 +1,13 @@
 import { Client, ConnectConfig } from 'ssh2';
 import Logger from '../../utils/logger';
-import { AgentConfig } from '../../utils/types';
+import { RemoteExecConfig } from '../../utils/types';
+import { IRemoteExecutor } from '../remoteExecutor';
 
-export class UnixExecutor {
+export class UnixExecutor implements IRemoteExecutor {
   private static _instance: UnixExecutor;
   private client: Client | null = null;
   private isConnected = false;
-  private currentAgent: AgentConfig | null = null;
+  private config: RemoteExecConfig | null = null;
 
   static get instance() {
     if (!UnixExecutor._instance) {
@@ -15,47 +16,36 @@ export class UnixExecutor {
     return UnixExecutor._instance;
   }
 
-  init(agent: AgentConfig): void {
-    this.currentAgent = agent;
+  init(config: RemoteExecConfig): void {
+    this.config = config;
     this.client = null;
     this.isConnected = false;
   }
 
   private getConnectionConfig(): ConnectConfig {
-    if (
-      !this.currentAgent?.remote_exec ||
-      !this.currentAgent?.remote_exec.enabled
-    ) {
+    if (!this.config || !this.config.enabled) {
       throw new Error('Remote execution not configured for this agent');
     }
 
     const connectionConfig: ConnectConfig = {
-      host: this.currentAgent.remote_exec.target,
-      port: this.currentAgent.remote_exec.port,
-      username: this.currentAgent.remote_exec.user,
-      password: this.currentAgent.remote_exec.password,
+      host: this.config.target,
+      port: this.config.port,
+      username: this.config.user,
+      password: this.config.password,
       // debug: (message: string) => Logger.debug(message),
     };
     // Add private key if specified
-    if (this.currentAgent.remote_exec.private_key) {
-      Logger.debug(
-        'Using private key:',
-        this.currentAgent.remote_exec.private_key
-      );
+    if (this.config.private_key) {
+      Logger.debug('Using private key:', this.config.private_key);
       const fs = require('fs');
-      connectionConfig.privateKey = fs.readFileSync(
-        this.currentAgent.remote_exec.private_key
-      );
+      connectionConfig.privateKey = fs.readFileSync(this.config.private_key);
     }
 
     return connectionConfig;
   }
 
   async connect(): Promise<void> {
-    if (
-      !this.currentAgent?.remote_exec ||
-      !this.currentAgent?.remote_exec.enabled
-    ) {
+    if (!this.config || !this.config.enabled) {
       throw new Error('Remote execution not enabled for this agent');
     }
 
@@ -63,13 +53,13 @@ export class UnixExecutor {
     if (
       this.isConnected &&
       this.client &&
-      this.currentAgent?.id === this.currentAgent.id
+      this.config.target === this.config.target
     ) {
       return;
     }
 
     // Disconnect from previous connection if different agent
-    if (this.isConnected && this.currentAgent?.id !== this.currentAgent.id) {
+    if (this.isConnected && this.config.target !== this.config.target) {
       this.disconnect();
     }
 
@@ -154,7 +144,7 @@ export class UnixExecutor {
       this.client.end();
       this.client = null;
       this.isConnected = false;
-      this.currentAgent = null;
+      this.config = null;
     }
   }
 

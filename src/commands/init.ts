@@ -11,12 +11,13 @@ import { ConfigManager } from '../managers/configManager';
 import { TelemetryManager } from '../managers/telemetryManager';
 import { configureRemoteExecution } from '../remoteExecution/config';
 import { RemoteExecutor } from '../remoteExecution/remoteExecutor';
+import { getRemoteSystemInfo } from '../remoteExecution/remoteSystemInfo';
 import { addAgent } from '../utils/conf';
 import Logger from '../utils/logger';
 import { DISCORD_LINK } from '../utils/messaging';
 import { getTempPath2501 } from '../utils/platform';
 import { getSystemInfo } from '../utils/systemInfo';
-import { Configuration } from '../utils/types';
+import { Configuration, RemoteExecConfig } from '../utils/types';
 
 axios.defaults.baseURL = `${API_HOST}${API_VERSION}`;
 axios.defaults.timeout = 120 * 1000;
@@ -92,6 +93,40 @@ export async function getWorkspacePath(
   return finalPath;
 }
 
+async function initRemoteExecution(
+  options: InitCommandOptions
+): Promise<RemoteExecConfig | undefined> {
+  // Configure remote execution if specified
+  const remoteExecConfig = configureRemoteExecution(options);
+
+  // Validate remote connection if configured
+  if (remoteExecConfig?.enabled) {
+    logger.start('Testing remote connection...');
+
+    RemoteExecutor.instance.init(remoteExecConfig);
+
+    try {
+      const isValid = await RemoteExecutor.instance.validateConnection();
+
+      if (!isValid) {
+        logger.cancel(
+          'Remote connection validation failed. Please check your settings.'
+        );
+        process.exit(1);
+      }
+
+      logger.stop('Remote connection validated successfully');
+    } catch (error) {
+      logger.cancel(
+        `Remote connection validation failed: ${(error as Error).message}`
+      );
+      process.exit(1);
+    }
+  }
+
+  return remoteExecConfig;
+}
+
 // This function will be called when the `init` command is executed
 export const initCommand = async (
   options: InitCommandOptions
@@ -122,7 +157,10 @@ export const initCommand = async (
     logger.start('Creating agent');
     const configKey = options.config || 'SYSOPS';
 
-    const systemInfoPromise = getSystemInfo();
+    const remoteExecConfig = await initRemoteExecution(options);
+    const systemInfoPromise = remoteExecConfig
+      ? getRemoteSystemInfo()
+      : getSystemInfo();
 
     const parallelPromises = [
       getWorkspacePath(options),
@@ -146,37 +184,6 @@ export const initCommand = async (
       configManager.get('engine')
     );
     Logger.debug('Agent created:', createResponse);
-
-    // Configure remote execution if specified
-    const remoteExecConfig = configureRemoteExecution(options);
-
-    // Validate remote connection if configured
-    if (remoteExecConfig?.enabled) {
-      logger.start('Testing remote connection...');
-
-      RemoteExecutor.instance.init({
-        ...createResponse,
-        remote_exec: remoteExecConfig,
-      });
-
-      try {
-        const isValid = await RemoteExecutor.instance.validateConnection();
-
-        if (!isValid) {
-          logger.cancel(
-            'Remote connection validation failed. Please check your settings.'
-          );
-          process.exit(1);
-        }
-
-        logger.stop('Remote connection validated successfully');
-      } catch (error) {
-        logger.cancel(
-          `Remote connection validation failed: ${(error as Error).message}`
-        );
-        process.exit(1);
-      }
-    }
 
     // Add agent to config.
     addAgent({

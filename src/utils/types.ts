@@ -125,6 +125,16 @@ export interface HostInfo {
   public_ip_note?: string | null; // Optional, matches Host.public_ip_note
 }
 
+export interface RemoteExecConfig {
+  enabled: boolean;
+  target: string;
+  port: number;
+  type: (typeof REMOTE_EXEC_TYPES)[number];
+  user: string;
+  password?: string;
+  private_key?: string;
+}
+
 export interface AgentConfig {
   id: string;
   name: string;
@@ -135,15 +145,7 @@ export interface AgentConfig {
   key?: string; // Matches Agent.key
   cli_data?: Record<string, any>; // Matches Agent.cli_data
   // Remote execution configuration (optional, per-agent)
-  remote_exec?: {
-    enabled: boolean;
-    target: string;
-    port: number;
-    type: (typeof REMOTE_EXEC_TYPES)[number];
-    user: string;
-    password?: string;
-    private_key?: string;
-  };
+  remote_exec?: RemoteExecConfig;
 }
 
 export const REMOTE_EXEC_TYPES = ['unix', 'win'] as const;
