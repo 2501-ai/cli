@@ -10,6 +10,7 @@ import {
   DEFAULT_MAX_FILE_SIZE,
   INCLUDED_FILE_EXTENSIONS,
 } from '../constants';
+import { RemoteExecutor } from '../remoteExecution/remoteExecutor';
 import Logger from '../utils/logger';
 import { IgnoreManager } from './ignore';
 
@@ -173,6 +174,17 @@ export function getDirectoryMd5Hash({
   maxDepth = DEFAULT_MAX_DEPTH,
   maxDirSize = DEFAULT_MAX_DIR_SIZE, // 50MB
 }: DirectoryMd5HashOptions) {
+  if (RemoteExecutor.instance.isEnabled()) {
+    // Skip this for remote execution. Otherwise agents might modify files remotely.
+    // TODO: this might change in the near future.
+    return {
+      md5: '',
+      fileHashes: new Map<string, string>(),
+      directoryPath,
+      totalSize: 0,
+    };
+  }
+
   // Initialize ignore manager at root level
   const ignoreManager = IgnoreManager.getInstance();
 

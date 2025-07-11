@@ -1,35 +1,28 @@
 import fs from 'fs';
 import path from 'path';
 
-import Logger from '../utils/logger';
-import { getDirectoryMd5Hash, getDirectoryFiles } from '../utils/files';
-import {
-  DirectoryMd5Hash,
-  WorkspaceDiff,
-  WorkspaceState,
-} from '../utils/types';
 import {
   CONFIG_DIR,
   DEFAULT_MAX_DEPTH,
   DEFAULT_MAX_DIR_SIZE,
 } from '../constants';
-import { IgnoreManager } from '../utils/ignore';
-import { zipUtility } from '../utils/zip';
-import { toReadableSize } from '../utils/files';
-import { getTempPath2501 } from '../utils/platform';
 import { RemoteExecutor } from '../remoteExecution/remoteExecutor';
+import {
+  getDirectoryFiles,
+  getDirectoryMd5Hash,
+  toReadableSize,
+} from '../utils/files';
+import { IgnoreManager } from '../utils/ignore';
+import Logger from '../utils/logger';
+import { getTempPath2501 } from '../utils/platform';
+import {
+  DirectoryMd5Hash,
+  WorkspaceDiff,
+  WorkspaceState,
+} from '../utils/types';
+import { zipUtility } from '../utils/zip';
 
 export function resolveWorkspacePath(options: { workspace?: string }): string {
-  const executor = RemoteExecutor.instance;
-  if (executor.isInitialized()) {
-    // from this point we know that the agent exists.
-    const { user } = executor.getConfig();
-    //TODO implement the windows path.
-    const remoteWorkspace = `/home/${user}`;
-    // still use the workspace if provided.
-    return options.workspace || remoteWorkspace;
-  }
-
   let finalPath = options.workspace || process.cwd();
   // Convert relative path to absolute path if necessary
   finalPath = path.isAbsolute(finalPath)
@@ -128,7 +121,7 @@ export async function getWorkspaceHash(
   agentId: string
 ): Promise<{ hash: DirectoryMd5Hash; diff: WorkspaceDiff }> {
   const executor = RemoteExecutor.instance;
-  if (executor.isInitialized()) {
+  if (executor.isEnabled()) {
     // TODO: Later we can use the remote executor to get the workspace state.
     // const remoteState = await getRemoteWorkspaceState(workspace, agentId);
     return {

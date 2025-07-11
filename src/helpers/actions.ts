@@ -16,7 +16,7 @@ export const ERRORFILE_PATH = path.join(LOG_DIR, 'errors.log');
 
 export function read_file(args: { path: string }): string | null {
   try {
-    if (RemoteExecutor.instance.isInitialized()) {
+    if (RemoteExecutor.instance.isEnabled()) {
       // For remote execution, we'll need to handle this differently
       // For now, return null to indicate file not found
       return null;
@@ -34,7 +34,7 @@ export async function write_file(args: {
   path: string;
   content: string;
 }): Promise<string> {
-  if (RemoteExecutor.instance.isInitialized()) {
+  if (RemoteExecutor.instance.isEnabled()) {
     const escapedContent = args.content.replace(/"/g, '\\"');
     try {
       await RemoteExecutor.instance.executeCommand(
@@ -91,7 +91,7 @@ export async function update_file({
   Logger.debug('Updating sections:', sectionsDiff);
 
   try {
-    const fileContent = RemoteExecutor.instance.isInitialized()
+    const fileContent = RemoteExecutor.instance.isEnabled()
       ? await RemoteExecutor.instance.executeCommand(`cat "${path}"`)
       : fs.readFileSync(path, 'utf8');
 
@@ -100,7 +100,7 @@ export async function update_file({
       diffSections: sectionsDiff,
     });
 
-    if (RemoteExecutor.instance.isInitialized()) {
+    if (RemoteExecutor.instance.isEnabled()) {
       // Write file remotely.
       await write_file({ path, content: newContent });
     } else {
@@ -156,7 +156,7 @@ export async function run_shell({
 }): Promise<string> {
   Logger.debug(`Running shell command: ${command}`);
 
-  if (RemoteExecutor.instance.isInitialized()) {
+  if (RemoteExecutor.instance.isEnabled()) {
     try {
       const result = await RemoteExecutor.instance.executeCommand(command);
 

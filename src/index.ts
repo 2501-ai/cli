@@ -131,7 +131,9 @@ program
   .hook('preAction', authMiddleware)
   .hook('preAction', initPlugins)
   .hook('preAction', initPluginCredentials)
-  .hook('postAction', RemoteExecutor.instance.disconnect)
+  .hook('postAction', () => {
+    RemoteExecutor.instance.disconnect();
+  })
   .action(async (query, options) => {
     Logger.debug('Query options:', options);
     await queryCommand(query, options);
@@ -163,7 +165,9 @@ program
     'Path to private key for remote execution'
   )
   .hook('preAction', authMiddleware)
-  .hook('postAction', RemoteExecutor.instance.disconnect)
+  .hook('postAction', () => {
+    RemoteExecutor.instance.disconnect();
+  })
   .action(async (options) => {
     Logger.debug('Init options:', options);
     await initCommand(options);

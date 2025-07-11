@@ -24,7 +24,7 @@ export class RemoteExecutor {
 
   init(config: RemoteExecConfig): void {
     if (!config || !config.enabled) {
-      throw new Error('Remote execution not configured');
+      throw new Error('Remote config is not enabled');
     }
 
     // Initialize appropriate executor based on type
@@ -40,22 +40,40 @@ export class RemoteExecutor {
     Logger.debug(`Initialized ${config.type} remote executor.`);
   }
 
-  async executeCommand(command: string, stdin?: string): Promise<string> {
-    if (!this.executor || !this.config) {
-      throw new Error('Remote executor not initialized. Call init() first.');
+  /**
+   * @returns true if the remote executor is configured.
+   */
+  isConfigured(): boolean {
+    return this.executor !== null && this.config !== null;
+  }
+
+  /**
+   * @returns true if the remote executor is initialized and enabled.
+   */
+  isEnabled(): boolean {
+    return (this.isConfigured() && this.config?.enabled) ?? false;
+  }
+
+  private throwIfNotInitialized(method: string): void {
+    if (!this.isConfigured()) {
+      throw new Error(
+        `[${method}] Remote executor not initialized. Call init() first.`
+      );
     }
+  }
+
+  async executeCommand(command: string, stdin?: string): Promise<string> {
+    this.throwIfNotInitialized('executeCommand');
 
     Logger.debug(`Executing remote command: ${command}`);
-    return this.executor.executeCommand(command, stdin);
+    return this.executor!.executeCommand(command, stdin);
   }
 
   async validateConnection(): Promise<boolean> {
-    if (!this.executor || !this.config) {
-      throw new Error('Remote executor not initialized. Call init() first.');
-    }
+    this.throwIfNotInitialized('validateConnection');
 
-    Logger.debug(`Validating connection for host: ${this.config.target}`);
-    return this.executor.validateConnection();
+    Logger.debug(`Validating connection for host: ${this.config!.target}`);
+    return this.executor!.validateConnection();
   }
 
   disconnect(): void {
@@ -71,21 +89,13 @@ export class RemoteExecutor {
     Logger.debug('Remote executor disconnected');
   }
 
-  isInitialized(): boolean {
-    return this.executor !== null && this.config !== null;
-  }
-
   getConfig(): RemoteExecConfig {
-    if (!this.executor || !this.config) {
-      throw new Error('Remote executor not initialized. Call init() first.');
-    }
-    return this.config;
+    this.throwIfNotInitialized('getConfig');
+    return this.config!;
   }
 
   getExecutorType(): 'unix' | 'win' {
-    if (!this.executor || !this.config) {
-      throw new Error('Remote executor not initialized. Call init() first.');
-    }
-    return this.config?.type || null;
+    this.throwIfNotInitialized('getExecutorType');
+    return this.config!.type;
   }
 }

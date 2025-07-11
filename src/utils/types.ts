@@ -61,10 +61,7 @@ export type FunctionAction = {
   args: any;
 };
 
-export type EngineCapability = 'stream';
-
 export type QueryResponseDTO = {
-  capabilities: EngineCapability[]; // stream
   response?: string;
   actions?: FunctionAction[];
   prompt?: string;
@@ -133,9 +130,10 @@ export interface RemoteExecConfig {
   user: string;
   password?: string;
   private_key?: string;
+  remote_workspace: string;
 }
 
-export interface AgentConfig {
+export interface CreateAgentResponse {
   id: string;
   name: string;
   workspace: string;
@@ -144,8 +142,13 @@ export interface AgentConfig {
   host_id?: string; // Optional, matches Agent.host_id
   key?: string; // Matches Agent.key
   cli_data?: Record<string, any>; // Matches Agent.cli_data
+}
+
+export interface AgentConfig extends CreateAgentResponse {
   // Remote execution configuration (optional, per-agent)
   remote_exec?: RemoteExecConfig;
+  // Remote workspace path (optional, per-agent)
+  remote_workspace?: string;
 }
 
 export const REMOTE_EXEC_TYPES = ['unix', 'win'] as const;

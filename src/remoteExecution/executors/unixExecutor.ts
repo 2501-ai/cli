@@ -3,6 +3,8 @@ import Logger from '../../utils/logger';
 import { RemoteExecConfig } from '../../utils/types';
 import { IRemoteExecutor } from '../remoteExecutor';
 
+const UNIX_COMMAND_WRAPPER = `source ~/.bashrc 2>/dev/null || true; source ~/.profile 2>/dev/null || true; source ~/.nvm/nvm.sh 2>/dev/null || true;`;
+
 export class UnixExecutor implements IRemoteExecutor {
   private static _instance: UnixExecutor;
   private client: Client | null = null;
@@ -46,7 +48,7 @@ export class UnixExecutor implements IRemoteExecutor {
 
   async connect(): Promise<void> {
     if (!this.config || !this.config.enabled) {
-      throw new Error('Remote execution not enabled for this agent');
+      throw new Error('Remote execution not configured');
     }
 
     // If already connected to the same agent, return
@@ -99,7 +101,7 @@ export class UnixExecutor implements IRemoteExecutor {
         }
 
         // Source common environment files to ensure PATH includes Node.js
-        const envCommand = `source ~/.bashrc 2>/dev/null || true; source ~/.profile 2>/dev/null || true; source ~/.nvm/nvm.sh 2>/dev/null || true; ${command}`;
+        const envCommand = `${UNIX_COMMAND_WRAPPER} ${command}`;
 
         this.client.exec(envCommand, (err, stream) => {
           if (err) {
@@ -116,7 +118,7 @@ export class UnixExecutor implements IRemoteExecutor {
                 new Error(`Command failed with exit code ${code}: ${stderr}`)
               );
             } else {
-              resolve(stdout);
+              resolve(stdout.replace(UNIX_COMMAND_WRAPPER, '').trim());
             }
           });
 
@@ -151,7 +153,6 @@ export class UnixExecutor implements IRemoteExecutor {
   async validateConnection(): Promise<boolean> {
     try {
       const result = await this.executeCommand('echo "connection_test"');
-      this.disconnect();
       return result.trim() === 'connection_test';
     } catch (error) {
       Logger.error('Connection validation failed:', error);

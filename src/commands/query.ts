@@ -39,6 +39,7 @@ import {
   WorkspaceState,
 } from '../utils/types';
 import { initCommand } from './init';
+import { RemoteExecutor } from '../remoteExecution/remoteExecutor';
 
 marked.use(markedTerminal() as MarkedExtension);
 
@@ -46,7 +47,10 @@ const logger = new Logger();
 
 const initializeAgentConfig = async (
   workspace: string
-): Promise<AgentConfig | null> => {
+): Promise<{
+  agentConfig: AgentConfig | null;
+  workspaceChanged: boolean;
+}> => {
   let eligibleAgent = getEligibleAgent(workspace);
   let force = false;
   if (!eligibleAgent) {
@@ -56,11 +60,16 @@ const initializeAgentConfig = async (
   }
 
   // Ensure workspace is always synchronized after initialization
+  let workspaceChanged = false;
   if (eligibleAgent) {
-    await synchronizeWorkspace(eligibleAgent, workspace, force);
+    workspaceChanged = await synchronizeWorkspace(
+      eligibleAgent,
+      workspace,
+      force
+    );
   }
 
-  return eligibleAgent;
+  return { agentConfig: eligibleAgent, workspaceChanged };
 };
 
 const executeActions = async (
@@ -237,31 +246,25 @@ export const queryCommand = async (
     const stream = options.stream ?? configManager.get('stream') ?? true;
 
     ////////// Agent Init //////////
-    const agentConfig = await initializeAgentConfig(workspace);
+    const { agentConfig, workspaceChanged } =
+      await initializeAgentConfig(workspace);
 
     // If not agent is eligible, it usually means there was an error during the init process that is already displayed.
     if (!agentConfig) {
       return;
     }
-    const agentManager = new AgentManager({
-      workspace,
-      agentConfig,
-    });
+    if (agentConfig.remote_exec?.enabled) {
+      RemoteExecutor.instance.init(agentConfig.remote_exec);
+    }
 
     ////////// Workflow start //////////
-    let workspaceChanged = false;
     let taskId = options.taskId;
+    if (!taskId) {
+      const taskResult = await createTask(agentConfig.id, query);
+      taskId = taskResult.id;
+    }
 
-    // Run synchronizeWorkspace and createTask in parallel
-    const [syncResult, taskResult] = await Promise.all([
-      synchronizeWorkspace(agentConfig, workspace),
-      taskId
-        ? Promise.resolve({ id: taskId })
-        : createTask(agentConfig.id, query),
-    ]);
-
-    workspaceChanged = syncResult;
-    taskId = taskResult.id;
+    Logger.debug('Task ID:', taskId);
 
     const workspaceData = getDirectoryMd5Hash({
       directoryPath: workspace,
@@ -275,6 +278,10 @@ export const queryCommand = async (
       ' \n '
     );
 
+    const agentManager = new AgentManager({
+      workspace,
+      agentConfig,
+    });
     logger.start('Thinking');
     const agentResponse = await queryAgent(
       agentManager.agentConfig.id,

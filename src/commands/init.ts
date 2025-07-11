@@ -9,7 +9,7 @@ import { isDirUnsafe } from '../helpers/security';
 import { resolveWorkspacePath } from '../helpers/workspace';
 import { ConfigManager } from '../managers/configManager';
 import { TelemetryManager } from '../managers/telemetryManager';
-import { configureRemoteExecution } from '../remoteExecution/config';
+import { initRemoteExecution } from '../remoteExecution';
 import { RemoteExecutor } from '../remoteExecution/remoteExecutor';
 import { getRemoteSystemInfo } from '../remoteExecution/remoteSystemInfo';
 import { addAgent } from '../utils/conf';
@@ -17,19 +17,20 @@ import Logger from '../utils/logger';
 import { DISCORD_LINK } from '../utils/messaging';
 import { getTempPath2501 } from '../utils/platform';
 import { getSystemInfo } from '../utils/systemInfo';
-import { Configuration, RemoteExecConfig } from '../utils/types';
+import { Configuration } from '../utils/types';
 
 axios.defaults.baseURL = `${API_HOST}${API_VERSION}`;
 axios.defaults.timeout = 120 * 1000;
 
-interface InitCommandOptions {
+export interface InitCommandOptions {
   name?: string;
   workspace?: string | boolean;
   config?: string;
   ignoreUnsafe?: boolean;
   remoteExec?: string;
   remoteExecType?: string;
-  remoteExecPassword?: string;
+  remotePrivateKey?: string;
+  remoteWorkspace?: string;
 }
 
 const logger = new Logger();
@@ -52,7 +53,7 @@ async function fetchConfiguration(configKey: string): Promise<Configuration> {
 export async function getWorkspacePath(
   options: InitCommandOptions
 ): Promise<string> {
-  if (RemoteExecutor.instance.isInitialized()) {
+  if (RemoteExecutor.instance.isEnabled()) {
     return resolveWorkspacePath({
       workspace:
         typeof options.workspace === 'string' ? options.workspace : undefined,
@@ -93,40 +94,6 @@ export async function getWorkspacePath(
   return finalPath;
 }
 
-async function initRemoteExecution(
-  options: InitCommandOptions
-): Promise<RemoteExecConfig | undefined> {
-  // Configure remote execution if specified
-  const remoteExecConfig = configureRemoteExecution(options);
-
-  // Validate remote connection if configured
-  if (remoteExecConfig?.enabled) {
-    logger.start('Testing remote connection...');
-
-    RemoteExecutor.instance.init(remoteExecConfig);
-
-    try {
-      const isValid = await RemoteExecutor.instance.validateConnection();
-
-      if (!isValid) {
-        logger.cancel(
-          'Remote connection validation failed. Please check your settings.'
-        );
-        process.exit(1);
-      }
-
-      logger.stop('Remote connection validated successfully');
-    } catch (error) {
-      logger.cancel(
-        `Remote connection validation failed: ${(error as Error).message}`
-      );
-      process.exit(1);
-    }
-  }
-
-  return remoteExecConfig;
-}
-
 // This function will be called when the `init` command is executed
 export const initCommand = async (
   options: InitCommandOptions
@@ -154,14 +121,12 @@ export const initCommand = async (
       configManager.set('disable_spinner', shouldDisableSpinner);
     }
 
-    logger.start('Creating agent');
-    const configKey = options.config || 'SYSOPS';
-
-    const remoteExecConfig = await initRemoteExecution(options);
-    const systemInfoPromise = remoteExecConfig
+    const remoteExecConfig = await initRemoteExecution(options, logger);
+    const systemInfoPromise = remoteExecConfig?.enabled
       ? getRemoteSystemInfo()
       : getSystemInfo();
 
+    const configKey = options.config || 'SYSOPS';
     const parallelPromises = [
       getWorkspacePath(options),
       systemInfoPromise,
@@ -177,18 +142,24 @@ export const initCommand = async (
 
     Logger.debug('systemInfo results:', { systemInfo });
 
-    const createResponse = await createAgent(
-      workspacePath,
+    logger.start('Creating agent');
+    // Give the agent a workspace that is the remote workspace if remote execution is enabled.
+    const path = remoteExecConfig
+      ? remoteExecConfig.remote_workspace
+      : workspacePath;
+
+    const { id, name } = await createAgent(
+      path,
       agentConfig,
       systemInfo,
       configManager.get('engine')
     );
-    Logger.debug('Agent created:', createResponse);
+    Logger.debug('Agent created:', { id, name });
 
     // Add agent to config.
     addAgent({
-      id: createResponse.id,
-      name: createResponse.name,
+      id,
+      name,
       workspace: workspacePath,
       configuration: agentConfig.id,
       engine: configManager.get('engine'),
@@ -196,9 +167,9 @@ export const initCommand = async (
     });
 
     TelemetryManager.instance.updateContext({
-      agentId: createResponse.id,
+      agentId: id,
     });
-    logger.stop(`Agent ${createResponse.id} created`);
+    logger.stop(`Agent ${id} created`);
   } catch (e: unknown) {
     logger.handleError(e as Error, (e as Error).message);
   }

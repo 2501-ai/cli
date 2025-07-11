@@ -6,7 +6,7 @@ import { ConfigManager } from '../managers/configManager';
 import { pluginService } from '../utils/plugins';
 import { getHostInfo } from '../utils/systemInfo';
 import {
-  AgentConfig,
+  CreateAgentResponse,
   Configuration,
   EngineType,
   QueryResponseDTO,
@@ -33,7 +33,7 @@ export const createAgent = async (
   selected_config: Configuration,
   sysinfo: SystemInfo,
   engine: EngineType
-): Promise<AgentConfig> => {
+): Promise<CreateAgentResponse> => {
   const hostInfo = await getHostInfo();
 
   const { data: createResponse } = await axios.post('/agents', {
@@ -45,6 +45,7 @@ export const createAgent = async (
     host: hostInfo,
   });
 
+  // TODO: make engine return less data.
   return createResponse;
 };
 
