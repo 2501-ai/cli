@@ -123,12 +123,17 @@ program
     'Remote execution type (unix or win)',
     'unix'
   )
+  .option(
+    '--remote-private-key <privateKey>',
+    'Path to private key for remote execution'
+  )
   .option('--remote-exec-password <password>', 'Password for remote execution')
   .hook('preAction', authMiddleware)
   .hook('preAction', initPlugins)
   .hook('preAction', initPluginCredentials)
   .hook('postAction', RemoteExecutor.instance.disconnect)
   .action(async (query, options) => {
+    Logger.debug('Query options:', options);
     await queryCommand(query, options);
   });
 
@@ -153,9 +158,14 @@ program
     'unix'
   )
   .option('--remote-exec-password <password>', 'Password for remote execution')
+  .option(
+    '--remote-private-key <privateKey>',
+    'Path to private key for remote execution'
+  )
   .hook('preAction', authMiddleware)
   .hook('postAction', RemoteExecutor.instance.disconnect)
   .action(async (options) => {
+    Logger.debug('Init options:', options);
     await initCommand(options);
   });
 

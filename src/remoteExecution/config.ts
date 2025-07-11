@@ -5,6 +5,7 @@ export function configureRemoteExecution(options: {
   remoteExec?: string;
   remoteExecType?: string;
   remoteExecPassword?: string;
+  remotePrivateKey?: string;
 }): AgentConfig['remote_exec'] {
   if (!options.remoteExec) {
     return undefined;
@@ -32,5 +33,6 @@ export function configureRemoteExecution(options: {
     type: execType as any,
     user: user,
     password: options.remoteExecPassword,
+    private_key: options.remotePrivateKey,
   };
 }
