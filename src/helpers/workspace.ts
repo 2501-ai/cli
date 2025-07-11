@@ -3,7 +3,11 @@ import path from 'path';
 
 import Logger from '../utils/logger';
 import { getDirectoryMd5Hash, getDirectoryFiles } from '../utils/files';
-import { WorkspaceDiff, WorkspaceState } from '../utils/types';
+import {
+  DirectoryMd5Hash,
+  WorkspaceDiff,
+  WorkspaceState,
+} from '../utils/types';
 import {
   CONFIG_DIR,
   DEFAULT_MAX_DEPTH,
@@ -13,13 +17,15 @@ import { IgnoreManager } from '../utils/ignore';
 import { zipUtility } from '../utils/zip';
 import { toReadableSize } from '../utils/files';
 import { getTempPath2501 } from '../utils/platform';
-import { ConfigManager } from '../managers/configManager';
+import { RemoteExecutor } from '../remoteExecution/remoteExecutor';
 
 export function resolveWorkspacePath(options: { workspace?: string }): string {
-  const remoteExec = ConfigManager.instance.get('remote_exec');
-  if (remoteExec) {
+  const executor = RemoteExecutor.instance;
+  if (executor.isInitialized()) {
+    // from this point we know that the agent exists.
+    const agent = executor.getCurrentAgent()!;
     //TODO implement the windows path.
-    const remoteWorkspace = `/home/${ConfigManager.instance.get('remote_exec_user')}`;
+    const remoteWorkspace = `/home/${agent.remote_exec?.user}`;
     // still use the workspace if provided.
     return options.workspace || remoteWorkspace;
   }
@@ -115,9 +121,32 @@ export async function updateWorkspaceState(
 }
 
 /**
- * Gets workspace state and changes in a single pass
+ * Gets workspace hash and changes in a single pass
  */
-export async function getWorkspaceState(workspace: string, agentId: string) {
+export async function getWorkspaceHash(
+  workspace: string,
+  agentId: string
+): Promise<{ hash: DirectoryMd5Hash; diff: WorkspaceDiff }> {
+  const executor = RemoteExecutor.instance;
+  if (executor.isInitialized()) {
+    // TODO: Later we can use the remote executor to get the workspace state.
+    // const remoteState = await getRemoteWorkspaceState(workspace, agentId);
+    return {
+      hash: {
+        md5: '',
+        fileHashes: new Map(),
+        directoryPath: workspace,
+        totalSize: 0,
+      },
+      diff: {
+        added: [],
+        removed: [],
+        modified: [],
+        hasChanges: false,
+        isEmpty: true,
+      },
+    };
+  }
   // Compute hash only once
   const currentState = getDirectoryMd5Hash({
     directoryPath: workspace,
@@ -133,14 +162,14 @@ export async function getWorkspaceState(workspace: string, agentId: string) {
   });
 
   return {
-    currentState,
+    hash: currentState,
     diff,
   };
 }
 
 // Modify getWorkspaceChanges to use the shared computation
 export async function getWorkspaceChanges(workspace: string, agentId: string) {
-  const { diff } = await getWorkspaceState(workspace, agentId);
+  const { diff } = await getWorkspaceHash(workspace, agentId);
   return diff;
 }
 

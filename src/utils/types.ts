@@ -10,6 +10,13 @@ export interface WorkspaceState {
   agent_id: string;
 }
 
+export interface DirectoryMd5Hash {
+  md5: string;
+  fileHashes: Map<string, string>;
+  directoryPath: string;
+  totalSize: number;
+}
+
 export interface Configuration {
   id: string;
   prompt: string;
@@ -124,10 +131,19 @@ export interface AgentConfig {
   workspace: string;
   engine: EngineType;
   configuration: string;
-  capabilities: EngineCapability[];
   host_id?: string; // Optional, matches Agent.host_id
   key?: string; // Matches Agent.key
   cli_data?: Record<string, any>; // Matches Agent.cli_data
+  // Remote execution configuration (optional, per-agent)
+  remote_exec?: {
+    enabled: boolean;
+    target: string;
+    port: number;
+    type: (typeof REMOTE_EXEC_TYPES)[number];
+    user: string;
+    password?: string;
+    private_key?: string;
+  };
 }
 
 export const REMOTE_EXEC_TYPES = ['unix', 'win'] as const;
@@ -142,13 +158,6 @@ export type LocalConfig = {
   disable_spinner: boolean;
   telemetry_enabled: boolean;
   auto_update: boolean;
-  remote_exec: boolean;
-  remote_exec_target: string;
-  remote_exec_port: number;
-  remote_exec_type: (typeof REMOTE_EXEC_TYPES)[number];
-  remote_exec_private_key: string;
-  remote_exec_user: string;
-  remote_exec_password: string;
 };
 
 export type LocalConfigKey = keyof LocalConfig;

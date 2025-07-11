@@ -19,7 +19,7 @@ import {
 } from '../helpers/streams';
 import {
   generateWorkspaceZip,
-  getWorkspaceState,
+  getWorkspaceHash,
   resolveWorkspacePath,
   writeWorkspaceState,
 } from '../helpers/workspace';
@@ -47,20 +47,20 @@ const logger = new Logger();
 const initializeAgentConfig = async (
   workspace: string
 ): Promise<AgentConfig | null> => {
-  let eligible = getEligibleAgent(workspace);
+  let eligibleAgent = getEligibleAgent(workspace);
   let force = false;
-  if (!eligible) {
+  if (!eligibleAgent) {
     await initCommand({ workspace });
-    eligible = getEligibleAgent(workspace);
+    eligibleAgent = getEligibleAgent(workspace);
     force = true;
   }
 
   // Ensure workspace is always synchronized after initialization
-  if (eligible) {
-    await synchronizeWorkspace(eligible.id, workspace, force);
+  if (eligibleAgent) {
+    await synchronizeWorkspace(eligibleAgent, workspace, force);
   }
 
-  return eligible;
+  return eligibleAgent;
 };
 
 const executeActions = async (
@@ -107,32 +107,31 @@ const executeActions = async (
  * @returns True if the workspace was synchronized, false otherwise.
  */
 const synchronizeWorkspace = async (
-  agentId: string,
+  agent: AgentConfig,
   workspace: string,
   force: boolean = false
 ): Promise<boolean> => {
   Logger.debug('Synchronizing workspace:', workspace);
-  if (ConfigManager.instance.get('remote_exec')) {
+  // Remote execution agents don't need workspace synchronization
+  // since they operate on remote files directly
+  if (agent?.remote_exec?.enabled) {
     return false;
   }
 
   // Get both state and changes in a single pass
-  const { currentState, diff: workspaceDiff } = await getWorkspaceState(
-    workspace,
-    agentId
-  );
-  Logger.debug('Workspace diff:', { workspaceDiff });
+  const { hash, diff } = await getWorkspaceHash(workspace, agent.id);
+  Logger.debug('Workspace diff:', { diff });
 
-  if (workspaceDiff.isEmpty) return false;
+  if (diff.isEmpty) return false;
 
-  if (workspaceDiff.hasChanges || force) {
+  if (diff.hasChanges || force) {
     logger.start('Synchronizing workspace');
 
     Logger.debug('Agent Workspace has changes, synchronizing...');
     // Pass the already computed files to avoid recomputation
     const files = await generateWorkspaceZip(workspace, {
-      fileHashes: currentState.fileHashes,
-      totalSize: currentState.totalSize,
+      fileHashes: hash.fileHashes,
+      totalSize: hash.totalSize,
     });
 
     if (process.env.TFZO_NODE_ENV !== 'dev') {
@@ -141,14 +140,14 @@ const synchronizeWorkspace = async (
       Logger.debug('Agent : Workspace ZIP deleted:', files[0].path);
     }
 
-    await indexFiles(agentId, files);
+    await indexFiles(agent.id, files);
 
     // Update workspace state using the already computed state
     const newState: WorkspaceState = {
-      state_hash: currentState.md5,
-      file_hashes: currentState.fileHashes,
+      state_hash: hash.md5,
+      file_hashes: hash.fileHashes,
       path: workspace,
-      agent_id: agentId,
+      agent_id: agent.id,
     };
     writeWorkspaceState(newState);
     logger.stop('Workspace synchronized');
@@ -245,11 +244,8 @@ export const queryCommand = async (
       return;
     }
     const agentManager = new AgentManager({
-      id: agentConfig.id,
-      name: agentConfig.name,
-      engine: agentConfig.engine,
-      capabilities: agentConfig.capabilities,
       workspace,
+      agentConfig,
     });
 
     ////////// Workflow start //////////
@@ -258,7 +254,7 @@ export const queryCommand = async (
 
     // Run synchronizeWorkspace and createTask in parallel
     const [syncResult, taskResult] = await Promise.all([
-      synchronizeWorkspace(agentConfig.id, workspace),
+      synchronizeWorkspace(agentConfig, workspace),
       taskId
         ? Promise.resolve({ id: taskId })
         : createTask(agentConfig.id, query),
@@ -281,7 +277,7 @@ export const queryCommand = async (
 
     logger.start('Thinking');
     const agentResponse = await queryAgent(
-      agentManager.id,
+      agentManager.agentConfig.id,
       workspaceChanged,
       taskId,
       workspaceTree,
@@ -316,7 +312,7 @@ export const queryCommand = async (
       const toolOutputs = await executeActions(actions, agentManager);
       logger.start('Reviewing the job');
       const submitResponse = await submitToolOutputs(
-        agentManager.id,
+        agentManager.agentConfig.id,
         taskId,
         toolOutputs,
         stream

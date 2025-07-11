@@ -1,18 +1,15 @@
-import { ConfigManager } from '../managers/configManager';
-import { RemoteExecutor } from '../managers/remoteExecutor';
-import { WinRMExecutor } from '../managers/winrmExecutor';
-import Logger from './logger';
+import { RemoteExecutor } from './remoteExecutor';
+import Logger from '../utils/logger';
 import {
   DEFAULT_PACKAGE_EXCLUSIONS,
   LINUX_PACKAGE_MANAGERS,
   MACOS_PACKAGE_MANAGERS,
   PackageManagerDefinition,
   WINDOWS_PACKAGE_MANAGERS,
-} from './systemInfo';
-import { SystemInfo } from './types';
+} from '../utils/systemInfo';
+import { AgentConfig, SystemInfo } from '../utils/types';
 
 async function getRemoteGlobalNpmPackages(
-  executor: { executeCommand: (cmd: string) => Promise<string> },
   remoteType: 'unix' | 'win'
 ): Promise<string[]> {
   try {
@@ -21,6 +18,7 @@ async function getRemoteGlobalNpmPackages(
         ? 'npm list -g --depth=0 | findstr /R "^[├└]" | findstr "@"'
         : 'npm list -g --depth=0 | awk "{print $2}" | grep @';
 
+    const executor = RemoteExecutor.instance;
     const output = await executor.executeCommand(command);
     const packageLines = output.trim().split('\n').filter(Boolean);
 
@@ -52,11 +50,9 @@ async function getRemoteGlobalNpmPackages(
 /**
  * Command execution wrapper to handle errors and return a consistent format.
  */
-async function getRemoteVersion(
-  command: string,
-  executor: { executeCommand: (cmd: string) => Promise<string> }
-): Promise<string> {
+async function getRemoteVersion(command: string): Promise<string> {
   try {
+    const executor = RemoteExecutor.instance;
     const result = await executor.executeCommand(command);
     return result.trim();
   } catch (error) {
@@ -76,26 +72,23 @@ async function getRemoteVersion(
 }
 
 async function getRemotePythonVersion(
-  executor: { executeCommand: (cmd: string) => Promise<string> },
   remoteType: 'unix' | 'win'
 ): Promise<string> {
   // For Unix-like systems, python3 is preferred.
   if (remoteType === 'unix') {
-    const py3Version = await getRemoteVersion('python3 --version', executor);
+    const py3Version = await getRemoteVersion('python3 --version');
     if (py3Version !== '(error)') {
       return py3Version;
     }
   }
   // Fallback to 'python' for Windows or if 'python3' fails on Unix.
-  return getRemoteVersion('python --version', executor);
+  return getRemoteVersion('python --version');
 }
 
-async function getRemoteOSInfo(
-  executor: { executeCommand: (cmd: string) => Promise<string> },
-  remoteType: 'unix' | 'win'
-): Promise<string> {
+async function getRemoteOSInfo(remoteType: 'unix' | 'win'): Promise<string> {
   const command = remoteType === 'win' ? 'systeminfo' : 'uname -a';
   try {
+    const executor = RemoteExecutor.instance;
     const result = await executor.executeCommand(command);
     return result.trim();
   } catch (error) {
@@ -108,12 +101,12 @@ async function getRemoteOSInfo(
 }
 
 async function getUnixRemotePackages(): Promise<Record<string, string>> {
-  const remoteExecutor = RemoteExecutor.instance;
+  const executor = RemoteExecutor.instance;
   let platformPms: readonly PackageManagerDefinition[] = [];
 
   // 1. Detect if Linux or macOS
   try {
-    const uname = await remoteExecutor.executeCommand('uname -s');
+    const uname = await executor.executeCommand('uname -s');
     if (uname.toLowerCase().includes('linux')) {
       platformPms = LINUX_PACKAGE_MANAGERS;
       Logger.debug('Detected remote OS: Linux');
@@ -134,7 +127,7 @@ async function getUnixRemotePackages(): Promise<Record<string, string>> {
     await Promise.all(
       platformPms.map(async (pm) => {
         try {
-          await remoteExecutor.executeCommand(`command -v ${pm.cmd}`);
+          await executor.executeCommand(`command -v ${pm.cmd}`);
           return pm;
         } catch (e) {
           return null;
@@ -158,8 +151,7 @@ async function getUnixRemotePackages(): Promise<Record<string, string>> {
     detectedPms.map(async (pm) => {
       try {
         const listCmd = pm.listCmd(exclusionPattern);
-        // No need to escape spaces since RemoteExecutor handles the command properly
-        const stdout = await remoteExecutor.executeCommand(listCmd);
+        const stdout = await executor.executeCommand(listCmd);
         const packages = stdout.split('\n').filter(Boolean).sort();
         if (packages.length > 0) {
           return { [`packages installed via ${pm.cmd}`]: packages.join(',') };
@@ -176,7 +168,7 @@ async function getUnixRemotePackages(): Promise<Record<string, string>> {
 }
 
 async function getWindowsRemotePackages(): Promise<Record<string, string>> {
-  const remoteExecutor = WinRMExecutor.instance;
+  const executor = RemoteExecutor.instance;
   const platformPms = WINDOWS_PACKAGE_MANAGERS;
 
   // 1. Detect which package managers are installed
@@ -185,7 +177,7 @@ async function getWindowsRemotePackages(): Promise<Record<string, string>> {
       platformPms.map(async (pm) => {
         try {
           // `where` is the equivalent of `command -v` on Windows
-          await remoteExecutor.executeCommand(`where ${pm.cmd}`);
+          await executor.executeCommand(`where ${pm.cmd}`);
           return pm;
         } catch (e) {
           return null;
@@ -209,8 +201,7 @@ async function getWindowsRemotePackages(): Promise<Record<string, string>> {
     detectedPms.map(async (pm) => {
       try {
         const listCmd = pm.listCmd(exclusionPattern);
-        // No need to escape spaces since WinRMExecutor handles the command properly
-        const stdout = await remoteExecutor.executeCommand(listCmd);
+        const stdout = await executor.executeCommand(listCmd);
         const packages = stdout.split('\n').filter(Boolean).sort();
         if (packages.length > 0) {
           return { [`packages installed via ${pm.cmd}`]: packages.join(',') };
@@ -226,12 +217,9 @@ async function getWindowsRemotePackages(): Promise<Record<string, string>> {
   return allPackages.reduce((acc, curr) => ({ ...acc, ...curr }), {});
 }
 
-export async function getRemoteInstalledPackages(): Promise<
-  Record<string, string>
-> {
-  const config = ConfigManager.instance;
-  const remoteType = config.get('remote_exec_type');
-
+async function getRemoteInstalledPackages(
+  remoteType: 'unix' | 'win'
+): Promise<Record<string, string>> {
   Logger.debug(`Getting remote packages for type: ${remoteType}`);
 
   if (remoteType === 'win') {
@@ -241,13 +229,12 @@ export async function getRemoteInstalledPackages(): Promise<
   }
 }
 
-export async function getRemoteSystemInfo(): Promise<SystemInfo> {
-  const config = ConfigManager.instance;
-  const remoteType = config.get('remote_exec_type');
-  const executor =
-    remoteType === 'win' ? WinRMExecutor.instance : RemoteExecutor.instance;
+export async function getRemoteSystemInfo(
+  agent: AgentConfig
+): Promise<SystemInfo> {
+  const remoteType = RemoteExecutor.instance.getExecutorType() || 'unix';
 
-  Logger.debug(`Getting remote system info for type: ${remoteType}`);
+  Logger.debug(`Getting remote system info for agent: ${agent.id}`);
 
   const [
     installed_packages,
@@ -256,11 +243,11 @@ export async function getRemoteSystemInfo(): Promise<SystemInfo> {
     phpVersion,
     globalNpmPackages,
   ] = await Promise.all([
-    getRemoteInstalledPackages(),
-    getRemoteOSInfo(executor, remoteType),
-    getRemotePythonVersion(executor, remoteType),
-    getRemoteVersion('php --version', executor),
-    getRemoteGlobalNpmPackages(executor, remoteType),
+    getRemoteInstalledPackages(remoteType),
+    getRemoteOSInfo(remoteType),
+    getRemotePythonVersion(remoteType),
+    getRemoteVersion('php --version'),
+    getRemoteGlobalNpmPackages(remoteType),
   ]);
 
   const sysInfo: SystemInfo['sysInfo'] = {
@@ -272,7 +259,7 @@ export async function getRemoteSystemInfo(): Promise<SystemInfo> {
   return {
     sysInfo,
     nodeInfo: {
-      version: await getRemoteVersion('node --version', executor),
+      version: await getRemoteVersion('node --version'),
       global_packages: globalNpmPackages,
     },
     pythonInfo: {

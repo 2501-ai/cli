@@ -6,6 +6,7 @@ import { ConfigManager } from '../managers/configManager';
 import { pluginService } from '../utils/plugins';
 import { getHostInfo } from '../utils/systemInfo';
 import {
+  AgentConfig,
   Configuration,
   EngineType,
   QueryResponseDTO,
@@ -32,7 +33,7 @@ export const createAgent = async (
   selected_config: Configuration,
   sysinfo: SystemInfo,
   engine: EngineType
-) => {
+): Promise<AgentConfig> => {
   const hostInfo = await getHostInfo();
 
   const { data: createResponse } = await axios.post('/agents', {

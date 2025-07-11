@@ -9,14 +9,14 @@ import { isDirUnsafe } from '../helpers/security';
 import { resolveWorkspacePath } from '../helpers/workspace';
 import { ConfigManager } from '../managers/configManager';
 import { TelemetryManager } from '../managers/telemetryManager';
+import { configureRemoteExecution } from '../remoteExecution/config';
+import { RemoteExecutor } from '../remoteExecution/remoteExecutor';
 import { addAgent } from '../utils/conf';
 import Logger from '../utils/logger';
 import { DISCORD_LINK } from '../utils/messaging';
-import { getSystemInfo } from '../utils/systemInfo';
 import { getTempPath2501 } from '../utils/platform';
+import { getSystemInfo } from '../utils/systemInfo';
 import { Configuration } from '../utils/types';
-import { getRemoteSystemInfo } from '../utils/remoteSystemInfo';
-import { RemoteExecutor } from '../managers/remoteExecutor';
 
 axios.defaults.baseURL = `${API_HOST}${API_VERSION}`;
 axios.defaults.timeout = 120 * 1000;
@@ -26,6 +26,9 @@ interface InitCommandOptions {
   workspace?: string | boolean;
   config?: string;
   ignoreUnsafe?: boolean;
+  remoteExec?: string;
+  remoteExecType?: string;
+  remoteExecPassword?: string;
 }
 
 const logger = new Logger();
@@ -48,12 +51,8 @@ async function fetchConfiguration(configKey: string): Promise<Configuration> {
 export async function getWorkspacePath(
   options: InitCommandOptions
 ): Promise<string> {
-  if (ConfigManager.instance.get('remote_exec')) {
-    return resolveWorkspacePath({
-      workspace:
-        typeof options.workspace === 'string' ? options.workspace : undefined,
-    });
-  }
+  // For now, we'll handle remote workspace resolution in the actions
+  // when they have access to the agent configuration
 
   if (options.workspace === false) {
     const path = getTempPath2501(Date.now().toString());
@@ -119,10 +118,7 @@ export const initCommand = async (
     logger.start('Creating agent');
     const configKey = options.config || 'SYSOPS';
 
-    await RemoteExecutor.instance.connect();
-    const systemInfoPromise = ConfigManager.instance.get('remote_exec')
-      ? getRemoteSystemInfo()
-      : getSystemInfo();
+    const systemInfoPromise = getSystemInfo();
 
     const parallelPromises = [
       getWorkspacePath(options),
@@ -147,14 +143,45 @@ export const initCommand = async (
     );
     Logger.debug('Agent created:', createResponse);
 
+    // Configure remote execution if specified
+    const remoteExecConfig = configureRemoteExecution(options);
+
+    // Validate remote connection if configured
+    if (remoteExecConfig?.enabled) {
+      logger.start('Testing remote connection...');
+
+      RemoteExecutor.instance.init({
+        ...createResponse,
+        remote_exec: remoteExecConfig,
+      });
+
+      try {
+        const isValid = await RemoteExecutor.instance.validateConnection();
+
+        if (!isValid) {
+          logger.cancel(
+            'Remote connection validation failed. Please check your settings.'
+          );
+          process.exit(1);
+        }
+
+        logger.stop('Remote connection validated successfully');
+      } catch (error) {
+        logger.cancel(
+          `Remote connection validation failed: ${(error as Error).message}`
+        );
+        process.exit(1);
+      }
+    }
+
     // Add agent to config.
     addAgent({
       id: createResponse.id,
       name: createResponse.name,
-      capabilities: createResponse.capabilities,
       workspace: workspacePath,
       configuration: agentConfig.id,
       engine: configManager.get('engine'),
+      remote_exec: remoteExecConfig,
     });
 
     TelemetryManager.instance.updateContext({

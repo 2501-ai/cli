@@ -1,36 +1,52 @@
 import { Client, ConnectConfig } from 'ssh2';
-import { ConfigManager } from './configManager';
-import Logger from '../utils/logger';
+import Logger from '../../utils/logger';
+import { AgentConfig } from '../../utils/types';
 
-export class RemoteExecutor {
-  private static _instance: RemoteExecutor;
+export class UnixExecutor {
+  private static _instance: UnixExecutor;
   private client: Client | null = null;
   private isConnected = false;
+  private currentAgent: AgentConfig | null = null;
 
   static get instance() {
-    if (!RemoteExecutor._instance) {
-      RemoteExecutor._instance = new RemoteExecutor();
+    if (!UnixExecutor._instance) {
+      UnixExecutor._instance = new UnixExecutor();
     }
-    return RemoteExecutor._instance;
+    return UnixExecutor._instance;
+  }
+
+  init(agent: AgentConfig): void {
+    this.currentAgent = agent;
+    this.client = null;
+    this.isConnected = false;
   }
 
   private getConnectionConfig(): ConnectConfig {
-    const config = ConfigManager.instance;
+    if (
+      !this.currentAgent?.remote_exec ||
+      !this.currentAgent?.remote_exec.enabled
+    ) {
+      throw new Error('Remote execution not configured for this agent');
+    }
 
     const connectionConfig: ConnectConfig = {
-      host: config.get('remote_exec_target'),
-      port: config.get('remote_exec_port'),
-      username: config.get('remote_exec_user'),
-      password: config.get('remote_exec_password'),
+      host: this.currentAgent.remote_exec.target,
+      port: this.currentAgent.remote_exec.port,
+      username: this.currentAgent.remote_exec.user,
+      password: this.currentAgent.remote_exec.password,
       // debug: (message: string) => Logger.debug(message),
     };
 
     // Add private key if specified
-    const privateKeyPath = config.get('remote_exec_private_key');
-    if (privateKeyPath) {
-      Logger.debug('Using private key:', privateKeyPath);
+    if (this.currentAgent.remote_exec.private_key) {
+      Logger.debug(
+        'Using private key:',
+        this.currentAgent.remote_exec.private_key
+      );
       const fs = require('fs');
-      connectionConfig.privateKey = fs.readFileSync(privateKeyPath);
+      connectionConfig.privateKey = fs.readFileSync(
+        this.currentAgent.remote_exec.private_key
+      );
     }
 
     return connectionConfig;
@@ -38,10 +54,24 @@ export class RemoteExecutor {
 
   async connect(): Promise<void> {
     if (
-      (this.isConnected && this.client) ||
-      !ConfigManager.instance.get('remote_exec')
+      !this.currentAgent?.remote_exec ||
+      !this.currentAgent?.remote_exec.enabled
+    ) {
+      throw new Error('Remote execution not enabled for this agent');
+    }
+
+    // If already connected to the same agent, return
+    if (
+      this.isConnected &&
+      this.client &&
+      this.currentAgent?.id === this.currentAgent.id
     ) {
       return;
+    }
+
+    // Disconnect from previous connection if different agent
+    if (this.isConnected && this.currentAgent?.id !== this.currentAgent.id) {
+      this.disconnect();
     }
 
     return new Promise((resolve, reject) => {
@@ -125,6 +155,7 @@ export class RemoteExecutor {
       this.client.end();
       this.client = null;
       this.isConnected = false;
+      this.currentAgent = null;
     }
   }
 

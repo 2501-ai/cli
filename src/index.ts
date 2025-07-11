@@ -16,7 +16,7 @@ import Logger from './utils/logger';
 import { DISCORD_LINK } from './utils/messaging';
 import { getTempPath2501 } from './utils/platform';
 import { initPlugins } from './utils/plugins';
-import { RemoteExecutor } from './managers/remoteExecutor';
+import { RemoteExecutor } from './remoteExecution/remoteExecutor';
 
 // Initialize global error handlers before any other code
 errorHandler.initializeGlobalHandlers();
@@ -90,8 +90,6 @@ Command.prototype.action = function (fn) {
           this.name ? this.name() : 'unknown',
           { exitCode: 1 }
         );
-      } finally {
-        RemoteExecutor.instance.disconnect();
       }
     })();
   });
@@ -116,6 +114,16 @@ program
   .option('--stream [stream]', 'Stream the output of the query', true)
   .option('--plugins <path>', 'Path to plugins configuration file')
   .option('--env <path>', 'Path to .env file containing credentials')
+  .option(
+    '--remote-exec <connection>',
+    'Enable remote execution (user@host:port)'
+  )
+  .option(
+    '--remote-exec-type <type>',
+    'Remote execution type (unix or win)',
+    'unix'
+  )
+  .option('--remote-exec-password <password>', 'Password for remote execution')
   .hook('preAction', authMiddleware)
   .hook('preAction', initPlugins)
   .hook('preAction', initPluginCredentials)
@@ -135,6 +143,16 @@ program
     `Will not sync the current workspace and will create a temporary one in ${getTempPath2501()}`
   )
   .option('--config <configKey>', 'Specify the configuration Key to use')
+  .option(
+    '--remote-exec <connection>',
+    'Enable remote execution (user@host:port)'
+  )
+  .option(
+    '--remote-exec-type <type>',
+    'Remote execution type (unix or win)',
+    'unix'
+  )
+  .option('--remote-exec-password <password>', 'Password for remote execution')
   .hook('preAction', authMiddleware)
   .hook('postAction', RemoteExecutor.instance.disconnect)
   .action(async (options) => {
@@ -180,8 +198,7 @@ program
   .description('Set a configuration value')
   .argument('<key>', 'The key to set')
   .argument('<value>', 'The value to set')
-  .argument('[extra]', 'Additional parameter (e.g., type for remote_exec)')
-  .action(async (key, value, extra) => await setCommand(key, value, extra));
+  .action(async (key, value) => await setCommand(key, value));
 
 (async () => {
   try {
