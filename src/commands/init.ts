@@ -111,7 +111,8 @@ export const initCommand = async (
       configManager.set('join_discord_shown', true);
     }
 
-    if (process.env.TFZO_DISABLE_SPINNER) {
+    // Write the disable spinner to the config whenever the env variable is set.
+    if (process.env.TFZO_DISABLE_SPINNER !== undefined) {
       const shouldDisableSpinner = process.env.TFZO_DISABLE_SPINNER === 'true';
       configManager.set('disable_spinner', shouldDisableSpinner);
     }

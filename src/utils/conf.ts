@@ -37,7 +37,12 @@ export function writeConfig(config: LocalConfig): void {
       fs.mkdirSync(path.dirname(CONFIG_FILE_PATH), { recursive: true });
     }
     const data = JSON.stringify(config, null, 2);
-    fs.writeFileSync(CONFIG_FILE_PATH, data, 'utf8');
+
+    // Write with restrictive permissions (readable only by owner)
+    fs.writeFileSync(CONFIG_FILE_PATH, data, {
+      mode: 0o600, // rw-------
+      encoding: 'utf8',
+    });
   } catch (error) {
     Logger.error('Error writing configuration:', error);
     throw new Error(
