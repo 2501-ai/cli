@@ -1,4 +1,9 @@
 import { readConfig, writeConfig } from '../utils/conf';
+import {
+  encryptValue,
+  decryptValue,
+  SENSITIVE_FIELDS,
+} from '../utils/encryption';
 import Logger from '../utils/logger';
 import { LocalConfig, LocalConfigKey, REMOTE_EXEC_TYPES } from '../utils/types';
 
@@ -62,7 +67,34 @@ export class ConfigManager {
     }
 
     // Make sure the config is up to date with the default config.
-    this._config = { ...DEFAULT_CONFIG, ...config };
+    // Decrypt sensitive fields when loading
+    this._config = this.decryptConfig({ ...DEFAULT_CONFIG, ...config });
+  }
+
+  /**
+   * Decrypt sensitive fields from stored config
+   */
+  private decryptConfig(config: LocalConfig): LocalConfig {
+    const decrypted = { ...config };
+    SENSITIVE_FIELDS.forEach((field) => {
+      if (decrypted[field]) {
+        decrypted[field] = decryptValue(decrypted[field] as string) as any;
+      }
+    });
+    return decrypted;
+  }
+
+  /**
+   * Encrypt sensitive fields before storage
+   */
+  private encryptConfig(config: LocalConfig): LocalConfig {
+    const encrypted = { ...config };
+    SENSITIVE_FIELDS.forEach((field) => {
+      if (encrypted[field]) {
+        encrypted[field] = encryptValue(encrypted[field] as string) as any;
+      }
+    });
+    return encrypted;
   }
 
   /**
@@ -88,8 +120,9 @@ export class ConfigManager {
     const newConfig = { ...this._config, [key]: value };
 
     try {
-      writeConfig(newConfig);
-      this._config = newConfig;
+      // Encrypt sensitive fields before writing to disk
+      writeConfig(this.encryptConfig(newConfig));
+      this._config = newConfig; // Keep in-memory version decrypted
     } catch (error) {
       Logger.error(`Failed to set ${key}:`, error);
       throw new Error(
