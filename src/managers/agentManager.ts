@@ -5,9 +5,9 @@ import {
   browse_url,
   read_file,
   run_shell,
+  task_completed,
   update_file,
   write_file,
-  task_completed,
 } from '../helpers/actions';
 
 import Logger from '../utils/logger';
@@ -15,9 +15,7 @@ import Logger from '../utils/logger';
 import { BLACKLISTED_COMMANDS } from '../constants';
 import { getFunctionName } from '../utils/actions';
 import {
-  AgentCallbackType,
-  EngineCapability,
-  EngineType,
+  AgentConfig,
   FunctionAction,
   FunctionExecutionResult,
 } from '../utils/types';
@@ -44,25 +42,12 @@ function isBlacklistedCommand(command: string): boolean {
 }
 
 export class AgentManager {
-  id: string;
-  name: string;
-  engine: EngineType;
   workspace: string;
-  capabilities: EngineCapability[];
+  agentConfig: AgentConfig;
 
-  constructor(options: {
-    id: string;
-    name: string;
-    engine: EngineType;
-    workspace: string;
-    callback?: AgentCallbackType;
-    capabilities: EngineCapability[];
-  }) {
-    this.id = options.id;
-    this.name = options.name;
-    this.engine = options.engine;
+  constructor(options: { workspace: string; agentConfig: AgentConfig }) {
     this.workspace = options.workspace;
-    this.capabilities = options.capabilities;
+    this.agentConfig = options.agentConfig;
   }
 
   async executeAction(
@@ -109,7 +94,7 @@ export class AgentManager {
         ACTION_FNS.read_file({ path: args.path }) || 'NO PREVIOUS VERSION';
       try {
         const { data: correctionData } = await axios.post(
-          `/agents/${this.id}/verifyOutput`,
+          `/agents/${this.agentConfig.id}/verifyOutput`,
           {
             task: taskTitle,
             previous,
