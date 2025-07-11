@@ -22,7 +22,7 @@ export class RemoteExecutor {
       port: config.get('remote_exec_port'),
       username: config.get('remote_exec_user'),
       password: config.get('remote_exec_password'),
-      //   debug: (message: string) => Logger.debug(message),
+      // debug: (message: string) => Logger.debug(message),
     };
 
     // Add private key if specified
@@ -36,8 +36,11 @@ export class RemoteExecutor {
     return connectionConfig;
   }
 
-  private async connect(): Promise<void> {
-    if (this.isConnected && this.client) {
+  async connect(): Promise<void> {
+    if (
+      (this.isConnected && this.client) ||
+      !ConfigManager.instance.get('remote_exec')
+    ) {
       return;
     }
 
@@ -76,7 +79,10 @@ export class RemoteExecutor {
           return;
         }
 
-        this.client.exec(command, (err, stream) => {
+        // Source common environment files to ensure PATH includes Node.js
+        const envCommand = `source ~/.bashrc 2>/dev/null || true; source ~/.profile 2>/dev/null || true; source ~/.nvm/nvm.sh 2>/dev/null || true; ${command}`;
+
+        this.client.exec(envCommand, (err, stream) => {
           if (err) {
             reject(err);
             return;
@@ -102,13 +108,8 @@ export class RemoteExecutor {
           stream.stderr.on('data', (data: Buffer) => {
             stderr += data.toString();
           });
-
           if (stdin) {
-            Logger.debug('Writing content to stdin:', { content: stdin });
-            // Write the content to the stdin of the stream.
             stream.stdin.write(stdin);
-
-            // End the stdin of the stream.
             stream.stdin.end();
           }
         });
