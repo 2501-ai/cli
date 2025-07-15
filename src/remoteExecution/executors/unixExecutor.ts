@@ -1,47 +1,68 @@
 import { Client, ConnectConfig } from 'ssh2';
-import { ConfigManager } from './configManager';
-import Logger from '../utils/logger';
+import Logger from '../../utils/logger';
+import { RemoteExecConfig } from '../../utils/types';
+import { IRemoteExecutor } from '../remoteExecutor';
 
-export class RemoteExecutor {
-  private static _instance: RemoteExecutor;
+const UNIX_COMMAND_WRAPPER = `source ~/.bashrc 2>/dev/null || true; source ~/.profile 2>/dev/null || true; source ~/.nvm/nvm.sh 2>/dev/null || true;`;
+
+export class UnixExecutor implements IRemoteExecutor {
+  private static _instance: UnixExecutor;
   private client: Client | null = null;
   private isConnected = false;
+  private config: RemoteExecConfig | null = null;
 
   static get instance() {
-    if (!RemoteExecutor._instance) {
-      RemoteExecutor._instance = new RemoteExecutor();
+    if (!UnixExecutor._instance) {
+      UnixExecutor._instance = new UnixExecutor();
     }
-    return RemoteExecutor._instance;
+    return UnixExecutor._instance;
+  }
+
+  init(config: RemoteExecConfig): void {
+    this.config = config;
+    this.client = null;
+    this.isConnected = false;
   }
 
   private getConnectionConfig(): ConnectConfig {
-    const config = ConfigManager.instance;
+    if (!this.config || !this.config.enabled) {
+      throw new Error('Remote execution not configured for this agent');
+    }
 
     const connectionConfig: ConnectConfig = {
-      host: config.get('remote_exec_target'),
-      port: config.get('remote_exec_port'),
-      username: config.get('remote_exec_user'),
-      password: config.get('remote_exec_password'),
+      host: this.config.target,
+      port: this.config.port,
+      username: this.config.user,
+      password: this.config.password,
       // debug: (message: string) => Logger.debug(message),
     };
-
     // Add private key if specified
-    const privateKeyPath = config.get('remote_exec_private_key');
-    if (privateKeyPath) {
-      Logger.debug('Using private key:', privateKeyPath);
+    if (this.config.private_key) {
+      Logger.debug('Using private key:', this.config.private_key);
       const fs = require('fs');
-      connectionConfig.privateKey = fs.readFileSync(privateKeyPath);
+      connectionConfig.privateKey = fs.readFileSync(this.config.private_key);
     }
 
     return connectionConfig;
   }
 
   async connect(): Promise<void> {
+    if (!this.config || !this.config.enabled) {
+      throw new Error('Remote execution not configured');
+    }
+
+    // If already connected to the same agent, return
     if (
-      (this.isConnected && this.client) ||
-      !ConfigManager.instance.get('remote_exec')
+      this.isConnected &&
+      this.client &&
+      this.config.target === this.config.target
     ) {
       return;
+    }
+
+    // Disconnect from previous connection if different agent
+    if (this.isConnected && this.config.target !== this.config.target) {
+      this.disconnect();
     }
 
     return new Promise((resolve, reject) => {
@@ -80,7 +101,7 @@ export class RemoteExecutor {
         }
 
         // Source common environment files to ensure PATH includes Node.js
-        const envCommand = `source ~/.bashrc 2>/dev/null || true; source ~/.profile 2>/dev/null || true; source ~/.nvm/nvm.sh 2>/dev/null || true; ${command}`;
+        const envCommand = `${UNIX_COMMAND_WRAPPER} ${command}`;
 
         this.client.exec(envCommand, (err, stream) => {
           if (err) {
@@ -97,7 +118,7 @@ export class RemoteExecutor {
                 new Error(`Command failed with exit code ${code}: ${stderr}`)
               );
             } else {
-              resolve(stdout);
+              resolve(stdout.replace(UNIX_COMMAND_WRAPPER, '').trim());
             }
           });
 
@@ -125,13 +146,13 @@ export class RemoteExecutor {
       this.client.end();
       this.client = null;
       this.isConnected = false;
+      this.config = null;
     }
   }
 
   async validateConnection(): Promise<boolean> {
     try {
       const result = await this.executeCommand('echo "connection_test"');
-      this.disconnect();
       return result.trim() === 'connection_test';
     } catch (error) {
       Logger.error('Connection validation failed:', error);
