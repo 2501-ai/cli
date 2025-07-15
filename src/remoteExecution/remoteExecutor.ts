@@ -83,10 +83,10 @@ export class RemoteExecutor {
       this.executor.disconnect
     ) {
       this.executor.disconnect();
+      Logger.debug('Remote executor disconnected');
     }
     this.executor = null;
     this.config = null;
-    Logger.debug('Remote executor disconnected');
   }
 
   getConfig(): RemoteExecConfig {
