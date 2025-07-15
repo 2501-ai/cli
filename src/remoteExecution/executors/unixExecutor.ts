@@ -118,6 +118,7 @@ export class UnixExecutor implements IRemoteExecutor {
                 new Error(`Command failed with exit code ${code}: ${stderr}`)
               );
             } else {
+              // makes sure to remove the command wrapper from the output
               resolve(stdout.replace(UNIX_COMMAND_WRAPPER, '').trim());
             }
           });
