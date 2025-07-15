@@ -53,7 +53,17 @@ Join our Discord server: ${DISCORD_LINK}
   )
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   .version(require('../package.json').version)
-  .on('command:*', async (args, options) => {
+  .option(
+    '--remote-exec <connection>',
+    'Enable remote execution (user@host:port)'
+  )
+  .option('--remote-exec-type <type>', 'Remote execution type (unix or win)')
+  .option(
+    '--remote-private-key <privateKey>',
+    'Path to private key for remote execution'
+  )
+  .option('--remote-exec-password <password>', 'Password for remote execution')
+  .on('command:*', async (args) => {
     const query = args?.join(' ');
     if (!query) {
       Logger.log(
@@ -61,12 +71,12 @@ Join our Discord server: ${DISCORD_LINK}
       );
       return;
     }
+    const options = program.opts();
+    Logger.debug('Args:', { args, options });
 
     try {
       await authMiddleware();
-      await queryCommand(query, {
-        stream: options.stream,
-      });
+      await queryCommand(query, options);
     } catch (error) {
       await errorHandler.handleCommandError(error as Error, 'fallback-query', {
         exitCode: 1,
@@ -114,19 +124,6 @@ program
   .option('--stream [stream]', 'Stream the output of the query', true)
   .option('--plugins <path>', 'Path to plugins configuration file')
   .option('--env <path>', 'Path to .env file containing credentials')
-  .option(
-    '--remote-exec <connection>',
-    'Enable remote execution (user@host:port)'
-  )
-  .option(
-    '--remote-exec-type <type>',
-    'Remote execution type (unix or win)',
-    'unix'
-  )
-  .option(
-    '--remote-private-key <privateKey>',
-    'Path to private key for remote execution'
-  )
   .option('--remote-exec-password <password>', 'Password for remote execution')
   .hook('preAction', authMiddleware)
   .hook('preAction', initPlugins)
@@ -150,27 +147,15 @@ program
     `Will not sync the current workspace and will create a temporary one in ${getTempPath2501()}`
   )
   .option('--config <configKey>', 'Specify the configuration Key to use')
-  .option(
-    '--remote-exec <connection>',
-    'Enable remote execution (user@host:port)'
-  )
-  .option(
-    '--remote-exec-type <type>',
-    'Remote execution type (unix or win)',
-    'unix'
-  )
-  .option('--remote-exec-password <password>', 'Password for remote execution')
-  .option(
-    '--remote-private-key <privateKey>',
-    'Path to private key for remote execution'
-  )
   .hook('preAction', authMiddleware)
   .hook('postAction', () => {
     RemoteExecutor.instance.disconnect();
   })
-  .action(async (options) => {
-    Logger.debug('Init options:', options);
-    await initCommand(options);
+  .action(async (cmdOptions) => {
+    const options = program.opts();
+    const allOptions = { ...cmdOptions, ...options };
+    Logger.debug('Init options:', allOptions);
+    await initCommand(allOptions);
   });
 
 // Agents command

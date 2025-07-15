@@ -43,19 +43,34 @@ import { RemoteExecutor } from '../remoteExecution/remoteExecutor';
 
 marked.use(markedTerminal() as MarkedExtension);
 
+interface QueryOptions {
+  workspace?: string;
+  agentId?: string;
+  stream?: boolean;
+  noPersistentAgent?: boolean;
+  plugins?: string;
+  credentials?: string;
+  taskId?: string;
+  remoteExec?: string;
+  remoteExecType?: string;
+  remotePrivateKey?: string;
+  remoteExecPassword?: string;
+}
+
 const logger = new Logger();
 
 const initializeAgentConfig = async (
-  workspace: string
+  resolvedWorkspace: string,
+  options: QueryOptions
 ): Promise<{
   agentConfig: AgentConfig | null;
   workspaceChanged: boolean;
 }> => {
-  let eligibleAgent = getEligibleAgent(workspace);
+  let eligibleAgent = getEligibleAgent(resolvedWorkspace);
   let force = false;
   if (!eligibleAgent) {
-    await initCommand({ workspace });
-    eligibleAgent = getEligibleAgent(workspace);
+    await initCommand({ ...options, workspace: resolvedWorkspace });
+    eligibleAgent = getEligibleAgent(resolvedWorkspace);
     force = true;
   }
 
@@ -64,7 +79,7 @@ const initializeAgentConfig = async (
   if (eligibleAgent) {
     workspaceChanged = await synchronizeWorkspace(
       eligibleAgent,
-      workspace,
+      resolvedWorkspace,
       force
     );
   }
@@ -215,18 +230,7 @@ const parseAgentResponse = async (
   return [actions, queryResponse];
 };
 
-export const queryCommand = async (
-  query: string,
-  options: {
-    workspace?: string;
-    agentId?: string;
-    stream?: boolean;
-    noPersistentAgent?: boolean;
-    plugins?: string;
-    credentials?: string;
-    taskId?: string;
-  }
-) => {
+export const queryCommand = async (query: string, options: QueryOptions) => {
   Logger.debug('Options:', options);
 
   const context = {
@@ -240,14 +244,16 @@ export const queryCommand = async (
 
   try {
     const configManager = ConfigManager.instance;
-    const workspace = resolveWorkspacePath(options);
-    Logger.debug('Workspace:', workspace);
+    const resolvedWorkspace = resolveWorkspacePath(options);
+    Logger.debug('Workspace:', resolvedWorkspace);
 
     const stream = options.stream ?? configManager.get('stream') ?? true;
 
     ////////// Agent Init //////////
-    const { agentConfig, workspaceChanged } =
-      await initializeAgentConfig(workspace);
+    const { agentConfig, workspaceChanged } = await initializeAgentConfig(
+      resolvedWorkspace,
+      options
+    );
 
     // If not agent is eligible, it usually means there was an error during the init process that is already displayed.
     if (!agentConfig) {
@@ -267,7 +273,7 @@ export const queryCommand = async (
     Logger.debug('Task ID:', taskId);
 
     const workspaceData = getDirectoryMd5Hash({
-      directoryPath: workspace,
+      directoryPath: resolvedWorkspace,
     });
 
     /**
@@ -279,7 +285,7 @@ export const queryCommand = async (
     );
 
     const agentManager = new AgentManager({
-      workspace,
+      workspace: resolvedWorkspace,
       agentConfig,
     });
     logger.start('Thinking');

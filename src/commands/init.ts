@@ -122,7 +122,7 @@ export const initCommand = async (
     }
 
     const remoteExecConfig = await initRemoteExecution(options, logger);
-    const systemInfoPromise = remoteExecConfig?.enabled
+    const systemInfoPromise = RemoteExecutor.instance.isEnabled()
       ? getRemoteSystemInfo()
       : getSystemInfo();
 

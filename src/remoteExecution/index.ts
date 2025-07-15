@@ -67,15 +67,13 @@ export async function initRemoteExecution(
       logger.cancel(
         'Remote connection validation failed. Please check your settings.'
       );
-      process.exit(1);
+    } else {
+      logger.stop('Remote connection validated successfully');
     }
-
-    logger.stop('Remote connection validated successfully');
   } catch (error) {
     logger.cancel(
       `Remote connection validation failed: ${(error as Error).message}`
     );
-    process.exit(1);
   }
 
   return remoteExecConfig;
