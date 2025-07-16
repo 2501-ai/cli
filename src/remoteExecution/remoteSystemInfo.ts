@@ -10,11 +10,11 @@ import { SystemInfo } from '../utils/types';
 import { RemoteExecutor } from './remoteExecutor';
 
 async function getRemoteGlobalNpmPackages(
-  remoteType: 'unix' | 'win'
+  platform: 'windows' | 'unix'
 ): Promise<string[]> {
   try {
     const command =
-      remoteType === 'win'
+      platform === 'windows'
         ? 'npm list -g --depth=0 | findstr /R "^[├└]" | findstr "@"'
         : 'npm list -g --depth=0 | awk "{print $2}" | grep @';
 
@@ -22,7 +22,7 @@ async function getRemoteGlobalNpmPackages(
     const output = await executor.executeCommand(command);
     const packageLines = output.trim().split('\n').filter(Boolean);
 
-    if (remoteType === 'win') {
+    if (platform === 'windows') {
       if (isWindowsCommandFound(output)) {
         return [];
       }
@@ -80,10 +80,10 @@ async function getRemoteVersion(command: string): Promise<string> {
 }
 
 async function getRemotePythonVersion(
-  remoteType: 'unix' | 'win'
+  platform: 'windows' | 'unix'
 ): Promise<string> {
   // For Unix-like systems, python3 is preferred.
-  if (remoteType === 'unix') {
+  if (platform === 'unix') {
     const py3Version = await getRemoteVersion('python3 --version');
     if (py3Version !== '(error)') {
       return py3Version;
@@ -94,8 +94,8 @@ async function getRemotePythonVersion(
   return sanitizeWindowsOutput(output);
 }
 
-async function getRemoteOSInfo(remoteType: 'unix' | 'win'): Promise<string> {
-  const command = remoteType === 'win' ? 'systeminfo' : 'uname -a';
+async function getRemoteOSInfo(platform: 'windows' | 'unix'): Promise<string> {
+  const command = platform === 'windows' ? 'systeminfo' : 'uname -a';
   try {
     const executor = RemoteExecutor.instance;
     const result = await executor.executeCommand(command);
@@ -105,7 +105,7 @@ async function getRemoteOSInfo(remoteType: 'unix' | 'win'): Promise<string> {
       `Failed to get remote OS info for command "${command}":`,
       error
     );
-    return `(${remoteType} - OS info unavailable)`;
+    return `(${platform} - OS info unavailable)`;
   }
 }
 
@@ -176,21 +176,22 @@ async function getUnixRemotePackages(): Promise<Record<string, string>> {
   return allPackages.reduce((acc, curr) => ({ ...acc, ...curr }), {});
 }
 
-const WINDOWS_COMMAND_NOT_FOUND_ERRORS = [
-  'Could not find',
-  'not found',
-  'is not recognized as an internal or external command',
-  'The system cannot find the path specified',
-];
-
+/**
+ * Helper function to check if a Windows command was found.
+ */
 function isWindowsCommandFound(output: string): boolean {
-  return WINDOWS_COMMAND_NOT_FOUND_ERRORS.some((error) =>
-    output.includes(error)
+  const lowerOutput = output.toLowerCase();
+  return (
+    lowerOutput.includes('not recognized as an internal or external command') ||
+    lowerOutput.includes('is not recognized') ||
+    lowerOutput.includes('command not found') ||
+    lowerOutput.includes('was not found') ||
+    lowerOutput.includes('could not find')
   );
 }
 
 /**
- * Windows output is full of unicode characters that are not accepted in Engine.
+ * Helper function to sanitize Windows command output.
  */
 function sanitizeWindowsOutput(output: string): string {
   return output.trim().replace(/[\u0000-\u001F\u007F-\u009F]/g, '');
@@ -253,11 +254,11 @@ async function getWindowsRemotePackages(): Promise<Record<string, string>> {
 }
 
 async function getRemoteInstalledPackages(
-  remoteType: 'unix' | 'win'
+  platform: 'windows' | 'unix'
 ): Promise<Record<string, string>> {
-  Logger.debug(`Getting remote packages for type: ${remoteType}`);
+  Logger.debug(`Getting remote packages for platform: ${platform}`);
 
-  if (remoteType === 'win') {
+  if (platform === 'windows') {
     return getWindowsRemotePackages();
   } else {
     return getUnixRemotePackages();
@@ -265,9 +266,10 @@ async function getRemoteInstalledPackages(
 }
 
 export async function getRemoteSystemInfo(): Promise<SystemInfo> {
-  const { type, target } = RemoteExecutor.instance.getConfig();
+  const config = RemoteExecutor.instance.getConfig();
+  const { target, platform } = config;
 
-  Logger.debug(`Getting remote system info for host: ${target}`);
+  Logger.debug(`Getting remote system info for host: ${target} (${platform})`);
 
   if (!RemoteExecutor.instance.isConnected) {
     await RemoteExecutor.instance.connect();
@@ -280,15 +282,15 @@ export async function getRemoteSystemInfo(): Promise<SystemInfo> {
     phpVersion,
     globalNpmPackages,
   ] = await Promise.all([
-    getRemoteInstalledPackages(type),
-    getRemoteOSInfo(type),
-    getRemotePythonVersion(type),
+    getRemoteInstalledPackages(platform),
+    getRemoteOSInfo(platform),
+    getRemotePythonVersion(platform),
     getRemoteVersion('php --version'),
-    getRemoteGlobalNpmPackages(type),
+    getRemoteGlobalNpmPackages(platform),
   ]);
 
   const sysInfo: SystemInfo['sysInfo'] = {
-    platform: type,
+    platform: platform,
     os_info,
     installed_packages,
   };

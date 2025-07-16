@@ -1,4 +1,4 @@
-import { UnixExecutor } from './executors/unixExecutor';
+import { SSHExecutor } from './executors/sshExecutor';
 import { WinRMExecutor } from './executors/winrmExecutor';
 import { RemoteExecConfig } from '../utils/types';
 import Logger from '../utils/logger';
@@ -6,10 +6,10 @@ import Logger from '../utils/logger';
 export interface IRemoteExecutor {
   init(config: RemoteExecConfig): void;
   executeCommand(command: string, stdin?: string): Promise<string>;
-  validateConnection(): Promise<boolean>;
   disconnect?(): Promise<void>;
   connect(): Promise<void>;
   isConnected(): boolean;
+  wrapper?: string;
 }
 
 export class RemoteExecutor {
@@ -33,17 +33,21 @@ export class RemoteExecutor {
       throw new Error('Remote config is not enabled');
     }
 
-    // Initialize appropriate executor based on type
-    if (config.type === 'win') {
+    // Initialize appropriate executor based on connection type
+    if (config.type === 'winrm') {
       this.executor = WinRMExecutor.instance;
+    } else if (config.type === 'ssh') {
+      this.executor = SSHExecutor.instance;
     } else {
-      this.executor = UnixExecutor.instance;
+      throw new Error(`Unsupported remote execution type: ${config.type}`);
     }
 
     this.config = config;
     this.executor.init(config);
 
-    Logger.debug(`Initialized ${config.type} remote executor.`);
+    Logger.debug(
+      `Initialized ${config.type} remote executor for ${config.target}:${config.port}`
+    );
   }
 
   /**
@@ -79,7 +83,57 @@ export class RemoteExecutor {
     this.throwIfNotInitialized('validateConnection');
 
     Logger.debug(`Validating connection for host: ${this.config!.target}`);
-    return this.executor!.validateConnection();
+    return (await this.detectRemotePlatform()) !== null;
+  }
+
+  async detectRemotePlatform(): Promise<'windows' | 'unix' | null> {
+    if (!this.config) {
+      throw new Error('Remote executor not configured');
+    }
+
+    this.executor!.wrapper = '';
+    await this.connect(); // initialize the connection to the remote host
+    if (this.config.type === 'winrm') {
+      this.config.platform = 'windows';
+      return 'windows';
+    }
+
+    try {
+      this.executor!.wrapper = '';
+      const result = await this.executeCommand('uname -s 2>&1 || ver');
+
+      Logger.debug('Platform detection result:', result);
+
+      // Check if the output contains Windows indicators
+      if (
+        result.toLowerCase().includes('windows') ||
+        result.toLowerCase().includes('microsoft')
+      ) {
+        this.config.platform = 'windows';
+        return 'windows';
+      }
+
+      // If uname succeeded, it's Unix-like (Linux, macOS, etc.)
+      if (
+        result.includes('Linux') ||
+        result.includes('Darwin') ||
+        result.includes('FreeBSD')
+      ) {
+        this.config.platform = 'unix';
+        return 'unix';
+      }
+
+      // Default to unix if unclear
+      Logger.debug(
+        'Platform detection unclear, defaulting to unix. Result:',
+        result
+      );
+      this.config.platform = 'unix';
+      return 'unix';
+    } catch (error) {
+      Logger.debug('Platform detection failed:', error);
+      return null;
+    }
   }
 
   async disconnect(): Promise<void> {
@@ -103,10 +157,5 @@ export class RemoteExecutor {
   getConfig(): RemoteExecConfig {
     this.throwIfNotInitialized('getConfig');
     return this.config!;
-  }
-
-  getExecutorType(): 'unix' | 'win' {
-    this.throwIfNotInitialized('getExecutorType');
-    return this.config!.type;
   }
 }

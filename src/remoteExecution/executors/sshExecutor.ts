@@ -5,23 +5,25 @@ import { IRemoteExecutor } from '../remoteExecutor';
 
 const UNIX_COMMAND_WRAPPER = `source ~/.bashrc 2>/dev/null || true; source ~/.profile 2>/dev/null || true; source ~/.nvm/nvm.sh 2>/dev/null || true;`;
 
-export class UnixExecutor implements IRemoteExecutor {
-  private static _instance: UnixExecutor;
+export class SSHExecutor implements IRemoteExecutor {
+  private static _instance: SSHExecutor;
   private client: Client | null = null;
   private connected = false;
   private config: RemoteExecConfig | null = null;
+  wrapper: string = '';
 
   static get instance() {
-    if (!UnixExecutor._instance) {
-      UnixExecutor._instance = new UnixExecutor();
+    if (!SSHExecutor._instance) {
+      SSHExecutor._instance = new SSHExecutor();
     }
-    return UnixExecutor._instance;
+    return SSHExecutor._instance;
   }
 
   init(config: RemoteExecConfig): void {
     this.config = config;
     this.client = null;
     this.connected = false;
+    this.wrapper = config.platform === 'windows' ? '' : UNIX_COMMAND_WRAPPER;
   }
 
   isConnected(): boolean {
@@ -70,7 +72,9 @@ export class UnixExecutor implements IRemoteExecutor {
     }
 
     return new Promise((resolve, reject) => {
-      this.client = new Client();
+      this.client = new Client({
+        captureRejections: true,
+      });
 
       this.client.on('ready', () => {
         this.connected = true;
@@ -98,16 +102,18 @@ export class UnixExecutor implements IRemoteExecutor {
     try {
       await this.connect();
 
+      if (!this.config || !this.config.enabled) {
+        throw new Error('Remote execution not configured');
+      }
+
       return new Promise((resolve, reject) => {
         if (!this.client) {
           reject(new Error('SSH client not initialized'));
           return;
         }
 
-        // Source common environment files to ensure PATH includes Node.js
-        const envCommand = `${UNIX_COMMAND_WRAPPER} ${command}`;
-
-        this.client.exec(envCommand, (err, stream) => {
+        // Use platform-appropriate command wrapper
+        this.client.exec(this.wrapper + command, (err, stream) => {
           if (err) {
             reject(err);
             return;
@@ -122,8 +128,9 @@ export class UnixExecutor implements IRemoteExecutor {
                 new Error(`Command failed with exit code ${code}: ${stderr}`)
               );
             } else {
-              // makes sure to remove the command wrapper from the output
-              resolve(stdout.replace(UNIX_COMMAND_WRAPPER, '').trim());
+              // Remove the command wrapper from the output if used
+              const result = stdout.replace(this.wrapper, '').trim();
+              resolve(result);
             }
           });
 
@@ -134,6 +141,7 @@ export class UnixExecutor implements IRemoteExecutor {
           stream.stderr.on('data', (data: Buffer) => {
             stderr += data.toString();
           });
+
           if (stdin) {
             stream.stdin.write(stdin);
             stream.stdin.end();
@@ -152,16 +160,6 @@ export class UnixExecutor implements IRemoteExecutor {
       this.client = null;
       this.connected = false;
       this.config = null;
-    }
-  }
-
-  async validateConnection(): Promise<boolean> {
-    try {
-      const result = await this.executeCommand('echo "connection_test"');
-      return result.trim() === 'connection_test';
-    } catch (error) {
-      Logger.error('Connection validation failed:', error);
-      return false;
     }
   }
 }

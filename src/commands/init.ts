@@ -28,9 +28,10 @@ export interface InitCommandOptions {
   config?: string;
   ignoreUnsafe?: boolean;
   remoteExec?: string;
-  remoteExecType?: string;
   remotePrivateKey?: string;
   remoteWorkspace?: string;
+  remoteExecType?: string;
+  remoteExecPassword?: string;
 }
 
 const logger = new Logger();

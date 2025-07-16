@@ -57,10 +57,14 @@ Join our Discord server: ${DISCORD_LINK}
     '--remote-exec <connection>',
     'Enable remote execution (user@host:port)'
   )
-  .option('--remote-exec-type <type>', 'Remote execution type (unix or win)')
   .option(
     '--remote-private-key <privateKey>',
     'Path to private key for remote execution'
+  )
+  .option(
+    '--remote-exec-type <type>',
+    'Type of remote execution: ssh or winrm. (defaults to ssh)',
+    'ssh'
   )
   .option('--remote-exec-password <password>', 'Password for remote execution')
   .option('--remote-skip-test <skipTest>', 'Skip the remote connection test')
@@ -77,7 +81,10 @@ Join our Discord server: ${DISCORD_LINK}
 
     try {
       await authMiddleware();
-      await queryCommand(query, options);
+      await queryCommand(query, {
+        remoteExecType: options.remoteExecType,
+        ...options,
+      });
     } catch (error) {
       await errorHandler.handleCommandError(error as Error, 'fallback-query', {
         exitCode: 1,
@@ -154,7 +161,11 @@ program
   .action(async (cmdOptions) => {
     const options = program.opts();
     const allOptions = { ...cmdOptions, ...options };
-    Logger.debug('Init options:', allOptions);
+    Logger.debug('Init options:', {
+      ...allOptions,
+      remoteExecPassword:
+        (allOptions.remoteExecPassword && '***') || '(not provided)',
+    });
     await initCommand(allOptions);
   });
 

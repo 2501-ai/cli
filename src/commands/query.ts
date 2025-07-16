@@ -52,9 +52,9 @@ interface QueryOptions {
   credentials?: string;
   taskId?: string;
   remoteExec?: string;
-  remoteExecType?: string;
   remotePrivateKey?: string;
   remoteExecPassword?: string;
+  remoteExecType?: string;
 }
 
 const logger = new Logger();

@@ -16,6 +16,7 @@ export class WinRMExecutor implements IRemoteExecutor {
   private config: RemoteExecConfig | null = null;
   private connected = false;
   private session: WinRMSession | null = null;
+  wrapper = '';
 
   static get instance() {
     if (!WinRMExecutor._instance) {
@@ -67,7 +68,6 @@ export class WinRMExecutor implements IRemoteExecutor {
     if (this.connected && this.config.target !== this.config.target) {
       this.disconnect();
     }
-    Logger.debug('Connecting to WinRM..');
 
     try {
       const connectionConfig = this.getConnectionConfig();
@@ -79,10 +79,10 @@ export class WinRMExecutor implements IRemoteExecutor {
           'utf8'
         ).toString('base64');
 
-      Logger.debug('Auth:', {
+      Logger.debug('Connection Params:', {
         auth,
-        username: connectionConfig.username,
-        password: connectionConfig.password,
+        username: (connectionConfig.username && '***') || '(not provided)',
+        password: (connectionConfig.password && '***') || '(not provided)',
         host: connectionConfig.host,
         port: connectionConfig.port,
         path: '/wsman',
@@ -159,15 +159,5 @@ export class WinRMExecutor implements IRemoteExecutor {
     this.session = null;
     this.connected = false;
     this.config = null;
-  }
-
-  async validateConnection(): Promise<boolean> {
-    try {
-      const result = await this.executeCommand('echo connection_test');
-      return result.trim() === 'connection_test';
-    } catch (error) {
-      Logger.error('WinRM connection validation failed:', error);
-      return false;
-    }
   }
 }
