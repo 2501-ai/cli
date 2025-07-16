@@ -19,12 +19,13 @@ function configureRemoteExecution(options: {
   }
 
   // Parse connection string: user@host:port
-  const match = options.remoteExec.match(/^(.+)@(.+):?(\d+)?$/);
+  const match = options.remoteExec.match(
+    /^([^@]+)@((?:\d{1,3}\.){3}\d{1,3}|[a-zA-Z0-9.-]+):(\d+)$/
+  );
   if (!match) {
     Logger.error('Invalid remote execution format. Use: user@host:port');
     process.exit(1);
   }
-
   const [, user, host, port = '22'] = match;
 
   const execType = options.remoteExecType || 'unix';

@@ -142,7 +142,7 @@ export class UnixExecutor implements IRemoteExecutor {
     }
   }
 
-  disconnect(): void {
+  async disconnect(): Promise<void> {
     if (this.client) {
       this.client.end();
       this.client = null;

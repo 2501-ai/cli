@@ -23,6 +23,10 @@ async function getRemoteGlobalNpmPackages(
     const packageLines = output.trim().split('\n').filter(Boolean);
 
     if (remoteType === 'win') {
+      if (isWindowsCommandFound(output)) {
+        return [];
+      }
+
       // Extract package names from Windows output format
       // example output:
       // +-- corepack@0.32.0
@@ -33,7 +37,8 @@ async function getRemoteGlobalNpmPackages(
             '@' +
             line.split('@')[1]
         )
-        .filter((pkg) => pkg.includes('@'));
+        .filter((pkg) => pkg.includes('@'))
+        .map(sanitizeWindowsOutput);
     } else {
       // Unix/Linux output is already clean package names
       return packageLines.filter((pkg) => pkg.includes('@'));
@@ -54,7 +59,10 @@ async function getRemoteVersion(command: string): Promise<string> {
   try {
     const executor = RemoteExecutor.instance;
     const result = await executor.executeCommand(command);
-    return result.trim();
+    if (isWindowsCommandFound(result)) {
+      return '(not found)';
+    }
+    return sanitizeWindowsOutput(result.trim());
   } catch (error) {
     if (
       error instanceof Error &&
@@ -82,7 +90,8 @@ async function getRemotePythonVersion(
     }
   }
   // Fallback to 'python' for Windows or if 'python3' fails on Unix.
-  return getRemoteVersion('python --version');
+  const output = await getRemoteVersion('python --version');
+  return sanitizeWindowsOutput(output);
 }
 
 async function getRemoteOSInfo(remoteType: 'unix' | 'win'): Promise<string> {
@@ -90,7 +99,7 @@ async function getRemoteOSInfo(remoteType: 'unix' | 'win'): Promise<string> {
   try {
     const executor = RemoteExecutor.instance;
     const result = await executor.executeCommand(command);
-    return result.trim();
+    return sanitizeWindowsOutput(result.trim());
   } catch (error) {
     Logger.error(
       `Failed to get remote OS info for command "${command}":`,
@@ -167,6 +176,26 @@ async function getUnixRemotePackages(): Promise<Record<string, string>> {
   return allPackages.reduce((acc, curr) => ({ ...acc, ...curr }), {});
 }
 
+const WINDOWS_COMMAND_NOT_FOUND_ERRORS = [
+  'Could not find',
+  'not found',
+  'is not recognized as an internal or external command',
+  'The system cannot find the path specified',
+];
+
+function isWindowsCommandFound(output: string): boolean {
+  return WINDOWS_COMMAND_NOT_FOUND_ERRORS.some((error) =>
+    output.includes(error)
+  );
+}
+
+/**
+ * Windows output is full of unicode characters that are not accepted in Engine.
+ */
+function sanitizeWindowsOutput(output: string): string {
+  return output.trim().replace(/[\u0000-\u001F\u007F-\u009F]/g, '');
+}
+
 async function getWindowsRemotePackages(): Promise<Record<string, string>> {
   const executor = RemoteExecutor.instance;
   const platformPms = WINDOWS_PACKAGE_MANAGERS;
@@ -177,7 +206,10 @@ async function getWindowsRemotePackages(): Promise<Record<string, string>> {
       platformPms.map(async (pm) => {
         try {
           // `where` is the equivalent of `command -v` on Windows
-          await executor.executeCommand(`where ${pm.cmd}`);
+          const output = await executor.executeCommand(`where ${pm.cmd}`);
+          if (isWindowsCommandFound(output)) {
+            return null;
+          }
           return pm;
         } catch (e) {
           return null;
@@ -202,7 +234,10 @@ async function getWindowsRemotePackages(): Promise<Record<string, string>> {
       try {
         const listCmd = pm.listCmd(exclusionPattern);
         const stdout = await executor.executeCommand(listCmd);
-        const packages = stdout.split('\n').filter(Boolean).sort();
+        const packages = sanitizeWindowsOutput(stdout)
+          .split('\n')
+          .filter(Boolean)
+          .sort();
         if (packages.length > 0) {
           return { [`packages installed via ${pm.cmd}`]: packages.join(',') };
         }

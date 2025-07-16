@@ -7,7 +7,7 @@ export interface IRemoteExecutor {
   init(config: RemoteExecConfig): void;
   executeCommand(command: string, stdin?: string): Promise<string>;
   validateConnection(): Promise<boolean>;
-  disconnect?(): void;
+  disconnect?(): Promise<void>;
 }
 
 export class RemoteExecutor {
@@ -76,13 +76,13 @@ export class RemoteExecutor {
     return this.executor!.validateConnection();
   }
 
-  disconnect(): void {
+  async disconnect(): Promise<void> {
     if (
       this.executor &&
       'disconnect' in this.executor &&
       this.executor.disconnect
     ) {
-      this.executor.disconnect();
+      await this.executor.disconnect();
       Logger.debug('Remote executor disconnected');
     }
     this.executor = null;

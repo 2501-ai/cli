@@ -63,6 +63,7 @@ Join our Discord server: ${DISCORD_LINK}
     'Path to private key for remote execution'
   )
   .option('--remote-exec-password <password>', 'Password for remote execution')
+  .option('--remote-skip-test <skipTest>', 'Skip the remote connection test')
   .on('command:*', async (args) => {
     const query = args?.join(' ');
     if (!query) {
@@ -124,7 +125,6 @@ program
   .option('--stream [stream]', 'Stream the output of the query', true)
   .option('--plugins <path>', 'Path to plugins configuration file')
   .option('--env <path>', 'Path to .env file containing credentials')
-  .option('--remote-exec-password <password>', 'Password for remote execution')
   .hook('preAction', authMiddleware)
   .hook('preAction', initPlugins)
   .hook('preAction', initPluginCredentials)
