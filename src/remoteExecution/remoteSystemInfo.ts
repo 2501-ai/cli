@@ -269,6 +269,10 @@ export async function getRemoteSystemInfo(): Promise<SystemInfo> {
 
   Logger.debug(`Getting remote system info for host: ${target}`);
 
+  if (!RemoteExecutor.instance.isConnected) {
+    await RemoteExecutor.instance.connect();
+  }
+
   const [
     installed_packages,
     os_info,

@@ -14,7 +14,7 @@ interface WinRMSession {
 export class WinRMExecutor implements IRemoteExecutor {
   private static _instance: WinRMExecutor;
   private config: RemoteExecConfig | null = null;
-  private isConnected = false;
+  private connected = false;
   private session: WinRMSession | null = null;
 
   static get instance() {
@@ -29,7 +29,11 @@ export class WinRMExecutor implements IRemoteExecutor {
   init(config: RemoteExecConfig): void {
     this.config = config;
     this.session = null;
-    this.isConnected = false;
+    this.connected = false;
+  }
+
+  isConnected(): boolean {
+    return this.connected;
   }
 
   private getConnectionConfig() {
@@ -52,7 +56,7 @@ export class WinRMExecutor implements IRemoteExecutor {
 
     // If already connected to the same agent, return
     if (
-      this.isConnected &&
+      this.connected &&
       this.session &&
       this.config.target === this.config.target
     ) {
@@ -60,7 +64,7 @@ export class WinRMExecutor implements IRemoteExecutor {
     }
 
     // Disconnect from previous connection if different agent
-    if (this.isConnected && this.config.target !== this.config.target) {
+    if (this.connected && this.config.target !== this.config.target) {
       this.disconnect();
     }
     Logger.debug('Connecting to WinRM..');
@@ -100,10 +104,10 @@ export class WinRMExecutor implements IRemoteExecutor {
         path: '/wsman',
       };
 
-      this.isConnected = true;
+      this.connected = true;
       Logger.debug('WinRM connection established');
     } catch (error) {
-      this.isConnected = false;
+      this.connected = false;
       Logger.debug('WinRM connection error:', error);
       throw error;
     }
@@ -153,7 +157,7 @@ export class WinRMExecutor implements IRemoteExecutor {
       Logger.debug('WinRM connection closed');
     }
     this.session = null;
-    this.isConnected = false;
+    this.connected = false;
     this.config = null;
   }
 

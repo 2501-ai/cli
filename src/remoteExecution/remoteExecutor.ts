@@ -8,6 +8,8 @@ export interface IRemoteExecutor {
   executeCommand(command: string, stdin?: string): Promise<string>;
   validateConnection(): Promise<boolean>;
   disconnect?(): Promise<void>;
+  connect(): Promise<void>;
+  isConnected(): boolean;
 }
 
 export class RemoteExecutor {
@@ -20,6 +22,10 @@ export class RemoteExecutor {
       RemoteExecutor._instance = new RemoteExecutor();
     }
     return RemoteExecutor._instance;
+  }
+
+  get isConnected(): boolean {
+    return this.executor?.isConnected() ?? false;
   }
 
   init(config: RemoteExecConfig): void {
@@ -87,6 +93,11 @@ export class RemoteExecutor {
     }
     this.executor = null;
     this.config = null;
+  }
+
+  async connect(): Promise<void> {
+    this.throwIfNotInitialized('connect');
+    await this.executor?.connect();
   }
 
   getConfig(): RemoteExecConfig {

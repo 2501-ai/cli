@@ -8,7 +8,7 @@ const UNIX_COMMAND_WRAPPER = `source ~/.bashrc 2>/dev/null || true; source ~/.pr
 export class UnixExecutor implements IRemoteExecutor {
   private static _instance: UnixExecutor;
   private client: Client | null = null;
-  private isConnected = false;
+  private connected = false;
   private config: RemoteExecConfig | null = null;
 
   static get instance() {
@@ -21,7 +21,11 @@ export class UnixExecutor implements IRemoteExecutor {
   init(config: RemoteExecConfig): void {
     this.config = config;
     this.client = null;
-    this.isConnected = false;
+    this.connected = false;
+  }
+
+  isConnected(): boolean {
+    return this.connected;
   }
 
   private getConnectionConfig(): ConnectConfig {
@@ -53,7 +57,7 @@ export class UnixExecutor implements IRemoteExecutor {
 
     // If already connected to the same agent, return
     if (
-      this.isConnected &&
+      this.connected &&
       this.client &&
       this.config.target === this.config.target
     ) {
@@ -61,7 +65,7 @@ export class UnixExecutor implements IRemoteExecutor {
     }
 
     // Disconnect from previous connection if different agent
-    if (this.isConnected && this.config.target !== this.config.target) {
+    if (this.connected && this.config.target !== this.config.target) {
       this.disconnect();
     }
 
@@ -69,19 +73,19 @@ export class UnixExecutor implements IRemoteExecutor {
       this.client = new Client();
 
       this.client.on('ready', () => {
-        this.isConnected = true;
+        this.connected = true;
         Logger.debug('SSH connection established');
         resolve();
       });
 
       this.client.on('error', (err) => {
-        this.isConnected = false;
+        this.connected = false;
         Logger.debug('SSH connection error:', err);
         reject(err);
       });
 
       this.client.on('close', () => {
-        this.isConnected = false;
+        this.connected = false;
         Logger.debug('SSH connection closed');
       });
 
@@ -146,7 +150,7 @@ export class UnixExecutor implements IRemoteExecutor {
     if (this.client) {
       this.client.end();
       this.client = null;
-      this.isConnected = false;
+      this.connected = false;
       this.config = null;
     }
   }
