@@ -23,7 +23,7 @@ async function getRemoteGlobalNpmPackages(
     const packageLines = output.trim().split('\n').filter(Boolean);
 
     if (platform === 'windows') {
-      if (isWindowsCommandFound(output)) {
+      if (isCommandFound(output)) {
         return [];
       }
 
@@ -44,10 +44,13 @@ async function getRemoteGlobalNpmPackages(
       return packageLines.filter((pkg) => pkg.includes('@'));
     }
   } catch (error) {
-    Logger.error(
+    Logger.debug(
       'Error executing npm list command on remote:',
       (error as Error).message
     );
+    if (error instanceof Error && isCommandFound(error.message)) {
+      return [];
+    }
     return [];
   }
 }
@@ -59,22 +62,19 @@ async function getRemoteVersion(command: string): Promise<string> {
   try {
     const executor = RemoteExecutor.instance;
     const result = await executor.executeCommand(command);
-    if (isWindowsCommandFound(result)) {
+    if (isCommandFound(result)) {
       return '(not found)';
     }
     return sanitizeWindowsOutput(result.trim());
   } catch (error) {
-    if (
-      error instanceof Error &&
-      error.message.toLowerCase().includes('command not found')
-    ) {
-      return '(not found)';
-    }
-
-    Logger.error(
+    Logger.debug(
       `Failed to get remote version for command "${command}":`,
       error
     );
+    if (error instanceof Error && isCommandFound(error.message)) {
+      return '(not found)';
+    }
+
     return '(error)';
   }
 }
@@ -101,7 +101,7 @@ async function getRemoteOSInfo(platform: 'windows' | 'unix'): Promise<string> {
     const result = await executor.executeCommand(command);
     return sanitizeWindowsOutput(result.trim());
   } catch (error) {
-    Logger.error(
+    Logger.debug(
       `Failed to get remote OS info for command "${command}":`,
       error
     );
@@ -179,7 +179,7 @@ async function getUnixRemotePackages(): Promise<Record<string, string>> {
 /**
  * Helper function to check if a Windows command was found.
  */
-function isWindowsCommandFound(output: string): boolean {
+function isCommandFound(output: string): boolean {
   const lowerOutput = output.toLowerCase();
   return (
     lowerOutput.includes('not recognized as an internal or external command') ||
@@ -208,7 +208,7 @@ async function getWindowsRemotePackages(): Promise<Record<string, string>> {
         try {
           // `where` is the equivalent of `command -v` on Windows
           const output = await executor.executeCommand(`where ${pm.cmd}`);
-          if (isWindowsCommandFound(output)) {
+          if (isCommandFound(output)) {
             return null;
           }
           return pm;
@@ -244,7 +244,7 @@ async function getWindowsRemotePackages(): Promise<Record<string, string>> {
         }
         return { [pm.cmd]: '' };
       } catch (error) {
-        Logger.error(`Remote error executing ${pm.cmd} list command:`, error);
+        Logger.debug(`Error executing remote ${pm.cmd} list command:`, error);
         return { [pm.cmd]: '' };
       }
     })
