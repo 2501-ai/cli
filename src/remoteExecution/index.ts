@@ -162,3 +162,17 @@ export async function initRemoteExecution(
 
   return remoteExecConfig;
 }
+
+/**
+ * Helper function to check if a Windows command was found.
+ */
+export function isCommandNotFound(output: string): boolean {
+  const lowerOutput = output.toLowerCase();
+  return (
+    lowerOutput.includes('not recognized as an internal or external command') ||
+    lowerOutput.includes('is not recognized') ||
+    lowerOutput.includes('command not found') ||
+    lowerOutput.includes('was not found') ||
+    lowerOutput.includes('could not find')
+  );
+}

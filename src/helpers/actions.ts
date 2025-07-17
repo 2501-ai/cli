@@ -9,6 +9,7 @@ import { modifyCodeSections } from '../utils/sectionUpdate';
 import { IgnoreManager } from '../utils/ignore';
 import Logger from '../utils/logger';
 import { RemoteExecutor } from '../remoteExecution/remoteExecutor';
+import { isCommandNotFound } from '../remoteExecution';
 
 export const LOG_DIR = path.join(CONFIG_DIR, 'logs');
 export const LOGFILE_PATH = path.join(LOG_DIR, 'commands.log');
@@ -36,11 +37,22 @@ export async function write_file(args: {
 }): Promise<string> {
   if (RemoteExecutor.instance.isEnabled()) {
     const escapedContent = args.content.replace(/"/g, '\\"');
+    const config = RemoteExecutor.instance.getConfig();
     try {
-      await RemoteExecutor.instance.executeCommand(
-        `tee "${args.path}"`,
-        escapedContent
-      );
+      if (config.type === 'winrm') {
+        // For WinRM, we need to use the `echo` command to write the file
+        const result = await RemoteExecutor.instance.executeCommand(
+          `powershell Write-Host ${escapedContent || ''} -NoNewline > "${args.path}"`
+        );
+        if (isCommandNotFound(result)) {
+          throw new Error(`Failed to write file: '${result}'`);
+        }
+      } else {
+        await RemoteExecutor.instance.executeCommand(
+          `tee "${args.path}"`,
+          escapedContent
+        );
+      }
     } catch (error) {
       throw new Error(`Failed to write file: ${error}`);
     }

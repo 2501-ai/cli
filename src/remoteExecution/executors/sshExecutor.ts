@@ -4,6 +4,7 @@ import { RemoteExecConfig } from '../../utils/types';
 import { IRemoteExecutor } from '../remoteExecutor';
 
 const UNIX_COMMAND_WRAPPER = `source ~/.bashrc 2>/dev/null || true; source ~/.profile 2>/dev/null || true; source ~/.nvm/nvm.sh 2>/dev/null || true;`;
+const WINDOWS_CMD_WRAPPER = 'powershell ';
 
 export class SSHExecutor implements IRemoteExecutor {
   private static _instance: SSHExecutor;
@@ -23,7 +24,10 @@ export class SSHExecutor implements IRemoteExecutor {
     this.config = config;
     this.client = null;
     this.connected = false;
-    this.wrapper = config.platform === 'windows' ? '' : UNIX_COMMAND_WRAPPER;
+    this.wrapper =
+      config.platform === 'windows'
+        ? WINDOWS_CMD_WRAPPER
+        : UNIX_COMMAND_WRAPPER;
   }
 
   isConnected(): boolean {

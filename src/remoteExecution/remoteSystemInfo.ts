@@ -7,6 +7,7 @@ import {
   WINDOWS_PACKAGE_MANAGERS,
 } from '../utils/systemInfo';
 import { SystemInfo } from '../utils/types';
+import { isCommandNotFound } from './index';
 import { RemoteExecutor } from './remoteExecutor';
 
 async function getRemoteGlobalNpmPackages(
@@ -23,7 +24,7 @@ async function getRemoteGlobalNpmPackages(
     const packageLines = output.trim().split('\n').filter(Boolean);
 
     if (platform === 'windows') {
-      if (isCommandFound(output)) {
+      if (isCommandNotFound(output)) {
         return [];
       }
 
@@ -48,7 +49,7 @@ async function getRemoteGlobalNpmPackages(
       'Error executing npm list command on remote:',
       (error as Error).message
     );
-    if (error instanceof Error && isCommandFound(error.message)) {
+    if (error instanceof Error && isCommandNotFound(error.message)) {
       return [];
     }
     return [];
@@ -62,7 +63,7 @@ async function getRemoteVersion(command: string): Promise<string> {
   try {
     const executor = RemoteExecutor.instance;
     const result = await executor.executeCommand(command);
-    if (isCommandFound(result)) {
+    if (isCommandNotFound(result)) {
       return '(not found)';
     }
     return sanitizeWindowsOutput(result.trim());
@@ -71,7 +72,7 @@ async function getRemoteVersion(command: string): Promise<string> {
       `Failed to get remote version for command "${command}":`,
       error
     );
-    if (error instanceof Error && isCommandFound(error.message)) {
+    if (error instanceof Error && isCommandNotFound(error.message)) {
       return '(not found)';
     }
 
@@ -177,20 +178,6 @@ async function getUnixRemotePackages(): Promise<Record<string, string>> {
 }
 
 /**
- * Helper function to check if a Windows command was found.
- */
-function isCommandFound(output: string): boolean {
-  const lowerOutput = output.toLowerCase();
-  return (
-    lowerOutput.includes('not recognized as an internal or external command') ||
-    lowerOutput.includes('is not recognized') ||
-    lowerOutput.includes('command not found') ||
-    lowerOutput.includes('was not found') ||
-    lowerOutput.includes('could not find')
-  );
-}
-
-/**
  * Helper function to sanitize Windows command output.
  */
 function sanitizeWindowsOutput(output: string): string {
@@ -208,7 +195,7 @@ async function getWindowsRemotePackages(): Promise<Record<string, string>> {
         try {
           // `where` is the equivalent of `command -v` on Windows
           const output = await executor.executeCommand(`where ${pm.cmd}`);
-          if (isCommandFound(output)) {
+          if (isCommandNotFound(output)) {
             return null;
           }
           return pm;

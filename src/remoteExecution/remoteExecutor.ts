@@ -5,10 +5,15 @@ import Logger from '../utils/logger';
 
 export interface IRemoteExecutor {
   init(config: RemoteExecConfig): void;
+
   executeCommand(command: string, stdin?: string): Promise<string>;
+
   disconnect?(): Promise<void>;
+
   connect(): Promise<void>;
+
   isConnected(): boolean;
+
   wrapper?: string;
 }
 
@@ -91,7 +96,6 @@ export class RemoteExecutor {
       throw new Error('Remote executor not configured');
     }
 
-    this.executor!.wrapper = '';
     await this.connect(); // initialize the connection to the remote host
     if (this.config.type === 'winrm') {
       this.config.platform = 'windows';

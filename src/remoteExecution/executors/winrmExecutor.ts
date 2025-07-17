@@ -3,6 +3,8 @@ import Logger from '../../utils/logger';
 import { RemoteExecConfig } from '../../utils/types';
 import { IRemoteExecutor } from '../remoteExecutor';
 
+const WINDOWS_CMD_WRAPPER = 'powershell ';
+
 interface WinRMSession {
   shellId: string;
   host: string;
@@ -16,7 +18,7 @@ export class WinRMExecutor implements IRemoteExecutor {
   private config: RemoteExecConfig | null = null;
   private connected = false;
   private session: WinRMSession | null = null;
-  wrapper = '';
+  wrapper = WINDOWS_CMD_WRAPPER;
 
   static get instance() {
     if (!WinRMExecutor._instance) {
@@ -128,9 +130,10 @@ export class WinRMExecutor implements IRemoteExecutor {
         );
       }
 
+      const wrappedCommand = this.wrapper + command;
       const cmdId = await winrm.command.doExecuteCommand({
         ...this.session,
-        command,
+        command: wrappedCommand,
       });
 
       const result = await winrm.command.doReceiveOutput({
@@ -139,7 +142,7 @@ export class WinRMExecutor implements IRemoteExecutor {
       });
 
       Logger.debug('WinRM command result:', {
-        command,
+        wrappedCommand,
         cmdId,
         result,
       });
