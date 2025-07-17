@@ -2,6 +2,7 @@ import { run_shell, hasError } from '../helpers/actions';
 import { isLatestVersion } from './versioning';
 import Logger from './logger';
 import { ConfigManager } from '../managers/configManager';
+import execa from 'execa';
 
 const autoUpdate = async () => {
   try {
@@ -35,25 +36,6 @@ const autoUpdate = async () => {
   }
 };
 
-/**
- * Properly escape shell arguments to preserve spaces and special characters
- */
-function escapeShellArg(arg: string): string {
-  // If the argument contains spaces, quotes, or other special characters, wrap it in quotes
-  if (
-    arg.includes(' ') ||
-    arg.includes('"') ||
-    arg.includes("'") ||
-    arg.includes('\\') ||
-    arg.includes('$') ||
-    arg.includes('`')
-  ) {
-    // Escape any existing double quotes and wrap in double quotes
-    return `"${arg.replace(/"/g, '\\"')}"`;
-  }
-  return arg;
-}
-
 export async function handleAutoUpdate(): Promise<boolean> {
   const config = ConfigManager.instance;
 
@@ -80,23 +62,18 @@ export async function handleAutoUpdate(): Promise<boolean> {
 
   Logger.log('Auto-update completed. Restarting task with new process.');
 
-  // Properly escape arguments to preserve original quoting and spacing
-  const escapedArgs = process.argv.map(escapeShellArg);
-  const originalCommand = escapedArgs.join(' ');
+  // Use execa directly with the original arguments array to avoid shell parsing issues
+  const [nodePath, scriptPath, ...args] = process.argv;
 
-  // Execute the new process with TFZO_UPDATED in env
-  const result = await run_shell({
-    command: originalCommand,
-    shell: true,
-    env: {
-      ...process.env,
-      TFZO_UPDATED: 'true',
-    },
-  });
-
-  // Print the result and exit
-  if (result) {
-    Logger.log(result);
+  try {
+    await execa(nodePath, [scriptPath, ...args], {
+      stdio: 'inherit',
+      env: {
+        ...process.env,
+      },
+    });
+  } catch (error) {
+    Logger.error('Failed to restart process:', error);
   }
 
   process.exit(0);
