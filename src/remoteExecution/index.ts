@@ -17,7 +17,10 @@ function isRemoteExecType(type: string): type is RemoteExecConfig['type'] {
  * @param connectionString - The connection string to parse (ex: user@host:port or user@host).
  * @returns The user, host, and port.
  */
-export function parseConnectionString(connectionString: string): {
+export function parseConnectionString(
+  connectionString: string,
+  remoteExecType: RemoteExecConfig['type'] = 'ssh'
+): {
   user: string;
   host: string;
   port: string;
@@ -27,8 +30,9 @@ export function parseConnectionString(connectionString: string): {
     /^([^@]+)@((?:\d{1,3}\.){3}\d{1,3}|[a-zA-Z0-9.-]+):(\d+)$/
   );
 
+  const defaultPort = remoteExecType === 'winrm' ? '5985' : '22';
   if (connectionWithPortMatch) {
-    const [, user, host, port] = connectionWithPortMatch;
+    const [, user, host, port = defaultPort] = connectionWithPortMatch;
     return { user, host, port };
   }
 
@@ -39,7 +43,7 @@ export function parseConnectionString(connectionString: string): {
 
   if (connectionWithoutPortMatch) {
     const [, user, host] = connectionWithoutPortMatch;
-    return { user, host, port: '22' }; // Default to port 22
+    return { user, host, port: defaultPort }; // use default port
   }
 
   throw new Error(
@@ -68,15 +72,14 @@ export function configureRemoteExecution(
     throw new Error('Remote execution is not enabled');
   }
 
-  const { user, host, port } = parseConnectionString(options.remoteExec);
-
   const remoteExecType = options.remoteExecType ?? 'ssh';
   if (!isRemoteExecType(remoteExecType)) {
     throw new Error('Invalid remote execution type. Use: ssh or winrm');
   }
-
-  // Set default remote workspace (will be adjusted after platform detection)
-  const defaultRemoteWorkspace = `/home/${user}`;
+  const { user, host, port } = parseConnectionString(
+    options.remoteExec,
+    remoteExecType
+  );
 
   return {
     enabled: true,
@@ -84,10 +87,10 @@ export function configureRemoteExecution(
     port: parseInt(port),
     type: remoteExecType,
     user: user,
-    platform: 'unix',
+    platform: remoteExecType === 'winrm' ? 'windows' : 'unix',
     password: options.remoteExecPassword,
     private_key: options.remotePrivateKey,
-    remote_workspace: options.remoteWorkspace || defaultRemoteWorkspace,
+    remote_workspace: options.remoteWorkspace || '',
   };
 }
 

@@ -3,6 +3,8 @@ import Logger from '../../utils/logger';
 import { RemoteExecConfig } from '../../utils/types';
 import { IRemoteExecutor } from '../remoteExecutor';
 
+// Powershell is the default command wrapper for winrm
+// A space is left at the end for the command concatenation.
 const WINDOWS_CMD_WRAPPER = 'powershell ';
 
 interface WinRMSession {

@@ -1,6 +1,6 @@
 import { configureRemoteExecution, parseConnectionString } from '../index';
 
-describe('configureRemoteExecution', () => {
+describe('configureRemoteExecution for unix', () => {
   it('should configure remote execution for unix', () => {
     const config = configureRemoteExecution({
       remoteExec: 'user@host:22',
@@ -12,6 +12,10 @@ describe('configureRemoteExecution', () => {
       port: 22,
       type: 'ssh',
       user: 'user',
+      password: undefined,
+      platform: 'unix',
+      private_key: undefined,
+      remote_workspace: '',
     });
   });
   it('should configure remote execution with default port', () => {
@@ -25,6 +29,47 @@ describe('configureRemoteExecution', () => {
       port: 22,
       type: 'ssh',
       user: 'user',
+      password: undefined,
+      platform: 'unix',
+      private_key: undefined,
+      remote_workspace: '',
+    });
+  });
+});
+
+describe('configureRemoteExecution for winrm', () => {
+  it('should configure remote execution for winrm', () => {
+    const config = configureRemoteExecution({
+      remoteExec: 'user@host:5985',
+      remoteExecType: 'winrm',
+    });
+    expect(config).toEqual({
+      enabled: true,
+      target: 'host',
+      port: 5985,
+      type: 'winrm',
+      user: 'user',
+      password: undefined,
+      platform: 'windows',
+      private_key: undefined,
+      remote_workspace: '',
+    });
+  });
+  it('should configure remote execution with default port', () => {
+    const config = configureRemoteExecution({
+      remoteExec: 'user@host',
+      remoteExecType: 'winrm',
+    });
+    expect(config).toEqual({
+      enabled: true,
+      target: 'host',
+      port: 5985,
+      type: 'winrm',
+      user: 'user',
+      password: undefined,
+      platform: 'windows',
+      private_key: undefined,
+      remote_workspace: '',
     });
   });
 });
@@ -49,7 +94,7 @@ describe('parseConnectionString', () => {
   });
 
   it('should throw an error if the connection string is invalid', () => {
-    expect(() => parseConnectionString('user@host')).toThrow(
+    expect(() => parseConnectionString('user@host 22')).toThrow(
       'Invalid connection format. Use: user@host:port'
     );
   });
