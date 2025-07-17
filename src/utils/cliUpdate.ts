@@ -35,6 +35,25 @@ const autoUpdate = async () => {
   }
 };
 
+/**
+ * Properly escape shell arguments to preserve spaces and special characters
+ */
+function escapeShellArg(arg: string): string {
+  // If the argument contains spaces, quotes, or other special characters, wrap it in quotes
+  if (
+    arg.includes(' ') ||
+    arg.includes('"') ||
+    arg.includes("'") ||
+    arg.includes('\\') ||
+    arg.includes('$') ||
+    arg.includes('`')
+  ) {
+    // Escape any existing double quotes and wrap in double quotes
+    return `"${arg.replace(/"/g, '\\"')}"`;
+  }
+  return arg;
+}
+
 export async function handleAutoUpdate(): Promise<boolean> {
   const config = ConfigManager.instance;
 
@@ -61,9 +80,9 @@ export async function handleAutoUpdate(): Promise<boolean> {
 
   Logger.log('Auto-update completed. Restarting task with new process.');
 
-  // Preserve original command structure by using the full command line
-  // This maintains proper quoting and escaping of arguments
-  const originalCommand = process.argv.join(' ');
+  // Properly escape arguments to preserve original quoting and spacing
+  const escapedArgs = process.argv.map(escapeShellArg);
+  const originalCommand = escapedArgs.join(' ');
 
   // Execute the new process with TFZO_UPDATED in env
   const result = await run_shell({
