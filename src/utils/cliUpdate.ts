@@ -70,6 +70,7 @@ export async function handleAutoUpdate(): Promise<boolean> {
       stdio: 'inherit',
       env: {
         ...process.env,
+        TFZO_UPDATED: 'true',
       },
     });
   } catch (error) {
