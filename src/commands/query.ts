@@ -260,7 +260,16 @@ export const queryCommand = async (query: string, options: QueryOptions) => {
       return;
     }
     if (agentConfig.remote_exec?.enabled) {
-      RemoteExecutor.instance.init(agentConfig.remote_exec);
+      const isInitialized = RemoteExecutor.instance.init(
+        agentConfig.remote_exec,
+        resolvedWorkspace
+      );
+      if (!isInitialized) {
+        logger.cancel(
+          'An agent is already initialized in this workspace. Remote execution cancelled.'
+        );
+        process.exit(1);
+      }
     }
 
     ////////// Workflow start //////////
