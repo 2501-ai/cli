@@ -108,7 +108,8 @@ export function configureRemoteExecution(
  */
 export async function initRemoteExecution(
   options: InitCommandOptions,
-  logger: Logger
+  logger: Logger,
+  workspacePath: string
 ): Promise<RemoteExecConfig | undefined> {
   // Validate remote connection if configured
   if (!options?.remoteExec) {
@@ -127,7 +128,16 @@ export async function initRemoteExecution(
   }
 
   // Initialize executor to run the detection command
-  RemoteExecutor.instance.init(remoteExecConfig);
+  const isInitialized = RemoteExecutor.instance.init(
+    remoteExecConfig,
+    workspacePath
+  );
+  if (!isInitialized) {
+    logger.cancel(
+      'An agent is already initialized in this workspace. Remote execution cancelled.'
+    );
+    process.exit(1);
+  }
 
   try {
     logger.start(
