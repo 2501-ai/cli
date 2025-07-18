@@ -1,51 +1,58 @@
 import fs from 'fs';
 import path from 'path';
-import TurndownService from 'turndown';
-import execa from 'execa';
 import * as cheerio from 'cheerio';
+import execa from 'execa';
+import TurndownService from 'turndown';
 
-import Logger from '../utils/logger';
-
+import { CONFIG_DIR } from '../constants';
 import { modifyCodeSections } from '../utils/sectionUpdate';
 import { IgnoreManager } from '../utils/ignore';
-import { getLogDir } from '../utils/platform';
-import { ConfigManager } from '../managers/configManager';
-import { RemoteExecutor } from '../managers/remoteExecutor';
-import { WinRMExecutor } from '../managers/winrmExecutor';
+import Logger from '../utils/logger';
+import { RemoteExecutor } from '../remoteExecution/remoteExecutor';
+import { isCommandNotFound } from '../remoteExecution';
 
-/**
- * Directory to store logs
- */
-export const LOG_DIR = getLogDir();
-
-/**
- * File to log the output of the command
- */
-export const LOGFILE_PATH = `${LOG_DIR}/test.log`;
-
-/**
- * File to log the error of the command.
- */
-export const ERRORFILE_PATH = `${LOG_DIR}/error.log`;
+export const LOG_DIR = path.join(CONFIG_DIR, 'logs');
+export const LOGFILE_PATH = path.join(LOG_DIR, 'commands.log');
+export const ERRORFILE_PATH = path.join(LOG_DIR, 'errors.log');
 
 export function read_file(args: { path: string }): string | null {
-  Logger.debug(`Reading file at "${args.path}"`);
-  if (!fs.existsSync(args.path)) return null;
+  try {
+    if (RemoteExecutor.instance.isEnabled()) {
+      // For remote execution, we'll need to handle this differently
+      // For now, return null to indicate file not found
+      return null;
+    }
 
-  return fs.readFileSync(args.path, 'utf8');
+    const data = fs.readFileSync(args.path, 'utf8');
+    return data;
+  } catch (error) {
+    Logger.error('Error reading file:', error);
+    return null;
+  }
 }
 
 export async function write_file(args: {
   path: string;
   content: string;
 }): Promise<string> {
-  if (ConfigManager.instance.get('remote_exec')) {
+  if (RemoteExecutor.instance.isEnabled()) {
     const escapedContent = args.content.replace(/"/g, '\\"');
+    const config = RemoteExecutor.instance.getConfig();
     try {
-      await RemoteExecutor.instance.executeCommand(
-        `tee "${args.path}"`,
-        escapedContent
-      );
+      if (config.type === 'winrm') {
+        // For WinRM, we need to use the `echo` command to write the file
+        const result = await RemoteExecutor.instance.executeCommand(
+          `powershell Write-Host ${escapedContent || ''} -NoNewline > "${args.path}"`
+        );
+        if (isCommandNotFound(result)) {
+          throw new Error(`Failed to write file: '${result}'`);
+        }
+      } else {
+        await RemoteExecutor.instance.executeCommand(
+          `tee "${args.path}"`,
+          escapedContent
+        );
+      }
     } catch (error) {
       throw new Error(`Failed to write file: ${error}`);
     }
@@ -96,7 +103,7 @@ export async function update_file({
   Logger.debug('Updating sections:', sectionsDiff);
 
   try {
-    const fileContent = ConfigManager.instance.get('remote_exec')
+    const fileContent = RemoteExecutor.instance.isEnabled()
       ? await RemoteExecutor.instance.executeCommand(`cat "${path}"`)
       : fs.readFileSync(path, 'utf8');
 
@@ -105,7 +112,8 @@ export async function update_file({
       diffSections: sectionsDiff,
     });
 
-    if (ConfigManager.instance.get('remote_exec')) {
+    if (RemoteExecutor.instance.isEnabled()) {
+      // Write file remotely.
       await write_file({ path, content: newContent });
     } else {
       try {
@@ -160,19 +168,9 @@ export async function run_shell({
 }): Promise<string> {
   Logger.debug(`Running shell command: ${command}`);
 
-  const config = ConfigManager.instance;
-
-  // Check if remote execution is enabled
-  if (config.get('remote_exec')) {
+  if (RemoteExecutor.instance.isEnabled()) {
     try {
-      const remoteType = config.get('remote_exec_type');
-      let result: string;
-
-      if (remoteType === 'win') {
-        result = await WinRMExecutor.instance.executeCommand(command);
-      } else {
-        result = await RemoteExecutor.instance.executeCommand(command);
-      }
+      const result = await RemoteExecutor.instance.executeCommand(command);
 
       logExecution(result);
 

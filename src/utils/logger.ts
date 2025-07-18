@@ -82,6 +82,14 @@ export default class Logger {
     p.cancel(message);
   }
 
+  /**
+   * Starts a spinner or logs a message, depending on the configuration.
+   *
+   * @param {string} [message] - An optional message to display when starting the spinner.
+   * If the terminal width is limited, the message will be truncated to fit. If spinners
+   * are disabled in the configuration, the message will be logged instead.
+   * @return {void} This method does not return a value.
+   */
   start(message?: string) {
     if (ConfigManager.instance.get('disable_spinner')) {
       p.log.message(message);
