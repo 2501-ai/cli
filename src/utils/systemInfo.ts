@@ -37,7 +37,7 @@ export const LINUX_PACKAGE_MANAGERS: readonly PackageManagerDefinition[] = [
   {
     cmd: 'yum',
     listCmd: (exclusionPattern: string) =>
-      `yum history list all 2>/dev/null | grep "U" | awk '{print $4}' | grep -vE '${exclusionPattern}'`,
+      `yum history list 2>/dev/null | grep "U" | awk '{print $4}' | grep -vE '${exclusionPattern}'`,
   },
   {
     cmd: 'pacman',
