@@ -85,6 +85,9 @@
       "pre-commit": "npm run lint"
     }
   },
+  "engines": {
+    "yarn": "please-use-npm"
+  },
   "publishConfig": {
     "access": "public"
   }
