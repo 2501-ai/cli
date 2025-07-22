@@ -6,7 +6,11 @@ import Logger from '../utils/logger';
 export interface IRemoteExecutor {
   init(config: RemoteExecConfig): void;
 
-  executeCommand(command: string, stdin?: string): Promise<string>;
+  executeCommand(
+    command: string,
+    stdin?: string,
+    rawCmd?: boolean
+  ): Promise<string>;
 
   disconnect?(): Promise<void>;
 
@@ -69,23 +73,23 @@ export class RemoteExecutor {
     return (this.isConfigured() && this.config?.enabled) ?? false;
   }
 
-  private throwIfNotInitialized(method: string): void {
+  async executeCommand(
+    command: string,
+    stdin?: string,
+    rawCmd = false
+  ): Promise<string> {
     if (!this.isConfigured()) {
-      throw new Error(
-        `[${method}] Remote executor not initialized. Call init() first.`
-      );
+      throw new Error(`Remote executor not initialized. Call init() first.`);
     }
-  }
-
-  async executeCommand(command: string, stdin?: string): Promise<string> {
-    this.throwIfNotInitialized('executeCommand');
 
     Logger.debug(`Executing remote command: ${command}`);
-    return this.executor!.executeCommand(command, stdin);
+    return this.executor!.executeCommand(command, stdin, rawCmd);
   }
 
   async validateConnection(): Promise<boolean> {
-    this.throwIfNotInitialized('validateConnection');
+    if (!this.isConfigured()) {
+      throw new Error(`Remote executor not initialized. Call init() first.`);
+    }
 
     Logger.debug(`Validating connection for host: ${this.config!.target}`);
     return (await this.detectRemotePlatform()) !== null;
@@ -99,12 +103,16 @@ export class RemoteExecutor {
     await this.connect(); // initialize the connection to the remote host
     if (this.config.type === 'winrm') {
       this.config.platform = 'windows';
+      console.log('windows');
       return 'windows';
     }
 
     try {
-      this.executor!.wrapper = '';
-      const result = await this.executeCommand('uname -s 2>&1 || ver');
+      const result = await this.executeCommand(
+        'uname -s 2>&1 || ver',
+        '',
+        true
+      );
 
       Logger.debug('Platform detection result:', result);
 
@@ -154,12 +162,16 @@ export class RemoteExecutor {
   }
 
   async connect(): Promise<void> {
-    this.throwIfNotInitialized('connect');
+    if (!this.isConfigured()) {
+      throw new Error(`Remote executor not initialized. Call init() first.`);
+    }
     await this.executor?.connect();
   }
 
   getConfig(): RemoteExecConfig {
-    this.throwIfNotInitialized('getConfig');
+    if (!this.isConfigured()) {
+      throw new Error(`Remote executor not initialized. Call init() first.`);
+    }
     return this.config!;
   }
 }

@@ -102,7 +102,11 @@ export class SSHExecutor implements IRemoteExecutor {
     });
   }
 
-  async executeCommand(command: string, stdin?: string): Promise<string> {
+  async executeCommand(
+    command: string,
+    stdin?: string,
+    rawCmd = false
+  ): Promise<string> {
     try {
       await this.connect();
 
@@ -117,40 +121,43 @@ export class SSHExecutor implements IRemoteExecutor {
         }
 
         // Use platform-appropriate command wrapper
-        this.client.exec(this.wrapper + command, (err, stream) => {
-          if (err) {
-            reject(err);
-            return;
-          }
-
-          let stdout = '';
-          let stderr = '';
-
-          stream.on('close', (code: number) => {
-            if (code !== 0) {
-              reject(
-                new Error(`Command failed with exit code ${code}: ${stderr}`)
-              );
-            } else {
-              // Remove the command wrapper from the output if used
-              const result = stdout.replace(this.wrapper, '').trim();
-              resolve(result);
+        this.client.exec(
+          rawCmd ? command : this.wrapper + command,
+          (err, stream) => {
+            if (err) {
+              reject(err);
+              return;
             }
-          });
 
-          stream.on('data', (data: Buffer) => {
-            stdout += data.toString();
-          });
+            let stdout = '';
+            let stderr = '';
 
-          stream.stderr.on('data', (data: Buffer) => {
-            stderr += data.toString();
-          });
+            stream.on('close', (code: number) => {
+              if (code !== 0) {
+                reject(
+                  new Error(`Command failed with exit code ${code}: ${stderr}`)
+                );
+              } else {
+                // Remove the command wrapper from the output if used
+                const result = stdout.replace(this.wrapper, '').trim();
+                resolve(result);
+              }
+            });
 
-          if (stdin) {
-            stream.stdin.write(stdin);
-            stream.stdin.end();
+            stream.on('data', (data: Buffer) => {
+              stdout += data.toString();
+            });
+
+            stream.stderr.on('data', (data: Buffer) => {
+              stderr += data.toString();
+            });
+
+            if (stdin) {
+              stream.stdin.write(stdin);
+              stream.stdin.end();
+            }
           }
-        });
+        );
       });
     } catch (error) {
       Logger.error('Remote command execution failed:', error);
