@@ -78,35 +78,31 @@ export class RemoteExecutor {
     return (this.isConfigured() && this.config?.enabled) ?? false;
   }
 
-  private throwIfNotInitialized(
-    method: string
-  ): asserts this is RemoteExecutor & {
+  private throwIfNotInitialized(): asserts this is RemoteExecutor & {
     executor: IRemoteExecutor;
     config: RemoteExecConfig;
   } {
     if (!this.isConfigured()) {
-      throw new Error(
-        `[${method}] Remote executor not initialized. Call init() first.`
-      );
+      throw new Error(`Remote executor not initialized. Call init() first.`);
     }
   }
 
   async executeCommand(command: string, stdin?: string): Promise<string> {
-    this.throwIfNotInitialized('executeCommand');
+    this.throwIfNotInitialized();
 
     Logger.debug(`Executing remote command: ${command}`);
     return this.executor.executeCommand(command, stdin);
   }
 
   async validateConnection(): Promise<boolean> {
-    this.throwIfNotInitialized('validateConnection');
+    this.throwIfNotInitialized();
 
     Logger.debug(`Validating connection for host: ${this.config.target}`);
     return (await this.detectRemotePlatform()) !== null;
   }
 
   async detectRemotePlatform(): Promise<'windows' | 'unix' | null> {
-    this.throwIfNotInitialized('detectRemotePlatform');
+    this.throwIfNotInitialized();
 
     await this.connect(); // initialize the connection to the remote host
 
@@ -167,12 +163,12 @@ export class RemoteExecutor {
   }
 
   async connect(): Promise<void> {
-    this.throwIfNotInitialized('connect');
+    this.throwIfNotInitialized();
     await this.executor?.connect();
   }
 
   getConfig(): RemoteExecConfig {
-    this.throwIfNotInitialized('getConfig');
+    this.throwIfNotInitialized();
     return this.config;
   }
 }
