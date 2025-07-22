@@ -122,20 +122,24 @@ export const initCommand = async (
       configManager.set('disable_spinner', shouldDisableSpinner);
     }
 
-    const remoteExecConfig = await initRemoteExecution(options, logger);
+    const workspacePath = await getWorkspacePath(options);
+
+    const remoteExecConfig = await initRemoteExecution(
+      options,
+      logger,
+      workspacePath
+    );
     const systemInfoPromise = RemoteExecutor.instance.isEnabled()
       ? getRemoteSystemInfo()
       : getSystemInfo();
 
     const configKey = options.config || 'SYSOPS';
     const parallelPromises = [
-      getWorkspacePath(options),
       systemInfoPromise,
       fetchConfiguration(configKey),
     ] as const;
 
-    const [workspacePath, systemInfo, agentConfig] =
-      await Promise.all(parallelPromises);
+    const [systemInfo, agentConfig] = await Promise.all(parallelPromises);
 
     TelemetryManager.instance.updateContext({
       workspacePath: workspacePath,

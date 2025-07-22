@@ -1,7 +1,8 @@
+import { listAgentsFromWorkspace } from '../utils/conf';
+import Logger from '../utils/logger';
+import { RemoteExecConfig } from '../utils/types';
 import { SSHExecutor } from './executors/sshExecutor';
 import { WinRMExecutor } from './executors/winrmExecutor';
-import { RemoteExecConfig } from '../utils/types';
-import Logger from '../utils/logger';
 
 export interface IRemoteExecutor {
   init(config: RemoteExecConfig): void;
@@ -23,8 +24,8 @@ export interface IRemoteExecutor {
 
 export class RemoteExecutor {
   private static _instance: RemoteExecutor;
-  private config: RemoteExecConfig | null = null;
-  private executor: IRemoteExecutor | null = null;
+  protected config: RemoteExecConfig | null = null;
+  protected executor: IRemoteExecutor | null = null;
 
   static get instance() {
     if (!RemoteExecutor._instance) {
@@ -37,9 +38,15 @@ export class RemoteExecutor {
     return this.executor?.isConnected() ?? false;
   }
 
-  init(config: RemoteExecConfig): void {
+  init(config: RemoteExecConfig, workspacePath: string): boolean {
     if (!config || !config.enabled) {
       throw new Error('Remote config is not enabled');
+    }
+
+    const agents = listAgentsFromWorkspace(workspacePath);
+
+    if (agents.length > 0) {
+      return false;
     }
 
     // Initialize appropriate executor based on connection type
@@ -57,6 +64,8 @@ export class RemoteExecutor {
     Logger.debug(
       `Initialized ${config.type} remote executor for ${config.target}:${config.port}`
     );
+
+    return true;
   }
 
   /**
@@ -73,34 +82,38 @@ export class RemoteExecutor {
     return (this.isConfigured() && this.config?.enabled) ?? false;
   }
 
+  private throwIfNotInitialized(): asserts this is RemoteExecutor & {
+    executor: IRemoteExecutor;
+    config: RemoteExecConfig;
+  } {
+    if (!this.isConfigured()) {
+      throw new Error(`Remote executor not initialized. Call init() first.`);
+    }
+  }
+
   async executeCommand(
     command: string,
     stdin?: string,
-    rawCmd = false
+    rawCmd?: boolean
   ): Promise<string> {
-    if (!this.isConfigured()) {
-      throw new Error(`Remote executor not initialized. Call init() first.`);
-    }
+    this.throwIfNotInitialized();
 
     Logger.debug(`Executing remote command: ${command}`);
-    return this.executor!.executeCommand(command, stdin, rawCmd);
+    return this.executor.executeCommand(command, stdin, rawCmd);
   }
 
   async validateConnection(): Promise<boolean> {
-    if (!this.isConfigured()) {
-      throw new Error(`Remote executor not initialized. Call init() first.`);
-    }
+    this.throwIfNotInitialized();
 
-    Logger.debug(`Validating connection for host: ${this.config!.target}`);
+    Logger.debug(`Validating connection for host: ${this.config.target}`);
     return (await this.detectRemotePlatform()) !== null;
   }
 
   async detectRemotePlatform(): Promise<'windows' | 'unix' | null> {
-    if (!this.config) {
-      throw new Error('Remote executor not configured');
-    }
+    this.throwIfNotInitialized();
 
     await this.connect(); // initialize the connection to the remote host
+
     if (this.config.type === 'winrm') {
       this.config.platform = 'windows';
       console.log('windows');
@@ -162,16 +175,12 @@ export class RemoteExecutor {
   }
 
   async connect(): Promise<void> {
-    if (!this.isConfigured()) {
-      throw new Error(`Remote executor not initialized. Call init() first.`);
-    }
-    await this.executor?.connect();
+    this.throwIfNotInitialized();
+    await this.executor.connect();
   }
 
   getConfig(): RemoteExecConfig {
-    if (!this.isConfigured()) {
-      throw new Error(`Remote executor not initialized. Call init() first.`);
-    }
-    return this.config!;
+    this.throwIfNotInitialized();
+    return this.config;
   }
 }

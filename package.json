@@ -1,6 +1,6 @@
 {
   "name": "@2501-ai/cli",
-  "version": "0.2.40-alpha.1",
+  "version": "0.2.40",
   "description": "",
   "main": "dist/index.js",
   "bin": {
@@ -85,6 +85,9 @@
     "hooks": {
       "pre-commit": "npm run lint"
     }
+  },
+  "engines": {
+    "yarn": "please-use-npm"
   },
   "publishConfig": {
     "access": "public"
