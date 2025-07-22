@@ -164,7 +164,7 @@ export class RemoteExecutor {
 
   async connect(): Promise<void> {
     this.throwIfNotInitialized();
-    await this.executor?.connect();
+    await this.executor.connect();
   }
 
   getConfig(): RemoteExecConfig {
