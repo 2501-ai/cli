@@ -12,6 +12,7 @@
     "build:clean": "rm -rf dist && tsc",
     "build:link": "npm run build && npm link && npm link @2501-ai/cli",
     "unlink": "npm unlink -g @2501-ai/cli",
+    "relink": "npm run unlink && npm run build:link",
     "start": "node .",
     "lint": "tsc --noEmit && eslint . --ext .ts,.tsx --fix",
     "prepare": "husky",
