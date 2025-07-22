@@ -117,11 +117,7 @@ export class WinRMExecutor implements IRemoteExecutor {
     }
   }
 
-  async executeCommand(
-    command: string,
-    stdin?: string,
-    rawCmd = false
-  ): Promise<string> {
+  async executeCommand(command: string, stdin?: string): Promise<string> {
     try {
       await this.connect();
 
@@ -136,10 +132,8 @@ export class WinRMExecutor implements IRemoteExecutor {
         );
       }
 
-      const escapedCommand = command.replace(/"/g, '""'); // Escape double quotes for PowerShell
-      const wrappedCommand = rawCmd
-        ? command
-        : `${this.wrapper}"${escapedCommand}"`; // Wrap in double quotes
+      const encodedCommand = Buffer.from(command, 'utf16le').toString('base64');
+      const wrappedCommand = `powershell -EncodedCommand ${encodedCommand}`;
 
       const cmdId = await winrm.command.doExecuteCommand({
         ...this.session,

@@ -7,7 +7,7 @@ if (!JEST_WINRM_PASS || !JEST_WINRM_USER || !JEST_WINRM_HOST) {
 }
 // Ex usage : npx dotenv -e .env.test -- npx jest executor.test.ts
 // Skip it not to make it run in the CI.
-describe.skip('RemoteExecutor - WinRM', () => {
+describe('RemoteExecutor - WinRM', () => {
   beforeAll(async () => {
     RemoteExecutor.instance.init(
       {
