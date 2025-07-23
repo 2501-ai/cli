@@ -7,7 +7,7 @@ import {
   WINDOWS_PACKAGE_MANAGERS,
 } from '../utils/systemInfo';
 import { SystemInfo } from '../utils/types';
-import { isCommandNotFound } from './index';
+import { isCommandNotFound } from './connectionParser';
 import { RemoteExecutor } from './remoteExecutor';
 
 async function getRemoteGlobalNpmPackages(

@@ -9,19 +9,16 @@ if (!JEST_WINRM_PASS || !JEST_WINRM_USER || !JEST_WINRM_HOST) {
 // Skip it not to make it run in the CI.
 describe('RemoteExecutor - WinRM', () => {
   beforeAll(async () => {
-    RemoteExecutor.instance.init(
-      {
-        enabled: true,
-        target: JEST_WINRM_HOST,
-        port: 5985,
-        type: 'winrm',
-        platform: 'windows',
-        user: JEST_WINRM_USER,
-        remote_workspace: `C:\\Users\\${JEST_WINRM_USER}`,
-        password: JEST_WINRM_PASS,
-      },
-      '/tmp/test'
-    );
+    RemoteExecutor.instance.init({
+      enabled: true,
+      target: JEST_WINRM_HOST,
+      port: 5985,
+      type: 'winrm',
+      platform: 'windows',
+      user: JEST_WINRM_USER,
+      remote_workspace: `C:\\Users\\${JEST_WINRM_USER}`,
+      password: JEST_WINRM_PASS,
+    });
     await RemoteExecutor.instance.validateConnection();
   });
 

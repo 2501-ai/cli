@@ -9,7 +9,7 @@ import { modifyCodeSections } from '../utils/sectionUpdate';
 import { IgnoreManager } from '../utils/ignore';
 import Logger from '../utils/logger';
 import { RemoteExecutor } from '../remoteExecution/remoteExecutor';
-import { isCommandNotFound } from '../remoteExecution';
+import { isCommandNotFound } from '../remoteExecution/connectionParser';
 
 export const LOG_DIR = path.join(CONFIG_DIR, 'logs');
 export const LOGFILE_PATH = path.join(LOG_DIR, 'commands.log');

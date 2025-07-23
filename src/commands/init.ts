@@ -9,15 +9,18 @@ import { isDirUnsafe } from '../helpers/security';
 import { resolveWorkspacePath } from '../helpers/workspace';
 import { ConfigManager } from '../managers/configManager';
 import { TelemetryManager } from '../managers/telemetryManager';
-import { initRemoteExecution } from '../remoteExecution';
+import {
+  configureAndValidateRemoteExecution,
+  detectPlatformAndAdjustWorkspace,
+} from '../remoteExecution/connectionParser';
 import { RemoteExecutor } from '../remoteExecution/remoteExecutor';
 import { getRemoteSystemInfo } from '../remoteExecution/remoteSystemInfo';
-import { addAgent } from '../utils/conf';
+import { addAgent, getEligibleAgent } from '../utils/conf';
 import Logger from '../utils/logger';
 import { DISCORD_LINK } from '../utils/messaging';
 import { getTempPath2501 } from '../utils/platform';
 import { getSystemInfo } from '../utils/systemInfo';
-import { Configuration } from '../utils/types';
+import { Configuration, RemoteExecConfig } from '../utils/types';
 
 axios.defaults.baseURL = `${API_HOST}${API_VERSION}`;
 axios.defaults.timeout = 120 * 1000;
@@ -95,6 +98,34 @@ export async function getWorkspacePath(
   return finalPath;
 }
 
+/**
+ * Initialize the remote execution.
+ *
+ * 1. Validate the connection string.
+ * 2. Initialize the remote execution.
+ * 3. Connect and detect the platform.
+ * 4. Adjust the workspace path based on the platform.
+ */
+export async function initRemoteExecution(
+  options: InitCommandOptions,
+  logger: Logger
+): Promise<RemoteExecConfig | undefined> {
+  if (!options?.remoteExec) {
+    return;
+  }
+
+  const remoteExecConfig = await configureAndValidateRemoteExecution(
+    options,
+    logger
+  );
+  if (!remoteExecConfig) {
+    return;
+  }
+
+  await detectPlatformAndAdjustWorkspace(remoteExecConfig, options, logger);
+  return remoteExecConfig;
+}
+
 // This function will be called when the `init` command is executed
 export const initCommand = async (
   options: InitCommandOptions
@@ -124,11 +155,15 @@ export const initCommand = async (
 
     const workspacePath = await getWorkspacePath(options);
 
-    const remoteExecConfig = await initRemoteExecution(
-      options,
-      logger,
-      workspacePath
-    );
+    const remoteExecConfig = await initRemoteExecution(options, logger);
+    const eligibleAgent = getEligibleAgent(workspacePath);
+    if (eligibleAgent?.remote_exec?.enabled) {
+      logger.cancel(
+        'An agent is already initialized in this workspace. Remote execution cancelled.'
+      );
+      process.exit(1);
+    }
+
     const systemInfoPromise = RemoteExecutor.instance.isEnabled()
       ? getRemoteSystemInfo()
       : getSystemInfo();
@@ -149,7 +184,7 @@ export const initCommand = async (
 
     logger.start('Creating agent');
     // Give the agent a workspace that is the remote workspace if remote execution is enabled.
-    const path = remoteExecConfig
+    const path = remoteExecConfig?.enabled
       ? remoteExecConfig.remote_workspace
       : workspacePath;
 
