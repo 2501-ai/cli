@@ -7,7 +7,11 @@ import { WinRMExecutor } from './executors/winrmExecutor';
 export interface IRemoteExecutor {
   init(config: RemoteExecConfig): void;
 
-  executeCommand(command: string, stdin?: string): Promise<string>;
+  executeCommand(
+    command: string,
+    stdin?: string,
+    rawCmd?: boolean
+  ): Promise<string>;
 
   disconnect?(): Promise<void>;
 
@@ -87,11 +91,15 @@ export class RemoteExecutor {
     }
   }
 
-  async executeCommand(command: string, stdin?: string): Promise<string> {
+  async executeCommand(
+    command: string,
+    stdin?: string,
+    rawCmd?: boolean
+  ): Promise<string> {
     this.throwIfNotInitialized();
 
     Logger.debug(`Executing remote command: ${command}`);
-    return this.executor.executeCommand(command, stdin);
+    return this.executor.executeCommand(command, stdin, rawCmd);
   }
 
   async validateConnection(): Promise<boolean> {
@@ -108,12 +116,16 @@ export class RemoteExecutor {
 
     if (this.config.type === 'winrm') {
       this.config.platform = 'windows';
+      console.log('windows');
       return 'windows';
     }
 
     try {
-      this.executor.wrapper = '';
-      const result = await this.executeCommand('uname -s 2>&1 || ver');
+      const result = await this.executeCommand(
+        'uname -s 2>&1 || ver',
+        '',
+        true
+      );
 
       Logger.debug('Platform detection result:', result);
 
