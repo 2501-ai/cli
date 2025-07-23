@@ -23,11 +23,14 @@ import {
 import { zipUtility } from '../utils/zip';
 
 export function resolveWorkspacePath(options: { workspace?: string }): string {
+  Logger.debug('Resolving workspace path:', options.workspace);
   let finalPath = options.workspace || process.cwd();
   // Convert relative path to absolute path if necessary
   finalPath = path.isAbsolute(finalPath)
     ? finalPath
     : path.resolve(process.cwd(), finalPath);
+
+  Logger.debug('Resolved workspace path:', finalPath);
 
   return finalPath;
 }

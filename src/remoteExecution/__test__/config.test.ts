@@ -1,4 +1,7 @@
-import { configureRemoteExecution, parseConnectionString } from '../index';
+import {
+  configureRemoteExecution,
+  parseConnectionString,
+} from '../connectionParser';
 
 describe('configureRemoteExecution for unix', () => {
   it('should configure remote execution for unix', () => {

@@ -1,4 +1,3 @@
-import { listAgentsFromWorkspace } from '../utils/conf';
 import Logger from '../utils/logger';
 import { RemoteExecConfig } from '../utils/types';
 import { SSHExecutor } from './executors/sshExecutor';
@@ -34,15 +33,9 @@ export class RemoteExecutor {
     return this.executor?.isConnected() ?? false;
   }
 
-  init(config: RemoteExecConfig, workspacePath: string): boolean {
+  init(config: RemoteExecConfig): void {
     if (!config || !config.enabled) {
       throw new Error('Remote config is not enabled');
-    }
-
-    const agents = listAgentsFromWorkspace(workspacePath);
-
-    if (agents.length > 0) {
-      return false;
     }
 
     // Initialize appropriate executor based on connection type
@@ -60,8 +53,6 @@ export class RemoteExecutor {
     Logger.debug(
       `Initialized ${config.type} remote executor for ${config.target}:${config.port}`
     );
-
-    return true;
   }
 
   /**

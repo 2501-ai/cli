@@ -240,6 +240,8 @@ export const queryCommand = async (query: string, options: QueryOptions) => {
     agentId: options.agentId,
   };
 
+  Logger.debug('Context:', context);
+
   TelemetryManager.instance.updateContext(context);
 
   try {
@@ -259,17 +261,9 @@ export const queryCommand = async (query: string, options: QueryOptions) => {
     if (!agentConfig) {
       return;
     }
+
     if (agentConfig.remote_exec?.enabled) {
-      const isInitialized = RemoteExecutor.instance.init(
-        agentConfig.remote_exec,
-        resolvedWorkspace
-      );
-      if (!isInitialized) {
-        logger.cancel(
-          'An agent is already initialized in this workspace. Remote execution cancelled.'
-        );
-        process.exit(1);
-      }
+      RemoteExecutor.instance.init(agentConfig.remote_exec);
     }
 
     ////////// Workflow start //////////

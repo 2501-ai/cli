@@ -81,10 +81,7 @@ Join our Discord server: ${DISCORD_LINK}
 
     try {
       await authMiddleware();
-      await queryCommand(query, {
-        remoteExecType: options.remoteExecType,
-        ...options,
-      });
+      await queryCommand(query, options);
     } catch (error) {
       await errorHandler.handleCommandError(error as Error, 'fallback-query', {
         exitCode: 1,
