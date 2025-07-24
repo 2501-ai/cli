@@ -68,6 +68,9 @@ Join our Discord server: ${DISCORD_LINK}
   )
   .option('--remote-exec-password <password>', 'Password for remote execution')
   .option('--remote-skip-test <skipTest>', 'Skip the remote connection test')
+  .hook('postAction', () => {
+    RemoteExecutor.instance.disconnect();
+  })
   .on('command:*', async (args) => {
     const query = args?.join(' ');
     if (!query) {
@@ -86,8 +89,6 @@ Join our Discord server: ${DISCORD_LINK}
       await errorHandler.handleCommandError(error as Error, 'fallback-query', {
         exitCode: 1,
       });
-    } finally {
-      RemoteExecutor.instance.disconnect();
     }
   });
 
@@ -132,9 +133,6 @@ program
   .hook('preAction', authMiddleware)
   .hook('preAction', initPlugins)
   .hook('preAction', initPluginCredentials)
-  .hook('postAction', () => {
-    RemoteExecutor.instance.disconnect();
-  })
   .action(async (query, options) => {
     Logger.debug('Query options:', options);
     await queryCommand(query, options);
@@ -152,9 +150,6 @@ program
   )
   .option('--config <configKey>', 'Specify the configuration Key to use')
   .hook('preAction', authMiddleware)
-  .hook('postAction', () => {
-    RemoteExecutor.instance.disconnect();
-  })
   .action(async (cmdOptions) => {
     const options = program.opts();
     const allOptions = { ...cmdOptions, ...options };
