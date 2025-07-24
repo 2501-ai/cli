@@ -11,6 +11,7 @@ import {
   EngineType,
   QueryResponseDTO,
   SystemInfo,
+  GetAgentResponse,
 } from '../utils/types';
 
 // const ONE_MINUTES_MILLIS = 60 * 1000;
@@ -47,6 +48,11 @@ export const createAgent = async (
 
   // TODO: make engine return less data.
   return createResponse;
+};
+
+export const getAgent = async (agentId: string): Promise<GetAgentResponse> => {
+  const { data } = await axios.get(`/agents/${agentId}`);
+  return data;
 };
 
 /**

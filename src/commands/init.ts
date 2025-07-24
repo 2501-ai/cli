@@ -4,7 +4,7 @@ import { terminal } from 'terminal-kit';
 
 // Local imports
 import { API_HOST, API_VERSION } from '../constants';
-import { createAgent } from '../helpers/api';
+import { createAgent, getAgent } from '../helpers/api';
 import { isDirUnsafe } from '../helpers/security';
 import { resolveWorkspacePath } from '../helpers/workspace';
 import { ConfigManager } from '../managers/configManager';
@@ -35,6 +35,8 @@ export interface InitCommandOptions {
   remoteWorkspace?: string;
   remoteExecType?: string;
   remoteExecPassword?: string;
+  agentId?: string;
+  taskId?: string;
 }
 
 const logger = new Logger();
@@ -109,7 +111,7 @@ export async function getWorkspacePath(
 export async function initRemoteExecution(
   options: InitCommandOptions,
   logger: Logger
-): Promise<RemoteExecConfig | undefined> {
+): Promise<RemoteExecConfig | void> {
   if (!options?.remoteExec) {
     return;
   }
@@ -124,6 +126,19 @@ export async function initRemoteExecution(
 
   await detectPlatformAndAdjustWorkspace(remoteExecConfig, options, logger);
   return remoteExecConfig;
+}
+
+/**
+ * Exit if a remote execution agent already exists.
+ */
+function checkForExistingAgent(workspacePath: string) {
+  const eligibleAgent = getEligibleAgent(workspacePath);
+  if (eligibleAgent?.remote_exec?.enabled) {
+    logger.cancel(
+      'An agent is already initialized in this workspace. Remote execution cancelled.'
+    );
+    process.exit(1);
+  }
 }
 
 // This function will be called when the `init` command is executed
@@ -156,15 +171,9 @@ export const initCommand = async (
     const workspacePath = await getWorkspacePath(options);
 
     const remoteExecConfig = await initRemoteExecution(options, logger);
-    const eligibleAgent = getEligibleAgent(workspacePath);
-    if (eligibleAgent?.remote_exec?.enabled) {
-      logger.cancel(
-        'An agent is already initialized in this workspace. Remote execution cancelled.'
-      );
-      process.exit(1);
-    }
+    checkForExistingAgent(workspacePath);
 
-    const systemInfoPromise = RemoteExecutor.instance.isEnabled()
+    const systemInfoPromise = remoteExecConfig
       ? getRemoteSystemInfo()
       : getSystemInfo();
 
@@ -183,27 +192,38 @@ export const initCommand = async (
     Logger.debug('systemInfo results:', { systemInfo });
 
     logger.start('Creating agent');
+
     // Give the agent a workspace that is the remote workspace if remote execution is enabled.
-    const path = remoteExecConfig?.enabled
-      ? remoteExecConfig.remote_workspace
-      : workspacePath;
+    const path = remoteExecConfig?.remote_workspace ?? workspacePath;
 
-    const { id, name } = await createAgent(
-      path,
-      agentConfig,
-      systemInfo,
-      configManager.get('engine')
-    );
-    Logger.debug('Agent created:', { id, name });
+    //TODO: add support for options.agentId and retrieve the existing agent if it exists.
+    let id: string;
+    let name: string;
+    if (options.agentId) {
+      const agent = await getAgent(options.agentId);
+      id = agent.id;
+      name = agent.name;
+      Logger.debug('Agent retrieved:', { agent });
+    } else {
+      const createdAgent = await createAgent(
+        path,
+        agentConfig,
+        systemInfo,
+        configManager.get('engine')
+      );
+      Logger.debug('Agent created:', { agent: createdAgent });
+      id = createdAgent.id;
+      name = createdAgent.name;
+    }
 
-    // Add agent to config.
+    // Add agent to local config.
     addAgent({
       id,
       name,
       workspace: workspacePath,
       configuration: agentConfig.id,
       engine: configManager.get('engine'),
-      remote_exec: remoteExecConfig,
+      remote_exec: remoteExecConfig ?? undefined,
     });
 
     TelemetryManager.instance.updateContext({

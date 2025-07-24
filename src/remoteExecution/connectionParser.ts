@@ -199,9 +199,8 @@ export async function detectPlatformAndAdjustWorkspace(
   logger: Logger
 ): Promise<void> {
   try {
-    logger.start(
-      `Connecting to remote host ${remoteExecConfig.target} using ${remoteExecConfig.type}...`
-    );
+    const { target, type, platform } = remoteExecConfig;
+    logger.start(`Connecting to remote host ${target} using ${type}...`);
 
     const isValid = await RemoteExecutor.instance.validateConnection();
     if (!isValid) {
@@ -209,8 +208,7 @@ export async function detectPlatformAndAdjustWorkspace(
       process.exit(1);
     }
 
-    const { platform } = RemoteExecutor.instance.getConfig();
-    logger.message(`Detected platform: ${platform}`);
+    logger.message(`Detected platform: ${platform} for ${target}`);
     logger.stop('Remote connection validated successfully');
 
     adjustWorkspacePathIfNeeded(remoteExecConfig, options);
@@ -233,9 +231,10 @@ function adjustWorkspacePathIfNeeded(
     return;
   }
 
-  const { platform, user } = remoteExecConfig;
   const adjustedWorkspace =
-    platform === 'windows' ? `C:\\Users\\${user}` : `/home/${user}`;
+    remoteExecConfig.platform === 'windows'
+      ? `C:\\Users\\${remoteExecConfig.user}`
+      : `/home/${remoteExecConfig.user}`;
 
   remoteExecConfig.remote_workspace = adjustedWorkspace;
   Logger.debug(`Adjusted workspace path to: ${adjustedWorkspace}`);
