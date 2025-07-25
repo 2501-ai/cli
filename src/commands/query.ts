@@ -347,6 +347,6 @@ export const queryCommand = async (query: string, options: QueryOptions) => {
       Logger.agent(finalResponse);
     }
   } catch (error) {
-    logger.handleError(error as Error);
+    await logger.handleError(error as Error);
   }
 };

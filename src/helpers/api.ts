@@ -4,14 +4,14 @@ import { FormData } from 'formdata-node';
 import { API_HOST, API_VERSION } from '../constants';
 import { ConfigManager } from '../managers/configManager';
 import { pluginService } from '../utils/plugins';
-import { getHostInfo } from '../utils/systemInfo';
 import {
-  CreateAgentResponse,
   Configuration,
+  CreateAgentResponse,
   EngineType,
+  GetAgentResponse,
+  HostInfo,
   QueryResponseDTO,
   SystemInfo,
-  GetAgentResponse,
 } from '../utils/types';
 
 // const ONE_MINUTES_MILLIS = 60 * 1000;
@@ -33,10 +33,9 @@ export const createAgent = async (
   workspace: string,
   selected_config: Configuration,
   sysinfo: SystemInfo,
-  engine: EngineType
+  engine: EngineType,
+  hostInfo: HostInfo
 ): Promise<CreateAgentResponse> => {
-  const hostInfo = await getHostInfo();
-
   const { data: createResponse } = await axios.post('/agents', {
     workspace,
     configuration: selected_config.id,
@@ -93,6 +92,13 @@ export const queryAgent = async (
   );
 
   return data;
+};
+
+export const updateHostInfo = async (
+  agentId: string,
+  hostInfo: HostInfo
+): Promise<void> => {
+  await axios.put(`/agents/${agentId}/host`, hostInfo);
 };
 
 /**

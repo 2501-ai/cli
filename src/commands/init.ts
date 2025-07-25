@@ -4,7 +4,12 @@ import { terminal } from 'terminal-kit';
 
 // Local imports
 import { API_HOST, API_VERSION } from '../constants';
-import { createAgent, getAgent, updateAgent } from '../helpers/api';
+import {
+  createAgent,
+  getAgent,
+  updateAgent,
+  updateHostInfo,
+} from '../helpers/api';
 import { isDirUnsafe } from '../helpers/security';
 import { resolveWorkspacePath } from '../helpers/workspace';
 import { ConfigManager } from '../managers/configManager';
@@ -19,7 +24,7 @@ import { addAgent, getEligibleAgent } from '../utils/conf';
 import Logger from '../utils/logger';
 import { DISCORD_LINK } from '../utils/messaging';
 import { getTempPath2501 } from '../utils/platform';
-import { getSystemInfo } from '../utils/systemInfo';
+import { getHostInfo, getSystemInfo } from '../utils/systemInfo';
 import { Configuration, RemoteExecConfig } from '../utils/types';
 
 axios.defaults.baseURL = `${API_HOST}${API_VERSION}`;
@@ -198,6 +203,8 @@ export const initCommand = async (
     //TODO: add support for options.agentId and retrieve the existing agent if it exists.
     let id: string;
     let name: string;
+    const hostInfo = await getHostInfo();
+
     if (options.agentId) {
       const agent = await getAgent(options.agentId);
       id = agent.id;
@@ -211,6 +218,8 @@ export const initCommand = async (
         process.exit(1);
       }
 
+      await updateHostInfo(id, hostInfo);
+
       // Update the system info for the agent.
       await updateAgent(id, {
         workspace: workspacePath,
@@ -223,7 +232,8 @@ export const initCommand = async (
         path,
         agentConfig,
         systemInfo,
-        configManager.get('engine')
+        configManager.get('engine'),
+        hostInfo
       );
       Logger.debug('Agent created:', { agent: createdAgent });
       id = createdAgent.id;
@@ -245,6 +255,6 @@ export const initCommand = async (
     });
     logger.stop(`Agent ${id} ${options.agentId ? 'retrieved' : 'created'}`);
   } catch (e: unknown) {
-    logger.handleError(e as Error, (e as Error).message);
+    await logger.handleError(e as Error, (e as Error).message);
   }
 };

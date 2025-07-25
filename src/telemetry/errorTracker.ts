@@ -205,9 +205,9 @@ class ErrorTracker {
 
 export const errorTracker = new ErrorTracker();
 
-export function trackError(
+export async function trackError(
   error: Error,
   context?: { metadata?: Record<string, any> }
-): void {
-  errorTracker.trackError(error, context).catch(() => {});
+): Promise<void> {
+  await errorTracker.trackError(error, context).catch(() => {});
 }

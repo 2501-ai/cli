@@ -172,14 +172,14 @@ export default class Logger {
     });
   }
 
-  handleError(
+  async handleError(
     e: Error | AxiosError,
-    defaultMsg = 'Unexpected error. Please try again !'
-  ) {
+    defaultMsg = e.message || 'Unexpected error. Please try again !'
+  ): Promise<void> {
     if (isDebug) {
       if (!axios.isAxiosError(e)) {
         Logger.error('Command error', e);
-        trackError(e, {
+        await trackError(e, {
           metadata: {
             defaultMsg,
           },
