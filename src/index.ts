@@ -140,6 +140,10 @@ program
   .hook('preAction', initPluginCredentials)
   .action(async (query, options) => {
     Logger.debug('Query options:', options);
+    if (!query && !options.taskId) {
+      Logger.error('Query is required if --task-id is not provided');
+      process.exit(1);
+    }
     await queryCommand(query, options);
   });
 
