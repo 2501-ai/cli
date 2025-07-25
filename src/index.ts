@@ -138,13 +138,15 @@ program
   .hook('preAction', authMiddleware)
   .hook('preAction', initPlugins)
   .hook('preAction', initPluginCredentials)
-  .action(async (query, options) => {
-    Logger.debug('Query options:', options);
-    if (!query && !options.taskId) {
+  .action(async (query, cmdOptions) => {
+    const options = program.opts();
+    const allOptions = { ...cmdOptions, ...options };
+    Logger.debug('Query options:', allOptions);
+    if (!query && !allOptions.taskId) {
       Logger.error('Query is required if --task-id is not provided');
       process.exit(1);
     }
-    await queryCommand(query, options);
+    await queryCommand(query, allOptions);
   });
 
 // Init command
