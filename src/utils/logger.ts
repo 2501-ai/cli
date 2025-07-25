@@ -212,6 +212,7 @@ export default class Logger {
     }
 
     if (!axios.isAxiosError(e)) {
+      Logger.error('Command error', e);
       trackError(e, {
         metadata: {
           defaultMsg,

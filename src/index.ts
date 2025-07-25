@@ -126,7 +126,8 @@ program
   .argument('<query>', 'Query to execute')
   .description('Execute a query using the specified agent')
   .option('--workspace <path>', 'Specify a different workspace path')
-  .option('--agentId <id>', 'Specify the agent ID')
+  .option('--agent-id <agentId>', 'Specify the agent ID')
+  .option('--task-id <taskId>', 'Specify the task ID')
   .option('--stream [stream]', 'Stream the output of the query', true)
   .option('--plugins <path>', 'Path to plugins configuration file')
   .option('--env <path>', 'Path to .env file containing credentials')
@@ -149,8 +150,8 @@ program
     `Will not sync the current workspace and will create a temporary one in ${getTempPath2501()}`
   )
   .option('--config <configKey>', 'Specify the configuration Key to use')
-  .option('--agentId <agentId>', 'Specify the agent ID')
-  .option('--taskId <taskId>', 'Specify the task ID')
+  .option('--agent-id <agentId>', 'Specify the agent ID')
+  .option('--task-id <taskId>', 'Specify the task ID')
   .hook('preAction', authMiddleware)
   .action(async (cmdOptions) => {
     const options = program.opts();
