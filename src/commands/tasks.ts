@@ -288,9 +288,17 @@ export async function tasksSubscriptionCommand(options: {
   }
 
   if (options.listen) {
+    // Set a maximum execution time to prevent hanging processes
+    const maxExecutionTime = 10 * 60 * 1000; // 10 minutes
+    const timeoutId = setTimeout(() => {
+      logger.log('Maximum execution time reached, forcing exit');
+      process.exit(0);
+    }, maxExecutionTime);
+
     try {
       const agent = getEligibleAgent(workspace);
       if (!agent) {
+        clearTimeout(timeoutId);
         return logger.outro('No agents available in the workspace');
       }
 
@@ -306,6 +314,7 @@ export async function tasksSubscriptionCommand(options: {
 
       if (!tasks.length) {
         logger.stop(`No tasks found`);
+        clearTimeout(timeoutId);
         return;
       }
 
@@ -328,10 +337,22 @@ export async function tasksSubscriptionCommand(options: {
         });
       }
       logger.log('All tasks have been processed');
+      clearTimeout(timeoutId);
     } catch (error) {
+      clearTimeout(timeoutId);
       Logger.error('Tasks error:', error);
+    } finally {
+      // Make sure the logger spinner is stopped.
+      logger.stop();
+
+      // Ensure clean exit when running in listen mode
+      // This is critical for crontab execution to prevent hanging processes
+      if (process.env.NODE_ENV !== 'development') {
+        setTimeout(() => {
+          Logger.debug('Forcing process exit after listen command completion');
+          process.exit(0);
+        }, 1000); // Give 1 second for any final cleanup
+      }
     }
-    // Make sure the logger spinner is stopped.
-    logger.stop();
   }
 }

@@ -167,10 +167,45 @@ export class SSHExecutor implements IRemoteExecutor {
 
   async disconnect(): Promise<void> {
     if (this.client) {
-      this.client.end();
-      this.client = null;
-      this.connected = false;
-      this.config = null;
+      return new Promise<void>((resolve) => {
+        if (!this.client) {
+          resolve();
+          return;
+        }
+
+        // Set a timeout to force disconnect if it takes too long
+        const timeoutId = setTimeout(() => {
+          Logger.debug('SSH disconnect timeout, forcing close');
+          if (this.client) {
+            this.client.destroy();
+          }
+          this.client = null;
+          this.connected = false;
+          this.config = null;
+          resolve();
+        }, 5000); // 5 second timeout
+
+        this.client.on('close', () => {
+          clearTimeout(timeoutId);
+          this.client = null;
+          this.connected = false;
+          this.config = null;
+          Logger.debug('SSH connection closed cleanly');
+          resolve();
+        });
+
+        this.client.on('error', (err) => {
+          clearTimeout(timeoutId);
+          Logger.debug('SSH disconnect error (ignoring):', err);
+          this.client = null;
+          this.connected = false;
+          this.config = null;
+          resolve(); // Still resolve to allow process to exit
+        });
+
+        // Gracefully end the connection
+        this.client.end();
+      });
     }
   }
 }

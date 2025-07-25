@@ -166,8 +166,12 @@ export class WinRMExecutor implements IRemoteExecutor {
 
   async disconnect(): Promise<void> {
     if (this.session) {
-      await winrm.shell.doDeleteShell(this.session);
-      Logger.debug('WinRM connection closed');
+      try {
+        await winrm.shell.doDeleteShell(this.session);
+        Logger.debug('WinRM connection closed cleanly');
+      } catch (error) {
+        Logger.debug('WinRM disconnect error (ignoring):', error);
+      }
     }
     this.session = null;
     this.connected = false;

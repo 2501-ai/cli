@@ -22,12 +22,20 @@ import { RemoteExecutor } from './remoteExecution/remoteExecutor';
 errorHandler.initializeGlobalHandlers();
 
 process.on('SIGINT', async () => {
-  RemoteExecutor.instance.disconnect();
+  try {
+    await RemoteExecutor.instance.disconnect();
+  } catch (error) {
+    Logger.debug('Error during SIGINT disconnect:', error);
+  }
   process.exit(0);
 });
 
 process.on('SIGTERM', async () => {
-  RemoteExecutor.instance.disconnect();
+  try {
+    await RemoteExecutor.instance.disconnect();
+  } catch (error) {
+    Logger.debug('Error during SIGTERM disconnect:', error);
+  }
   process.exit(0);
 });
 
@@ -68,8 +76,12 @@ Join our Discord server: ${DISCORD_LINK}
   )
   .option('--remote-exec-password <password>', 'Password for remote execution')
   .option('--remote-skip-test <skipTest>', 'Skip the remote connection test')
-  .hook('postAction', () => {
-    RemoteExecutor.instance.disconnect();
+  .hook('postAction', async () => {
+    try {
+      await RemoteExecutor.instance.disconnect();
+    } catch (error) {
+      Logger.debug('Error during postAction disconnect:', error);
+    }
   })
   .on('command:*', async (args) => {
     const query = args?.join(' ');
