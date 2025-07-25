@@ -31,6 +31,12 @@ process.on('SIGTERM', async () => {
   process.exit(0);
 });
 
+process.on('unhandledRejection', async (error) => {
+  await errorHandler.handleCommandError(error as Error, 'unhandledRejection', {
+    exitCode: 1,
+  });
+});
+
 const program = new Command();
 const programName = os.platform() === 'win32' ? 'a2501' : '@2501';
 
