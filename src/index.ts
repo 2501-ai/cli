@@ -31,6 +31,12 @@ process.on('SIGTERM', async () => {
   process.exit(0);
 });
 
+process.on('unhandledRejection', async (error) => {
+  await errorHandler.handleCommandError(error as Error, 'unhandledRejection', {
+    exitCode: 1,
+  });
+});
+
 const program = new Command();
 const programName = os.platform() === 'win32' ? 'a2501' : '@2501';
 
@@ -123,19 +129,26 @@ program
 // Query command
 program
   .command('query')
-  .argument('<query>', 'Query to execute')
+  .argument('[query]', 'Query to execute (optional if --task-id is provided)')
   .description('Execute a query using the specified agent')
   .option('--workspace <path>', 'Specify a different workspace path')
-  .option('--agentId <id>', 'Specify the agent ID')
+  .option('--agent-id <agentId>', 'Specify the agent ID')
+  .option('--task-id <taskId>', 'Specify the task ID')
   .option('--stream [stream]', 'Stream the output of the query', true)
   .option('--plugins <path>', 'Path to plugins configuration file')
   .option('--env <path>', 'Path to .env file containing credentials')
   .hook('preAction', authMiddleware)
   .hook('preAction', initPlugins)
   .hook('preAction', initPluginCredentials)
-  .action(async (query, options) => {
-    Logger.debug('Query options:', options);
-    await queryCommand(query, options);
+  .action(async (query, cmdOptions) => {
+    const options = program.opts();
+    const allOptions = { ...cmdOptions, ...options };
+    Logger.debug('Query options:', allOptions);
+    if (!query && !allOptions.taskId) {
+      Logger.error('Query is required if --task-id is not provided');
+      process.exit(1);
+    }
+    await queryCommand(query, allOptions);
   });
 
 // Init command
@@ -149,6 +162,8 @@ program
     `Will not sync the current workspace and will create a temporary one in ${getTempPath2501()}`
   )
   .option('--config <configKey>', 'Specify the configuration Key to use')
+  .option('--agent-id <agentId>', 'Specify the agent ID')
+  .option('--task-id <taskId>', 'Specify the task ID')
   .hook('preAction', authMiddleware)
   .action(async (cmdOptions) => {
     const options = program.opts();
