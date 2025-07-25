@@ -68,6 +68,11 @@ Join our Discord server: ${DISCORD_LINK}
   )
   .option('--remote-exec-password <password>', 'Password for remote execution')
   .option('--remote-skip-test <skipTest>', 'Skip the remote connection test')
+  // Register a cleanup hook that runs after any command completes
+  // This ensures the RemoteExecutor connection is properly closed to avoid:
+  // - Resource leaks (hanging SSH/WinRM connections)  
+  // - Process not exiting cleanly
+  // - Connection pool exhaustion on remote hosts
   .hook('postAction', () => {
     RemoteExecutor.instance.disconnect();
   })
