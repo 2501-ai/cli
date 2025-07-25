@@ -58,6 +58,7 @@ export const getAgent = async (agentId: string): Promise<GetAgentResponse> => {
 export const updateAgent = async (
   agentId: string,
   data: {
+    workspace?: string;
     cli_data?: Record<string, any>;
   }
 ): Promise<void> => {
