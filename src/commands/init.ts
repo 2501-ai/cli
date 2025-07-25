@@ -222,7 +222,7 @@ export const initCommand = async (
 
       // Update the system info for the agent.
       await updateAgent(id, {
-        workspace: workspacePath,
+        workspace: path,
         cli_data: {
           systemInfo,
         },
