@@ -55,6 +55,15 @@ export const getAgent = async (agentId: string): Promise<GetAgentResponse> => {
   return data;
 };
 
+export const updateAgent = async (
+  agentId: string,
+  data: {
+    cli_data?: Record<string, any>;
+  }
+): Promise<void> => {
+  await axios.put(`/agents/${agentId}`, data);
+};
+
 /**
  * Query the agent
  */

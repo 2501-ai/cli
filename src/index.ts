@@ -123,7 +123,11 @@ program
 // Query command
 program
   .command('query')
-  .argument('<query>', 'Query to execute')
+  .argument(
+    '<query>',
+    'Query to execute (optional if --task-id is provided)',
+    ''
+  )
   .description('Execute a query using the specified agent')
   .option('--workspace <path>', 'Specify a different workspace path')
   .option('--agent-id <agentId>', 'Specify the agent ID')

@@ -145,6 +145,8 @@ export interface CreateAgentResponse {
   cli_data?: Record<string, any>; // Matches Agent.cli_data
 }
 
+export type AgentStatus = 'idle' | 'running' | 'error';
+
 export interface GetAgentResponse {
   id: string;
   name: string;
@@ -155,6 +157,7 @@ export interface GetAgentResponse {
   key?: string; // Matches Agent.key
   cli_data?: Record<string, any>; // Matches Agent.cli_data
   // TODO: add remote_exec config from somewhere.
+  status: AgentStatus;
 }
 
 export interface AgentConfig extends CreateAgentResponse {

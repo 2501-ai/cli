@@ -4,7 +4,7 @@ import { terminal } from 'terminal-kit';
 
 // Local imports
 import { API_HOST, API_VERSION } from '../constants';
-import { createAgent, getAgent } from '../helpers/api';
+import { createAgent, getAgent, updateAgent } from '../helpers/api';
 import { isDirUnsafe } from '../helpers/security';
 import { resolveWorkspacePath } from '../helpers/workspace';
 import { ConfigManager } from '../managers/configManager';
@@ -190,7 +190,6 @@ export const initCommand = async (
     });
 
     Logger.debug('systemInfo results:', { systemInfo });
-
     logger.start('Creating agent');
 
     // Give the agent a workspace that is the remote workspace if remote execution is enabled.
@@ -204,6 +203,20 @@ export const initCommand = async (
       id = agent.id;
       name = agent.name;
       Logger.debug('Agent retrieved:', { agent });
+      // TODO: add status check for the agent with new statuses ?
+      if (agent.status !== 'idle') {
+        logger.cancel(
+          `Agent ${id} is not idle. Please stop the agent before starting a new task.`
+        );
+        process.exit(1);
+      }
+
+      // Update the system info for the agent.
+      await updateAgent(id, {
+        cli_data: {
+          systemInfo,
+        },
+      });
     } else {
       const createdAgent = await createAgent(
         path,
@@ -229,7 +242,7 @@ export const initCommand = async (
     TelemetryManager.instance.updateContext({
       agentId: id,
     });
-    logger.stop(`Agent ${id} created`);
+    logger.stop(`Agent ${id} ${options.agentId ? 'retrieved' : 'created'}`);
   } catch (e: unknown) {
     logger.handleError(e as Error, (e as Error).message);
   }
