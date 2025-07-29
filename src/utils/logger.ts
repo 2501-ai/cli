@@ -244,7 +244,9 @@ export default class Logger {
     }
 
     if (axiosError.response?.status === 500) {
-      defaultMsg = 'The server has returned an error. Please try again';
+      defaultMsg =
+        (axiosError.response?.data as { error: string })?.error ||
+        'The server has returned an error. Please try again';
     }
 
     if (axiosError.code === 'ECONNREFUSED') {

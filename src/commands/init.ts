@@ -55,8 +55,7 @@ async function fetchConfiguration(configKey: string): Promise<Configuration> {
   );
 
   if (!selectedConfig) {
-    Logger.error(`Configuration not found: ${configKey}`);
-    process.exit(1);
+    throw new Error(`Configuration not found: ${configKey}`);
   }
   return selectedConfig;
 }
@@ -96,8 +95,7 @@ export async function getWorkspacePath(
 
     // The symbol handles the CTRL+C cancelation from user.
     if (res === false || res.toString() === 'Symbol(clack:cancel)') {
-      logger.cancel('Operation cancelled');
-      process.exit(0);
+      throw new Error('Operation cancelled');
     }
 
     logger.log(`Using workspace at ${finalPath}`);
@@ -121,10 +119,7 @@ export async function initRemoteExecution(
     return;
   }
 
-  const remoteExecConfig = await configureAndValidateRemoteExecution(
-    options,
-    logger
-  );
+  const remoteExecConfig = await configureAndValidateRemoteExecution(options);
   if (!remoteExecConfig) {
     return;
   }
@@ -139,17 +134,14 @@ export async function initRemoteExecution(
 function checkForExistingAgent(workspacePath: string) {
   const eligibleAgent = getEligibleAgent(workspacePath);
   if (eligibleAgent?.remote_exec?.enabled) {
-    logger.cancel(
-      'An agent is already initialized in this workspace. Remote execution cancelled.'
-    );
-    process.exit(1);
+    throw new Error('An agent is already initialized in this workspace.');
   }
 }
 
 // This function will be called when the `init` command is executed
 export const initCommand = async (
   options: InitCommandOptions
-): Promise<void> => {
+): Promise<number> => {
   try {
     const configManager = ConfigManager.instance;
 
@@ -215,7 +207,7 @@ export const initCommand = async (
         logger.cancel(
           `Agent ${id} is not idle. Please stop the agent before starting a new task.`
         );
-        process.exit(1);
+        return 1;
       }
 
       await updateHostInfo(id, hostInfo);
@@ -254,7 +246,9 @@ export const initCommand = async (
       agentId: id,
     });
     logger.stop(`Agent ${id} ${options.agentId ? 'retrieved' : 'created'}`);
+    return 0;
   } catch (e: unknown) {
     await logger.handleError(e as Error, (e as Error).message);
+    return 1;
   }
 };

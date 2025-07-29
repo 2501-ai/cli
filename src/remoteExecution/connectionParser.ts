@@ -170,18 +170,16 @@ export function configureRemoteExecution(
  * Configure and validate remote execution setup
  */
 export async function configureAndValidateRemoteExecution(
-  options: InitCommandOptions,
-  logger: Logger
+  options: InitCommandOptions
 ): Promise<RemoteExecConfig | undefined> {
   let remoteExecConfig: RemoteExecConfig;
 
   try {
     remoteExecConfig = configureRemoteExecution(options);
   } catch (error) {
-    logger.cancel(
+    throw new Error(
       `Remote connection configuration failed: ${(error as Error).message}`
     );
-    process.exit(1);
   }
 
   // Initialize executor to run the detection command
@@ -204,8 +202,7 @@ export async function detectPlatformAndAdjustWorkspace(
 
     const isValid = await RemoteExecutor.instance.validateConnection();
     if (!isValid) {
-      logger.cancel('Remote connection failed. Please check your settings.');
-      process.exit(1);
+      throw new Error('Remote connection failed. Please check your settings.');
     }
 
     logger.message(`Detected platform: ${platform} for ${target}`);
@@ -213,10 +210,9 @@ export async function detectPlatformAndAdjustWorkspace(
 
     adjustWorkspacePathIfNeeded(remoteExecConfig, options);
   } catch (error) {
-    logger.cancel(
+    throw new Error(
       `Remote connection validation failed: ${(error as Error).message}`
     );
-    process.exit(1);
   }
 }
 

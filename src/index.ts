@@ -90,7 +90,10 @@ Join our Discord server: ${DISCORD_LINK}
 
     try {
       await authMiddleware();
-      await queryCommand(query, options);
+      const exitCode = await queryCommand(query, options);
+      if (exitCode > 0) {
+        process.exit(exitCode);
+      }
     } catch (error) {
       await errorHandler.handleCommandError(error as Error, 'fallback-query', {
         exitCode: 1,
@@ -148,7 +151,10 @@ program
       Logger.error('Query is required if --task-id is not provided');
       process.exit(1);
     }
-    await queryCommand(query, allOptions);
+    const exitCode = await queryCommand(query, allOptions);
+    if (exitCode > 0) {
+      process.exit(exitCode);
+    }
   });
 
 // Init command
@@ -173,7 +179,10 @@ program
       remoteExecPassword:
         (allOptions.remoteExecPassword && '***') || '(not provided)',
     });
-    await initCommand(allOptions);
+    const exitCode = await initCommand(allOptions);
+    if (exitCode > 0) {
+      process.exit(exitCode);
+    }
   });
 
 // Agents command
@@ -186,7 +195,10 @@ program
   .option('--all', 'Parameter to target all agents during list or flush action')
   .option('--flush', 'Flush all agents from the configuration')
   .action(async (options) => {
-    await agentsCommand(options);
+    const exitCode = await agentsCommand(options);
+    if (exitCode > 0) {
+      process.exit(exitCode);
+    }
   });
 
 // Tasks command
@@ -207,7 +219,10 @@ program
   .hook('preAction', initPlugins)
   .hook('preAction', initPluginCredentials)
   .action(async (options) => {
-    await tasksSubscriptionCommand(options);
+    const exitCode = await tasksSubscriptionCommand(options);
+    if (exitCode > 0) {
+      process.exit(exitCode);
+    }
   });
 
 program

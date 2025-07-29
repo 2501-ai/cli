@@ -11,13 +11,13 @@ export const agentsCommand = async (options: {
   all?: boolean;
   flush?: boolean;
   workspace?: string;
-}): Promise<void> => {
+}): Promise<number> => {
   const workspaceUrl = resolveWorkspacePath({ workspace: options.workspace });
 
   if (options.flush) {
     await flushAgents(workspaceUrl, options.all);
     terminal('All agents have been flushed from the configuration.\n');
-    return;
+    return 0;
   }
 
   let agents;
@@ -55,4 +55,5 @@ export const agentsCommand = async (options: {
   } else {
     terminal('No agents found.\n');
   }
+  return 0;
 };

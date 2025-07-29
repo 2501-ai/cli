@@ -230,7 +230,10 @@ const parseAgentResponse = async (
   return [actions, queryResponse];
 };
 
-export const queryCommand = async (query: string, options: QueryOptions) => {
+export const queryCommand = async (
+  query: string,
+  options: QueryOptions
+): Promise<number> => {
   Logger.debug('Options:', options);
 
   const context = {
@@ -259,7 +262,7 @@ export const queryCommand = async (query: string, options: QueryOptions) => {
 
     // If not agent is eligible, it usually means there was an error during the init process that is already displayed.
     if (!agentConfig) {
-      return;
+      return 1;
     }
 
     if (agentConfig.remote_exec?.enabled) {
@@ -317,10 +320,11 @@ export const queryCommand = async (query: string, options: QueryOptions) => {
     let finalResponse = '';
     while (actions.length) {
       if (isLooping(actions)) {
-        return logger.stop(
+        logger.stop(
           'Unfortunately, a loop has been detected. Please try again.',
           1
         );
+        return 1;
       }
 
       // If there are normal actions to execute, process them and submit their outputs to the backend.
@@ -346,7 +350,9 @@ export const queryCommand = async (query: string, options: QueryOptions) => {
       logger.stop(chalk.italic.gray('-'.repeat(getTerminalWidth() - 10)));
       Logger.agent(finalResponse);
     }
+    return 0;
   } catch (error) {
     await logger.handleError(error as Error);
+    return 1;
   }
 };
