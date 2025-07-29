@@ -4,7 +4,12 @@ import { terminal } from 'terminal-kit';
 
 // Local imports
 import { API_HOST, API_VERSION } from '../constants';
-import { createAgent } from '../helpers/api';
+import {
+  createAgent,
+  getAgent,
+  updateAgent,
+  updateHostInfo,
+} from '../helpers/api';
 import { isDirUnsafe } from '../helpers/security';
 import { resolveWorkspacePath } from '../helpers/workspace';
 import { ConfigManager } from '../managers/configManager';
@@ -19,7 +24,7 @@ import { addAgent, getEligibleAgent } from '../utils/conf';
 import Logger from '../utils/logger';
 import { DISCORD_LINK } from '../utils/messaging';
 import { getTempPath2501 } from '../utils/platform';
-import { getSystemInfo } from '../utils/systemInfo';
+import { getHostInfo, getSystemInfo } from '../utils/systemInfo';
 import { Configuration, RemoteExecConfig } from '../utils/types';
 
 axios.defaults.baseURL = `${API_HOST}${API_VERSION}`;
@@ -35,6 +40,8 @@ export interface InitCommandOptions {
   remoteWorkspace?: string;
   remoteExecType?: string;
   remoteExecPassword?: string;
+  agentId?: string;
+  taskId?: string;
 }
 
 const logger = new Logger();
@@ -48,8 +55,7 @@ async function fetchConfiguration(configKey: string): Promise<Configuration> {
   );
 
   if (!selectedConfig) {
-    Logger.error(`Configuration not found: ${configKey}`);
-    process.exit(1);
+    throw new Error(`Configuration not found: ${configKey}`);
   }
   return selectedConfig;
 }
@@ -89,8 +95,7 @@ export async function getWorkspacePath(
 
     // The symbol handles the CTRL+C cancelation from user.
     if (res === false || res.toString() === 'Symbol(clack:cancel)') {
-      logger.cancel('Operation cancelled');
-      process.exit(0);
+      throw new Error('Operation cancelled');
     }
 
     logger.log(`Using workspace at ${finalPath}`);
@@ -109,15 +114,12 @@ export async function getWorkspacePath(
 export async function initRemoteExecution(
   options: InitCommandOptions,
   logger: Logger
-): Promise<RemoteExecConfig | undefined> {
+): Promise<RemoteExecConfig | void> {
   if (!options?.remoteExec) {
     return;
   }
 
-  const remoteExecConfig = await configureAndValidateRemoteExecution(
-    options,
-    logger
-  );
+  const remoteExecConfig = await configureAndValidateRemoteExecution(options);
   if (!remoteExecConfig) {
     return;
   }
@@ -126,10 +128,20 @@ export async function initRemoteExecution(
   return remoteExecConfig;
 }
 
+/**
+ * Exit if a remote execution agent already exists.
+ */
+function checkForExistingAgent(workspacePath: string) {
+  const eligibleAgent = getEligibleAgent(workspacePath);
+  if (eligibleAgent?.remote_exec?.enabled) {
+    throw new Error('An agent is already initialized in this workspace.');
+  }
+}
+
 // This function will be called when the `init` command is executed
 export const initCommand = async (
   options: InitCommandOptions
-): Promise<void> => {
+): Promise<number> => {
   try {
     const configManager = ConfigManager.instance;
 
@@ -156,15 +168,9 @@ export const initCommand = async (
     const workspacePath = await getWorkspacePath(options);
 
     const remoteExecConfig = await initRemoteExecution(options, logger);
-    const eligibleAgent = getEligibleAgent(workspacePath);
-    if (eligibleAgent?.remote_exec?.enabled) {
-      logger.cancel(
-        'An agent is already initialized in this workspace. Remote execution cancelled.'
-      );
-      process.exit(1);
-    }
+    checkForExistingAgent(workspacePath);
 
-    const systemInfoPromise = RemoteExecutor.instance.isEnabled()
+    const systemInfoPromise = remoteExecConfig
       ? getRemoteSystemInfo()
       : getSystemInfo();
 
@@ -181,36 +187,68 @@ export const initCommand = async (
     });
 
     Logger.debug('systemInfo results:', { systemInfo });
-
     logger.start('Creating agent');
+
     // Give the agent a workspace that is the remote workspace if remote execution is enabled.
-    const path = remoteExecConfig?.enabled
-      ? remoteExecConfig.remote_workspace
-      : workspacePath;
+    const path = remoteExecConfig?.remote_workspace ?? workspacePath;
 
-    const { id, name } = await createAgent(
-      path,
-      agentConfig,
-      systemInfo,
-      configManager.get('engine')
-    );
-    Logger.debug('Agent created:', { id, name });
+    //TODO: add support for options.agentId and retrieve the existing agent if it exists.
+    let id: string;
+    let name: string;
+    const hostInfo = await getHostInfo();
 
-    // Add agent to config.
+    if (options.agentId) {
+      const agent = await getAgent(options.agentId);
+      id = agent.id;
+      name = agent.name;
+      Logger.debug('Agent retrieved:', { agent });
+      // TODO: add status check for the agent with new statuses ?
+      if (agent.status !== 'idle') {
+        logger.cancel(
+          `Agent ${id} is not idle. Please stop the agent before starting a new task.`
+        );
+        return 1;
+      }
+
+      await updateHostInfo(id, hostInfo);
+
+      // Update the system info for the agent.
+      await updateAgent(id, {
+        workspace: path,
+        cli_data: {
+          systemInfo,
+        },
+      });
+    } else {
+      const createdAgent = await createAgent(
+        path,
+        agentConfig,
+        systemInfo,
+        configManager.get('engine'),
+        hostInfo
+      );
+      Logger.debug('Agent created:', { agent: createdAgent });
+      id = createdAgent.id;
+      name = createdAgent.name;
+    }
+
+    // Add agent to local config.
     addAgent({
       id,
       name,
       workspace: workspacePath,
       configuration: agentConfig.id,
       engine: configManager.get('engine'),
-      remote_exec: remoteExecConfig,
+      remote_exec: remoteExecConfig ?? undefined,
     });
 
     TelemetryManager.instance.updateContext({
       agentId: id,
     });
-    logger.stop(`Agent ${id} created`);
+    logger.stop(`Agent ${id} ${options.agentId ? 'retrieved' : 'created'}`);
+    return 0;
   } catch (e: unknown) {
-    logger.handleError(e as Error, (e as Error).message);
+    await logger.handleError(e as Error, (e as Error).message);
+    return 1;
   }
 };

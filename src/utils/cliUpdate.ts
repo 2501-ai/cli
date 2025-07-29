@@ -75,6 +75,7 @@ export async function handleAutoUpdate(): Promise<boolean> {
     });
   } catch (error) {
     Logger.error('Failed to restart process:', error);
+    process.exit(1);
   }
 
   process.exit(0);

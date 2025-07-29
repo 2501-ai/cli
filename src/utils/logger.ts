@@ -172,14 +172,14 @@ export default class Logger {
     });
   }
 
-  handleError(
+  async handleError(
     e: Error | AxiosError,
-    defaultMsg = 'Unexpected error. Please try again !'
-  ) {
+    defaultMsg = e.message || 'Unexpected error. Please try again !'
+  ): Promise<void> {
     if (isDebug) {
       if (!axios.isAxiosError(e)) {
         Logger.error('Command error', e);
-        trackError(e, {
+        await trackError(e, {
           metadata: {
             defaultMsg,
           },
@@ -212,6 +212,7 @@ export default class Logger {
     }
 
     if (!axios.isAxiosError(e)) {
+      Logger.error('Command error', e);
       trackError(e, {
         metadata: {
           defaultMsg,
@@ -243,7 +244,9 @@ export default class Logger {
     }
 
     if (axiosError.response?.status === 500) {
-      defaultMsg = 'The server has returned an error. Please try again';
+      defaultMsg =
+        (axiosError.response?.data as { error: string })?.error ||
+        'The server has returned an error. Please try again';
     }
 
     if (axiosError.code === 'ECONNREFUSED') {
