@@ -30,12 +30,15 @@ export const agentsCommand = async (options: {
   if (agents.length > 0) {
     terminal.table(
       [
-        ['Name', 'ID', 'Configuration', 'Workspace'],
+        ['Name', 'ID', 'Configuration', 'Workspace', 'Remote Exec'],
         ...agents.map((agent) => [
           agent.name.substring(0, 10),
           agent.id,
           agent.configuration,
           agent.workspace,
+          agent.remote_exec?.enabled
+            ? `${agent.remote_exec.user}@${agent.remote_exec.target}:${agent.remote_exec.port}`
+            : 'Disabled',
         ]),
       ],
       {
@@ -45,7 +48,7 @@ export const agentsCommand = async (options: {
         borderAttr: { color: 'blue' },
         textAttr: { bgColor: 'default' },
         firstRowTextAttr: { bgColor: 'blue' },
-        width: 80,
+        width: 120,
         fit: true,
       }
     );

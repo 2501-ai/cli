@@ -12,13 +12,18 @@ import { HostInfo, SystemInfo } from './types';
 
 const execAsync = promisify(exec);
 
-type PackageManagerInfo = {
+export type PackageManagerDefinition = {
+  cmd: string;
+  listCmd: (exclusionPattern: string) => string;
+};
+
+export type PackageManagerInfo = {
   cmd: string;
   listCmd: string;
 };
 
 // Package manager definitions per OS
-const LINUX_PACKAGE_MANAGERS = [
+export const LINUX_PACKAGE_MANAGERS: readonly PackageManagerDefinition[] = [
   {
     cmd: 'apt',
     listCmd: (exclusionPattern: string) =>
@@ -29,10 +34,20 @@ const LINUX_PACKAGE_MANAGERS = [
     listCmd: (exclusionPattern: string) =>
       `dnf repoquery --userinstalled --queryformat "%{name}" 2>/dev/null | grep -vE '${exclusionPattern}'`,
   },
+  /**
+   * Here is the breakdown of the command:
+   *
+   * 1.  `yum history userinstalled 2>/dev/null`: This gets the initial list of packages installed by the user.
+   * 2.  `sed '1d'`: This removes the header line.
+   * 3.  `xargs -r -- rpm -q --qf '%{NAME}\\n'`:
+   *    *   `xargs -r --`: Takes the list of packages from `sed` and passes them as arguments to the `rpm` command. The `-r` flag ensures `rpm` isn't run if there are no packages.
+   *    *   `rpm -q --qf '%{NAME}\\n'`: This queries the `rpm` database for each package and uses the `--qf` (queryformat) option to print *only* the package `NAME`, followed by a newline.
+   *    *   This is the most reliable way to get just the package name, stripped of all version, release, and architecture information.
+   */
   {
     cmd: 'yum',
     listCmd: (exclusionPattern: string) =>
-      `yum history list all 2>/dev/null | grep "U" | awk '{print $4}' | grep -vE '${exclusionPattern}'`,
+      `yum history userinstalled 2>/dev/null | sed '1d' | xargs -r -- rpm -q --qf '%{NAME}\\n' | grep -vE '${exclusionPattern}'`,
   },
   {
     cmd: 'pacman',
@@ -46,7 +61,7 @@ const LINUX_PACKAGE_MANAGERS = [
   },
 ] as const;
 
-const MACOS_PACKAGE_MANAGERS = [
+export const MACOS_PACKAGE_MANAGERS: readonly PackageManagerDefinition[] = [
   {
     cmd: 'brew',
     listCmd: (exclusionPattern: string) =>
@@ -59,7 +74,7 @@ const MACOS_PACKAGE_MANAGERS = [
   },
 ] as const;
 
-const WINDOWS_PACKAGE_MANAGERS = [
+export const WINDOWS_PACKAGE_MANAGERS: readonly PackageManagerDefinition[] = [
   {
     cmd: 'winget',
     listCmd: (exclusionPattern: string) =>
@@ -208,24 +223,23 @@ function getPackageManagersForPlatform(
 ): PackageManagerInfo[] {
   const platform = os.platform();
 
-  const platformPackageManagers = {
+  const platformMapping = {
     linux: LINUX_PACKAGE_MANAGERS,
     darwin: MACOS_PACKAGE_MANAGERS,
     win32: WINDOWS_PACKAGE_MANAGERS,
-  } as const;
+  };
 
-  const packageManagers =
-    platformPackageManagers[platform as keyof typeof platformPackageManagers] ||
-    [];
+  const packageDefs: readonly PackageManagerDefinition[] =
+    platformMapping[platform as keyof typeof platformMapping] || [];
 
-  return packageManagers.map((pm) => ({
-    ...pm,
+  return packageDefs.map((pm) => ({
+    cmd: pm.cmd,
     listCmd: pm.listCmd(exclusionPattern),
   }));
 }
 
 // Default patterns to exclude
-const DEFAULT_PACKAGE_EXCLUSIONS = [
+export const DEFAULT_PACKAGE_EXCLUSIONS = [
   '^lib', // Libraries
   '^python[0-9]?[@]?', // Python packages
   '^gcc-', // GCC compiler related

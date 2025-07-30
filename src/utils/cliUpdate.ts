@@ -2,6 +2,7 @@ import { run_shell, hasError } from '../helpers/actions';
 import { isLatestVersion } from './versioning';
 import Logger from './logger';
 import { ConfigManager } from '../managers/configManager';
+import execa from 'execa';
 
 const autoUpdate = async () => {
   try {
@@ -61,23 +62,19 @@ export async function handleAutoUpdate(): Promise<boolean> {
 
   Logger.log('Auto-update completed. Restarting task with new process.');
 
-  // Preserve original command structure by using the full command line
-  // This maintains proper quoting and escaping of arguments
-  const originalCommand = process.argv.join(' ');
+  // Use execa directly with the original arguments array to avoid shell parsing issues
+  const [nodePath, scriptPath, ...args] = process.argv;
 
-  // Execute the new process with TFZO_UPDATED in env
-  const result = await run_shell({
-    command: originalCommand,
-    shell: true,
-    env: {
-      ...process.env,
-      TFZO_UPDATED: 'true',
-    },
-  });
-
-  // Print the result and exit
-  if (result) {
-    Logger.log(result);
+  try {
+    await execa(nodePath, [scriptPath, ...args], {
+      stdio: 'inherit',
+      env: {
+        ...process.env,
+        TFZO_UPDATED: 'true',
+      },
+    });
+  } catch (error) {
+    Logger.error('Failed to restart process:', error);
   }
 
   process.exit(0);

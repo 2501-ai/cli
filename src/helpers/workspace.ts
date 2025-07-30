@@ -1,34 +1,36 @@
 import fs from 'fs';
 import path from 'path';
 
-import Logger from '../utils/logger';
-import { getDirectoryMd5Hash, getDirectoryFiles } from '../utils/files';
-import { WorkspaceDiff, WorkspaceState } from '../utils/types';
 import {
   CONFIG_DIR,
   DEFAULT_MAX_DEPTH,
   DEFAULT_MAX_DIR_SIZE,
 } from '../constants';
+import { RemoteExecutor } from '../remoteExecution/remoteExecutor';
+import {
+  getDirectoryFiles,
+  getDirectoryMd5Hash,
+  toReadableSize,
+} from '../utils/files';
 import { IgnoreManager } from '../utils/ignore';
-import { zipUtility } from '../utils/zip';
-import { toReadableSize } from '../utils/files';
+import Logger from '../utils/logger';
 import { getTempPath2501 } from '../utils/platform';
-import { ConfigManager } from '../managers/configManager';
+import {
+  DirectoryMd5Hash,
+  WorkspaceDiff,
+  WorkspaceState,
+} from '../utils/types';
+import { zipUtility } from '../utils/zip';
 
 export function resolveWorkspacePath(options: { workspace?: string }): string {
-  const remoteExec = ConfigManager.instance.get('remote_exec');
-  if (remoteExec) {
-    //TODO implement the windows path.
-    const remoteWorkspace = `/home/${ConfigManager.instance.get('remote_exec_user')}`;
-    // still use the workspace if provided.
-    return options.workspace || remoteWorkspace;
-  }
-
+  Logger.debug('Resolving workspace path:', options.workspace);
   let finalPath = options.workspace || process.cwd();
   // Convert relative path to absolute path if necessary
   finalPath = path.isAbsolute(finalPath)
     ? finalPath
     : path.resolve(process.cwd(), finalPath);
+
+  Logger.debug('Resolved workspace path:', finalPath);
 
   return finalPath;
 }
@@ -115,9 +117,32 @@ export async function updateWorkspaceState(
 }
 
 /**
- * Gets workspace state and changes in a single pass
+ * Gets workspace hash and changes in a single pass
  */
-export async function getWorkspaceState(workspace: string, agentId: string) {
+export async function getWorkspaceHash(
+  workspace: string,
+  agentId: string
+): Promise<{ hash: DirectoryMd5Hash; diff: WorkspaceDiff }> {
+  const executor = RemoteExecutor.instance;
+  if (executor.isEnabled()) {
+    // TODO: Later we can use the remote executor to get the workspace state.
+    // const remoteState = await getRemoteWorkspaceState(workspace, agentId);
+    return {
+      hash: {
+        md5: '',
+        fileHashes: new Map(),
+        directoryPath: workspace,
+        totalSize: 0,
+      },
+      diff: {
+        added: [],
+        removed: [],
+        modified: [],
+        hasChanges: false,
+        isEmpty: true,
+      },
+    };
+  }
   // Compute hash only once
   const currentState = getDirectoryMd5Hash({
     directoryPath: workspace,
@@ -133,14 +158,14 @@ export async function getWorkspaceState(workspace: string, agentId: string) {
   });
 
   return {
-    currentState,
+    hash: currentState,
     diff,
   };
 }
 
 // Modify getWorkspaceChanges to use the shared computation
 export async function getWorkspaceChanges(workspace: string, agentId: string) {
-  const { diff } = await getWorkspaceState(workspace, agentId);
+  const { diff } = await getWorkspaceHash(workspace, agentId);
   return diff;
 }
 

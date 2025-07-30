@@ -10,6 +10,13 @@ export interface WorkspaceState {
   agent_id: string;
 }
 
+export interface DirectoryMd5Hash {
+  md5: string;
+  fileHashes: Map<string, string>;
+  directoryPath: string;
+  totalSize: number;
+}
+
 export interface Configuration {
   id: string;
   prompt: string;
@@ -54,10 +61,7 @@ export type FunctionAction = {
   args: any;
 };
 
-export type EngineCapability = 'stream';
-
 export type QueryResponseDTO = {
-  capabilities: EngineCapability[]; // stream
   response?: string;
   actions?: FunctionAction[];
   prompt?: string;
@@ -118,19 +122,37 @@ export interface HostInfo {
   public_ip_note?: string | null; // Optional, matches Host.public_ip_note
 }
 
-export interface AgentConfig {
+export interface RemoteExecConfig {
+  enabled: boolean;
+  target: string;
+  port: number;
+  type: (typeof REMOTE_EXEC_TYPES)[number]; // 'ssh' | 'winrm'
+  platform: 'windows' | 'unix';
+  user: string;
+  password?: string;
+  private_key?: string;
+  remote_workspace: string;
+}
+
+export interface CreateAgentResponse {
   id: string;
   name: string;
   workspace: string;
   engine: EngineType;
   configuration: string;
-  capabilities: EngineCapability[];
   host_id?: string; // Optional, matches Agent.host_id
   key?: string; // Matches Agent.key
   cli_data?: Record<string, any>; // Matches Agent.cli_data
 }
 
-export const REMOTE_EXEC_TYPES = ['unix', 'win'] as const;
+export interface AgentConfig extends CreateAgentResponse {
+  // Remote execution configuration (optional, per-agent)
+  remote_exec?: RemoteExecConfig;
+  // Remote workspace path (optional, per-agent)
+  remote_workspace?: string;
+}
+
+export const REMOTE_EXEC_TYPES = ['ssh', 'winrm'] as const;
 
 export type LocalConfig = {
   workspace_disabled: boolean;
@@ -142,13 +164,6 @@ export type LocalConfig = {
   disable_spinner: boolean;
   telemetry_enabled: boolean;
   auto_update: boolean;
-  remote_exec: boolean;
-  remote_exec_target: string;
-  remote_exec_port: number;
-  remote_exec_type: (typeof REMOTE_EXEC_TYPES)[number];
-  remote_exec_private_key: string;
-  remote_exec_user: string;
-  remote_exec_password: string;
 };
 
 export type LocalConfigKey = keyof LocalConfig;

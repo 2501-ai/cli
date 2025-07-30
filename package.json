@@ -1,6 +1,6 @@
 {
   "name": "@2501-ai/cli",
-  "version": "0.2.37",
+  "version": "0.2.42",
   "description": "",
   "main": "dist/index.js",
   "bin": {
@@ -12,6 +12,7 @@
     "build:clean": "rm -rf dist && tsc",
     "build:link": "npm run build && npm link && npm link @2501-ai/cli",
     "unlink": "npm unlink -g @2501-ai/cli",
+    "relink": "npm run unlink && npm run build:link",
     "start": "node .",
     "lint": "tsc --noEmit && eslint . --ext .ts,.tsx --fix",
     "prepare": "husky",
@@ -84,6 +85,9 @@
     "hooks": {
       "pre-commit": "npm run lint"
     }
+  },
+  "engines": {
+    "yarn": "please-use-npm"
   },
   "publishConfig": {
     "access": "public"

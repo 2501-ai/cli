@@ -16,7 +16,7 @@ import Logger from './utils/logger';
 import { DISCORD_LINK } from './utils/messaging';
 import { getTempPath2501 } from './utils/platform';
 import { initPlugins } from './utils/plugins';
-import { RemoteExecutor } from './managers/remoteExecutor';
+import { RemoteExecutor } from './remoteExecution/remoteExecutor';
 
 // Initialize global error handlers before any other code
 errorHandler.initializeGlobalHandlers();
@@ -53,7 +53,25 @@ Join our Discord server: ${DISCORD_LINK}
   )
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   .version(require('../package.json').version)
-  .on('command:*', async (args, options) => {
+  .option(
+    '--remote-exec <connection>',
+    'Enable remote execution (user@host:port)'
+  )
+  .option(
+    '--remote-private-key <privateKey>',
+    'Path to private key for remote execution'
+  )
+  .option(
+    '--remote-exec-type <type>',
+    'Type of remote execution: ssh or winrm. (defaults to ssh)',
+    'ssh'
+  )
+  .option('--remote-exec-password <password>', 'Password for remote execution')
+  .option('--remote-skip-test <skipTest>', 'Skip the remote connection test')
+  .hook('postAction', () => {
+    RemoteExecutor.instance.disconnect();
+  })
+  .on('command:*', async (args) => {
     const query = args?.join(' ');
     if (!query) {
       Logger.log(
@@ -61,18 +79,16 @@ Join our Discord server: ${DISCORD_LINK}
       );
       return;
     }
+    const options = program.opts();
+    Logger.debug('Args:', { args, options });
 
     try {
       await authMiddleware();
-      await queryCommand(query, {
-        stream: options.stream,
-      });
+      await queryCommand(query, options);
     } catch (error) {
       await errorHandler.handleCommandError(error as Error, 'fallback-query', {
         exitCode: 1,
       });
-    } finally {
-      RemoteExecutor.instance.disconnect();
     }
   });
 
@@ -90,8 +106,6 @@ Command.prototype.action = function (fn) {
           this.name ? this.name() : 'unknown',
           { exitCode: 1 }
         );
-      } finally {
-        RemoteExecutor.instance.disconnect();
       }
     })();
   });
@@ -119,8 +133,8 @@ program
   .hook('preAction', authMiddleware)
   .hook('preAction', initPlugins)
   .hook('preAction', initPluginCredentials)
-  .hook('postAction', RemoteExecutor.instance.disconnect)
   .action(async (query, options) => {
+    Logger.debug('Query options:', options);
     await queryCommand(query, options);
   });
 
@@ -136,9 +150,15 @@ program
   )
   .option('--config <configKey>', 'Specify the configuration Key to use')
   .hook('preAction', authMiddleware)
-  .hook('postAction', RemoteExecutor.instance.disconnect)
-  .action(async (options) => {
-    await initCommand(options);
+  .action(async (cmdOptions) => {
+    const options = program.opts();
+    const allOptions = { ...cmdOptions, ...options };
+    Logger.debug('Init options:', {
+      ...allOptions,
+      remoteExecPassword:
+        (allOptions.remoteExecPassword && '***') || '(not provided)',
+    });
+    await initCommand(allOptions);
   });
 
 // Agents command
@@ -180,8 +200,7 @@ program
   .description('Set a configuration value')
   .argument('<key>', 'The key to set')
   .argument('<value>', 'The value to set')
-  .argument('[extra]', 'Additional parameter (e.g., type for remote_exec)')
-  .action(async (key, value, extra) => await setCommand(key, value, extra));
+  .action(async (key, value) => await setCommand(key, value));
 
 (async () => {
   try {

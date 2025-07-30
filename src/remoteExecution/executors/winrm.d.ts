@@ -1,3 +1,8 @@
+/**
+ * Since there are no type definitions for node-winrm, we need to create our own.
+ * This is a workaround to allow us to use node-winrm in our project.
+ */
+
 declare module 'nodejs-winrm' {
   interface WinRMParams {
     host: string;
