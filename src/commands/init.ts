@@ -1,6 +1,5 @@
 import axios from 'axios';
 import fs from 'fs';
-import { terminal } from 'terminal-kit';
 
 // Local imports
 import { createAgent } from '../helpers/api';
