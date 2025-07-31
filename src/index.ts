@@ -40,6 +40,9 @@ process.on('unhandledRejection', async (error) => {
 const program = new Command();
 const programName = os.platform() === 'win32' ? 'a2501' : '@2501';
 
+let timeout: NodeJS.Timeout;
+
+// General program options.
 program
   .name(programName)
   .description(
@@ -74,7 +77,17 @@ Join our Discord server: ${DISCORD_LINK}
   )
   .option('--remote-exec-password <password>', 'Password for remote execution')
   .option('--remote-skip-test <skipTest>', 'Skip the remote connection test')
+  .hook('preAction', (cmd) => {
+    Logger.debug('Pre-action hook', cmd);
+    const TWENTY_MINUTES = 20 * 60 * 1000;
+    timeout = setTimeout(() => {
+      Logger.error(`Command ${cmd.name()} timed out`);
+      process.exit(1);
+    }, TWENTY_MINUTES);
+  })
   .hook('postAction', () => {
+    Logger.debug('Post-action hook clearing timeout');
+    clearTimeout(timeout);
     RemoteExecutor.instance.disconnect();
   })
   .on('command:*', async (args) => {

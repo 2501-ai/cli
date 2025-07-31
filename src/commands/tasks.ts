@@ -317,6 +317,7 @@ export async function tasksSubscriptionCommand(options: {
 
       logger.log(`Found ${tasks.length} tasks to execute`);
 
+      const exitCodes: number[] = [];
       for (const idx in tasks) {
         logger.log(`Processing task ${tasks[idx].id}`);
         // The engine will update the task as in_progress.
@@ -333,15 +334,19 @@ export async function tasksSubscriptionCommand(options: {
           Logger.error(`Task ${tasks[idx].id} failed: ${error}`);
           return 1;
         });
-        return exitCode;
+        exitCodes.push(exitCode);
       }
-      logger.log('All tasks have been processed');
+      logger.log(
+        `${exitCodes.length}/${tasks.length} tasks have been processed`
+      );
+      logger.stop();
+      return exitCodes.some((code) => code !== 0) ? 1 : 0;
     } catch (error) {
+      logger.stop();
       Logger.error('Tasks error:', error);
       return 1;
     }
-    // Make sure the logger spinner is stopped.
-    logger.stop();
   }
-  return 0;
+  // There should have been a command to listen for tasks.
+  return 1;
 }

@@ -41,7 +41,6 @@ export interface InitCommandOptions {
   remoteExecType?: string;
   remoteExecPassword?: string;
   agentId?: string;
-  taskId?: string;
 }
 
 const logger = new Logger();
