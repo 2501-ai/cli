@@ -1,0 +1,15 @@
+# Cursor Rules for 2501 CLI
+
+## Version Management
+When opening a pull request in this CLI repository, always increment the patch version in both `package.json` and `package-lock.json` files.
+
+Example: If current version is `0.2.43`, increment to `0.2.44`.
+
+Files to update:
+- `package.json`: Update the `"version"` field
+- `package-lock.json`: Update both occurrences of the version (root level and in the packages section)
+
+## Code Style
+- Follow existing TypeScript and ESLint conventions
+- All axios API calls should use the centralized configuration from `initAxios()` in `src/helpers/api.ts`
+- Prefer relative API paths (e.g., `/configurations`) over manually constructed URLs

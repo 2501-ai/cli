@@ -1,16 +1,13 @@
 import axios from 'axios';
 import { terminal } from 'terminal-kit';
 
-import { API_HOST, API_VERSION } from '../constants';
 import Logger from '../utils/logger';
 
 export const configCommand = async () => {
   const logger = new Logger();
   try {
     logger.start('Fetching configurations...');
-    const response = await axios.get(
-      `${API_HOST}${API_VERSION}/configurations`
-    );
+    const response = await axios.get('/configurations');
 
     logger.stop('Configurations fetched successfully.');
     logger.outro('Configurations :');
