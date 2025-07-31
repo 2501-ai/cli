@@ -160,7 +160,6 @@ export type LocalConfig = {
   engine: EngineType;
   stream?: boolean;
   agents: AgentConfig[];
-  join_discord_shown: boolean;
   disable_spinner: boolean;
   telemetry_enabled: boolean;
   auto_update: boolean;
