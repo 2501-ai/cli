@@ -1,6 +1,5 @@
 import axios from 'axios';
 import fs from 'fs';
-import { terminal } from 'terminal-kit';
 
 // Local imports
 import { createAgent } from '../helpers/api';
@@ -16,7 +15,6 @@ import { RemoteExecutor } from '../remoteExecution/remoteExecutor';
 import { getRemoteSystemInfo } from '../remoteExecution/remoteSystemInfo';
 import { addAgent, getEligibleAgent } from '../utils/conf';
 import Logger from '../utils/logger';
-import { DISCORD_LINK } from '../utils/messaging';
 import { getTempPath2501 } from '../utils/platform';
 import { getSystemInfo } from '../utils/systemInfo';
 import { Configuration, RemoteExecConfig } from '../utils/types';
@@ -128,21 +126,6 @@ export const initCommand = async (
 ): Promise<void> => {
   try {
     const configManager = ConfigManager.instance;
-
-    if (!configManager.get('join_discord_shown')) {
-      const term = terminal;
-
-      term('\n');
-      term.gray('🔗 Join our Discord\n');
-      term
-        .gray('│ ')
-        .gray(
-          'Connect with the 2501 team and community for updates, support, and insights:\n'
-        );
-      term.gray('│ ').gray.underline(`${DISCORD_LINK}\n`);
-
-      configManager.set('join_discord_shown', true);
-    }
 
     if (process.env.TFZO_DISABLE_SPINNER) {
       const shouldDisableSpinner = process.env.TFZO_DISABLE_SPINNER === 'true';

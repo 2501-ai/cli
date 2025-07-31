@@ -13,7 +13,6 @@ import { authMiddleware } from './middleware/auth';
 import { errorHandler } from './middleware/errorHandler';
 import { initPluginCredentials } from './utils/credentials';
 import Logger from './utils/logger';
-import { DISCORD_LINK } from './utils/messaging';
 import { getTempPath2501 } from './utils/platform';
 import { initPlugins } from './utils/plugins';
 import { RemoteExecutor } from './remoteExecution/remoteExecutor';
@@ -47,8 +46,6 @@ program
 ░▒▓████████▓▒░▒▓███████▓▒░░▒▓████████▓▒░  ░▒▓█▓▒░ 
                                                   
         ---- AI Autonomous Systems ----
-        
-Join our Discord server: ${DISCORD_LINK}
   `
   )
   // eslint-disable-next-line @typescript-eslint/no-var-requires
