@@ -17,6 +17,7 @@ import { DISCORD_LINK } from './utils/messaging';
 import { getTempPath2501 } from './utils/platform';
 import { initPlugins } from './utils/plugins';
 import { RemoteExecutor } from './remoteExecution/remoteExecutor';
+import { startTaskCommand } from './commands/startTask';
 
 // Initialize global error handlers before any other code
 errorHandler.initializeGlobalHandlers();
@@ -142,29 +143,22 @@ program
     await configCommand();
   });
 
-// Query command
+// Start task command
 program
-  .command('query')
-  .argument('[query]', 'Query to execute (optional if --task-id is provided)')
-  .description('Execute a query using the specified agent')
+  .command('start-task')
+  .argument('<taskId>', 'Task ID to start')
+  .description('Start a task')
   .option('--workspace <path>', 'Specify a different workspace path')
   .option('--agent-id <agentId>', 'Specify the agent ID')
-  .option('--task-id <taskId>', 'Specify the task ID')
   .option('--stream [stream]', 'Stream the output of the query', true)
-  .option('--plugins <path>', 'Path to plugins configuration file')
-  .option('--env <path>', 'Path to .env file containing credentials')
   .hook('preAction', authMiddleware)
   .hook('preAction', initPlugins)
   .hook('preAction', initPluginCredentials)
-  .action(async (query, cmdOptions) => {
+  .action(async (taskId, cmdOptions) => {
     const options = program.opts();
-    const allOptions = { ...cmdOptions, ...options };
-    Logger.debug('Query options:', allOptions);
-    if (!query && !allOptions.taskId) {
-      Logger.error('Query is required if --task-id is not provided');
-      process.exit(1);
-    }
-    const exitCode = await queryCommand(query, allOptions);
+    const allOptions = { ...cmdOptions, ...options, taskId };
+    Logger.debug(`Starting task ${taskId}`);
+    const exitCode = await startTaskCommand(allOptions);
     if (exitCode > 0) {
       process.exit(exitCode);
     }
