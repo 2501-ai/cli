@@ -3,7 +3,6 @@ import fs from 'fs';
 import { terminal } from 'terminal-kit';
 
 // Local imports
-import { API_HOST, API_VERSION } from '../constants';
 import { createAgent } from '../helpers/api';
 import { isDirUnsafe } from '../helpers/security';
 import { resolveWorkspacePath } from '../helpers/workspace';
@@ -20,9 +19,6 @@ import Logger from '../utils/logger';
 import { getTempPath2501 } from '../utils/platform';
 import { getSystemInfo } from '../utils/systemInfo';
 import { Configuration, RemoteExecConfig } from '../utils/types';
-
-axios.defaults.baseURL = `${API_HOST}${API_VERSION}`;
-axios.defaults.timeout = 120 * 1000;
 
 export interface InitCommandOptions {
   name?: string;
