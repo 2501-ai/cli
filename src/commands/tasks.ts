@@ -151,7 +151,7 @@ async function subscribeWindows(
 
   // Write batch file using Node.js fs - much simpler and reliable
   // For Windows, use the .cmd file directly, not through node.exe
-  const scriptPath = tfzoExecPath.split(' ').slice(1).join(' ');
+  const scriptPath = tfzoExecPath.split(' ').at(-1);
 
   const batchContent = `@echo off
 REM Preserve current user environment for scheduled task
