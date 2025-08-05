@@ -13,7 +13,6 @@ import { authMiddleware } from './middleware/auth';
 import { errorHandler } from './middleware/errorHandler';
 import { initPluginCredentials } from './utils/credentials';
 import Logger from './utils/logger';
-import { DISCORD_LINK } from './utils/messaging';
 import { getTempPath2501 } from './utils/platform';
 import { initPlugins } from './utils/plugins';
 import { RemoteExecutor } from './remoteExecution/remoteExecutor';
@@ -47,8 +46,6 @@ program
 ░▒▓████████▓▒░▒▓███████▓▒░░▒▓████████▓▒░  ░▒▓█▓▒░ 
                                                   
         ---- AI Autonomous Systems ----
-        
-Join our Discord server: ${DISCORD_LINK}
   `
   )
   // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -68,6 +65,11 @@ Join our Discord server: ${DISCORD_LINK}
   )
   .option('--remote-exec-password <password>', 'Password for remote execution')
   .option('--remote-skip-test <skipTest>', 'Skip the remote connection test')
+  // Register a cleanup hook that runs after any command completes
+  // This ensures the RemoteExecutor connection is properly closed to avoid:
+  // - Resource leaks (hanging SSH/WinRM connections)  
+  // - Process not exiting cleanly
+  // - Connection pool exhaustion on remote hosts
   .hook('postAction', () => {
     RemoteExecutor.instance.disconnect();
   })

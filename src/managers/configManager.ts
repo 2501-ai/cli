@@ -6,7 +6,6 @@ export const DEFAULT_CONFIG: LocalConfig = {
   workspace_disabled: false,
   agents: [],
   stream: true,
-  join_discord_shown: false,
   disable_spinner: true,
   api_key: '',
   engine: 'rhino',
@@ -19,7 +18,6 @@ const CONFIG_VALIDATORS: Record<LocalConfigKey, (value: any) => boolean> = {
   workspace_disabled: (value) => typeof value === 'boolean',
   agents: () => true, // Bypass validation for now
   stream: (value) => typeof value === 'boolean',
-  join_discord_shown: (value) => typeof value === 'boolean',
   disable_spinner: (value) => typeof value === 'boolean',
   api_key: (value) => typeof value === 'string',
   engine: (value) => typeof value === 'string',

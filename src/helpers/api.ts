@@ -23,9 +23,10 @@ export const initAxios = async () => {
     throw new Error('API key must be set.');
   }
 
-  axios.defaults.headers.common['Authorization'] = `Bearer ${apiKey}`;
+  // Set all axios defaults in one place
   axios.defaults.baseURL = `${API_HOST}${API_VERSION}`;
   axios.defaults.timeout = FIVE_MINUTES_MILLIS;
+  axios.defaults.headers.common['Authorization'] = `Bearer ${apiKey}`;
 };
 
 export const createAgent = async (
