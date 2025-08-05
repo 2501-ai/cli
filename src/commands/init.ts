@@ -1,9 +1,7 @@
 import axios from 'axios';
 import fs from 'fs';
-import { terminal } from 'terminal-kit';
 
 // Local imports
-import { API_HOST, API_VERSION } from '../constants';
 import {
   createAgent,
   getAgent,
@@ -22,13 +20,9 @@ import { RemoteExecutor } from '../remoteExecution/remoteExecutor';
 import { getRemoteSystemInfo } from '../remoteExecution/remoteSystemInfo';
 import { addAgent, getEligibleAgent } from '../utils/conf';
 import Logger from '../utils/logger';
-import { DISCORD_LINK } from '../utils/messaging';
 import { getTempPath2501 } from '../utils/platform';
 import { getHostInfo, getSystemInfo } from '../utils/systemInfo';
 import { Configuration, RemoteExecConfig } from '../utils/types';
-
-axios.defaults.baseURL = `${API_HOST}${API_VERSION}`;
-axios.defaults.timeout = 120 * 1000;
 
 export interface InitCommandOptions {
   name?: string;
@@ -143,21 +137,6 @@ export const initCommand = async (
 ): Promise<number> => {
   try {
     const configManager = ConfigManager.instance;
-
-    if (!configManager.get('join_discord_shown')) {
-      const term = terminal;
-
-      term('\n');
-      term.gray('🔗 Join our Discord\n');
-      term
-        .gray('│ ')
-        .gray(
-          'Connect with the 2501 team and community for updates, support, and insights:\n'
-        );
-      term.gray('│ ').gray.underline(`${DISCORD_LINK}\n`);
-
-      configManager.set('join_discord_shown', true);
-    }
 
     if (process.env.TFZO_DISABLE_SPINNER) {
       const shouldDisableSpinner = process.env.TFZO_DISABLE_SPINNER === 'true';
