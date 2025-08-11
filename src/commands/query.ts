@@ -262,7 +262,7 @@ export const queryCommand = async (
 
     // If not agent is eligible, it usually means there was an error during the init process that is already displayed.
     if (!agentConfig) {
-      throw new Error('No agent is eligible.');
+      return;
     }
 
     if (agentConfig.remote_exec?.enabled) {
@@ -320,11 +320,10 @@ export const queryCommand = async (
     let finalResponse = '';
     while (actions.length) {
       if (isLooping(actions)) {
-        logger.stop(
+        return logger.stop(
           'Unfortunately, a loop has been detected. Please try again.',
           1
         );
-        throw new Error('Loop detected.');
       }
 
       // If there are normal actions to execute, process them and submit their outputs to the backend.
