@@ -88,7 +88,8 @@ export async function getWorkspacePath(
 
     // The symbol handles the CTRL+C cancelation from user.
     if (res === false || res.toString() === 'Symbol(clack:cancel)') {
-      throw new Error('Operation cancelled');
+      logger.cancel('Operation cancelled');
+      process.exit(0);
     }
 
     logger.log(`Using workspace at ${finalPath}`);
