@@ -97,7 +97,8 @@ program
       await authMiddleware();
       await queryCommand(query, options);
     } catch (error) {
-      // The 'onCommand*' listener is handled differently than the actions.
+      // The 'onCommand*' listener is handled differently than the actions,
+      // and will trigger an unhandledRejection if an error is thrown.
       await errorHandler.handleCommandError(error as Error, 'fallback-query');
       // Makes sure the program exits with the correct error code.
       program.error((error as Error).message);
