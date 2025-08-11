@@ -101,7 +101,7 @@ program
       // and will trigger an unhandledRejection if an error is thrown.
       await errorHandler.handleCommandError(error as Error, 'fallback-query');
       // Makes sure the program exits with the correct error code.
-      program.error((error as Error).message);
+      process.exit(1);
     }
   });
 
@@ -205,6 +205,6 @@ program
   } catch (error) {
     await errorHandler.handleCommandError(error as Error, program.args[0]);
     // Makes sure the program exits with the correct error code.
-    program.error((error as Error).message);
+    process.exit(1);
   }
 })();
