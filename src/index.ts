@@ -31,12 +31,6 @@ process.on('SIGTERM', async () => {
   process.exit(0);
 });
 
-process.on('unhandledRejection', async (error) => {
-  await errorHandler.handleCommandError(error as Error, 'unhandledRejection', {
-    exitCode: 1,
-  });
-});
-
 const program = new Command();
 const programName = os.platform() === 'win32' ? 'a2501' : '@2501';
 
@@ -76,7 +70,7 @@ program
   .option('--remote-exec-password <password>', 'Password for remote execution')
   .option('--remote-skip-test <skipTest>', 'Skip the remote connection test')
   .hook('preAction', (cmd) => {
-    Logger.debug('Pre-action hook', cmd);
+    // Logger.debug('Pre-action hook', cmd);
     const TWENTY_MINUTES = 20 * 60 * 1000;
     timeout = setTimeout(() => {
       Logger.error(`Command ${cmd.name()} timed out`);
@@ -101,35 +95,14 @@ program
 
     try {
       await authMiddleware();
-      const exitCode = await queryCommand(query, options);
-      if (exitCode > 0) {
-        process.exit(exitCode);
-      }
+      await queryCommand(query, options);
     } catch (error) {
-      await errorHandler.handleCommandError(error as Error, 'fallback-query', {
-        exitCode: 1,
-      });
+      // The 'onCommand*' listener is handled differently than the actions.
+      await errorHandler.handleCommandError(error as Error, 'fallback-query');
+      // Makes sure the program exits with the correct error code.
+      program.error((error as Error).message);
     }
   });
-
-// Monkey-patch Commander.js's .action to auto-wrap all actions in try/catch
-const originalAction = Command.prototype.action;
-Command.prototype.action = function (fn) {
-  return originalAction.call(this, function (...args) {
-    // Use a regular function to preserve 'this' context
-    return (async () => {
-      try {
-        await fn.apply(this, args);
-      } catch (error) {
-        await errorHandler.handleCommandError(
-          error as Error,
-          this.name ? this.name() : 'unknown',
-          { exitCode: 1 }
-        );
-      }
-    })();
-  });
-};
 
 // Config command
 program
@@ -155,10 +128,7 @@ program
     const options = program.opts();
     const allOptions = { ...cmdOptions, ...options, taskId };
     Logger.debug(`Starting task ${taskId}`);
-    const exitCode = await startTaskCommand(allOptions);
-    if (exitCode > 0) {
-      process.exit(exitCode);
-    }
+    await startTaskCommand(allOptions);
   });
 
 // Init command
@@ -183,10 +153,7 @@ program
       remoteExecPassword:
         (allOptions.remoteExecPassword && '***') || '(not provided)',
     });
-    const exitCode = await initCommand(allOptions);
-    if (exitCode > 0) {
-      process.exit(exitCode);
-    }
+    await initCommand(allOptions);
   });
 
 // Agents command
@@ -199,10 +166,7 @@ program
   .option('--all', 'Parameter to target all agents during list or flush action')
   .option('--flush', 'Flush all agents from the configuration')
   .action(async (options) => {
-    const exitCode = await agentsCommand(options);
-    if (exitCode > 0) {
-      process.exit(exitCode);
-    }
+    await agentsCommand(options);
   });
 
 // Tasks command
@@ -223,10 +187,7 @@ program
   .hook('preAction', initPlugins)
   .hook('preAction', initPluginCredentials)
   .action(async (options) => {
-    const exitCode = await tasksSubscriptionCommand(options);
-    if (exitCode > 0) {
-      process.exit(exitCode);
-    }
+    await tasksSubscriptionCommand(options);
   });
 
 program
@@ -239,10 +200,10 @@ program
 (async () => {
   try {
     await handleAutoUpdate();
-    program.parse(process.argv);
+    await program.parseAsync(process.argv);
   } catch (error) {
-    await errorHandler.handleCommandError(error as Error, 'main', {
-      exitCode: 0,
-    });
+    await errorHandler.handleCommandError(error as Error, program.args[0]);
+    // Makes sure the program exits with the correct error code.
+    program.error((error as Error).message);
   }
 })();

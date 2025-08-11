@@ -32,6 +32,7 @@ export const configCommand = async () => {
       }
     );
   } catch (error) {
-    Logger.error('Failed to fetch configurations:');
+    logger.stop('Failed to fetch configurations.', 1);
+    throw error;
   }
 };

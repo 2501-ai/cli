@@ -33,6 +33,7 @@ export async function setCommand(key: string, value?: string) {
     ConfigManager.instance.set(configKey, parsedValue);
     logger.log(`${configKey} set successfully to ${parsedValue}.`);
   } catch (error) {
-    logger.cancel((error as Error).message);
+    logger.stop('Failed to set configuration', 1);
+    throw error;
   }
 }

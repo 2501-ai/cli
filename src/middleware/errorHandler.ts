@@ -26,7 +26,7 @@ export class ErrorHandler {
       Logger.error('Uncaught Exception:', error.message);
       Logger.debug('Stack trace:', error.stack || 'No stack trace available');
 
-      this.handleError(error, {
+      await this.handleError(error, {
         type: 'uncaughtException',
         fatal: true,
       });
@@ -48,7 +48,7 @@ export class ErrorHandler {
         );
         Logger.debug('Stack trace:', error.stack || 'No stack trace available');
 
-        this.handleError(error, {
+        await this.handleError(error, {
           type: 'unhandledRejection',
           fatal: true,
           metadata: { reason: String(reason) },
@@ -73,9 +73,9 @@ export class ErrorHandler {
   public async handleCommandError(
     error: Error,
     commandName?: string,
-    options?: { exitCode?: number; silent?: boolean }
+    options?: { silent?: boolean }
   ): Promise<void> {
-    const { exitCode = 1, silent = false } = options || {};
+    const { silent = false } = options || {};
 
     if (!silent) {
       Logger.error(
@@ -85,33 +85,28 @@ export class ErrorHandler {
       Logger.debug('Error details:', error.stack || 'No stack trace available');
     }
 
-    this.handleError(error, {
+    await this.handleError(error, {
       type: 'commandError',
       fatal: false,
       metadata: {
         commandName,
-        exitCode,
       },
     });
-
-    if (exitCode > 0) {
-      process.exit(exitCode);
-    }
   }
 
   /**
    * Core error handling logic
    */
-  private handleError(
+  private async handleError(
     error: Error,
     context: {
       type: 'uncaughtException' | 'unhandledRejection' | 'commandError';
       fatal: boolean;
       metadata?: Record<string, any>;
     }
-  ): void {
+  ): Promise<void> {
     // Track error via telemetry
-    trackError(error, {
+    await trackError(error, {
       metadata: {
         errorType: context.type,
         fatal: context.fatal,

@@ -134,7 +134,7 @@ function checkForExistingAgent(workspacePath: string) {
 // This function will be called when the `init` command is executed
 export const initCommand = async (
   options: InitCommandOptions
-): Promise<number> => {
+): Promise<void> => {
   try {
     const configManager = ConfigManager.instance;
 
@@ -185,7 +185,7 @@ export const initCommand = async (
         logger.cancel(
           `Agent ${id} is not idle. Please stop the agent before starting a new task.`
         );
-        return 1;
+        throw new Error('Agent is not idle.');
       }
 
       await updateHostInfo(id, hostInfo);
@@ -224,9 +224,8 @@ export const initCommand = async (
       agentId: id,
     });
     logger.stop(`Agent ${id} ${options.agentId ? 'retrieved' : 'created'}`);
-    return 0;
-  } catch (e: unknown) {
-    await logger.handleError(e as Error, (e as Error).message);
-    return 1;
+  } catch (error) {
+    logger.stop('Failed to initialize agent', 1);
+    throw error;
   }
 };

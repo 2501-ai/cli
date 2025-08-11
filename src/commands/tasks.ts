@@ -248,7 +248,7 @@ export async function tasksSubscriptionCommand(options: {
   unsubscribe?: boolean;
   workspace?: string;
   listen?: boolean;
-}): Promise<number> {
+}): Promise<void> {
   const logger = new Logger();
   const workspace = resolveWorkspacePath(options);
 
@@ -258,8 +258,7 @@ export async function tasksSubscriptionCommand(options: {
 
   // Handle case where getTfzoExecPath fails
   if (!tfzoExecPath) {
-    Logger.error('Failed to get TFZO executable path');
-    return 1;
+    throw new Error('Failed to get TFZO executable path');
   }
 
   if (options.subscribe) {
@@ -268,13 +267,13 @@ export async function tasksSubscriptionCommand(options: {
     const error = await subscribeToTasks(workspace, tfzoExecPath);
     if (error) {
       Logger.error('Subscription failed:', error);
-      return 1;
+      throw new Error('Subscription failed.');
     }
 
     logger.stop(
       `Subscribed to the API for new tasks on workspace ${workspace}`
     );
-    return 0;
+    return;
   }
 
   if (options.unsubscribe) {
@@ -283,13 +282,13 @@ export async function tasksSubscriptionCommand(options: {
     const error = await unsubscribeFromTasks(workspace, tfzoExecPath);
     if (error) {
       Logger.error('Unsubscription failed:', error);
-      return 1;
+      throw new Error('Unsubscription failed.');
     }
 
     logger.stop(
       `Unsubscribed to the API for new tasks on workspace ${workspace}`
     );
-    return 0;
+    return;
   }
 
   if (options.listen) {
@@ -297,7 +296,7 @@ export async function tasksSubscriptionCommand(options: {
       const agent = getEligibleAgent(workspace);
       if (!agent) {
         logger.outro('No agents available in the workspace');
-        return 1;
+        return;
       }
 
       // A spinner start requires a stop before returning.
@@ -312,7 +311,7 @@ export async function tasksSubscriptionCommand(options: {
 
       if (!tasks.length) {
         logger.stop(`No tasks found`);
-        return 0;
+        return;
       }
 
       logger.log(`Found ${tasks.length} tasks to execute`);
@@ -321,7 +320,7 @@ export async function tasksSubscriptionCommand(options: {
       for (const idx in tasks) {
         logger.log(`Processing task ${tasks[idx].id}`);
         // The engine will update the task as in_progress.
-        const exitCode = await queryCommand(tasks[idx].brief, {
+        await queryCommand(tasks[idx].brief, {
           workspace,
           agentId: agent.id,
           taskId: tasks[idx].id,
@@ -332,21 +331,18 @@ export async function tasksSubscriptionCommand(options: {
             result: `CLI Error: ${error}`,
           });
           Logger.error(`Task ${tasks[idx].id} failed: ${error}`);
-          return 1;
+          exitCodes.push(1);
         });
-        exitCodes.push(exitCode);
       }
       logger.log(
         `${exitCodes.length}/${tasks.length} tasks have been processed`
       );
       logger.stop();
-      return exitCodes.some((code) => code !== 0) ? 1 : 0;
     } catch (error) {
-      logger.stop();
-      Logger.error('Tasks error:', error);
-      return 1;
+      logger.stop('Tasks error', 1);
+      throw error;
     }
   }
-  // There should have been a command to listen for tasks.
-  return 1;
+  // There should have been an option to listen for tasks.
+  throw new Error('No option provided to listen for tasks.');
 }
