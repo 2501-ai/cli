@@ -267,7 +267,7 @@ export async function tasksSubscriptionCommand(options: {
     const error = await subscribeToTasks(workspace, tfzoExecPath);
     if (error) {
       Logger.error('Subscription failed:', error);
-      throw new Error('Subscription failed.');
+      return;
     }
 
     logger.stop(
@@ -282,7 +282,7 @@ export async function tasksSubscriptionCommand(options: {
     const error = await unsubscribeFromTasks(workspace, tfzoExecPath);
     if (error) {
       Logger.error('Unsubscription failed:', error);
-      throw new Error('Unsubscription failed.');
+      return;
     }
 
     logger.stop(
