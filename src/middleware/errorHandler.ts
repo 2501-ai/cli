@@ -79,8 +79,7 @@ export class ErrorHandler {
 
     if (!silent) {
       Logger.error(
-        `Command failed${commandName ? ` (${commandName})` : ''}:`,
-        error.message
+        `Command failed${commandName ? ` (${commandName})` : ''}: ${error.message}`
       );
       Logger.debug('Error details:', error.stack || 'No stack trace available');
     }
