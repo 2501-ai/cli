@@ -1,14 +1,21 @@
 name: Version Bump
 
 on:
-  push:
-    branches:
-      - main
+  workflow_dispatch:
+    inputs:
+      version_type:
+        description: 'Version bump type'
+        required: true
+        default: 'patch'
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
 
 jobs:
   version-bump:
     runs-on: ubuntu-latest
-    if: "!contains(github.event.head_commit.message, '[skip version bump]')"
     steps:
       - uses: actions/checkout@v4
         with:
@@ -36,7 +43,7 @@ jobs:
         run: npm test
 
       - name: Bump version
-        run: npm version patch
+        run: npm version ${{ github.event.inputs.version_type }}
 
       - name: Push changes
         run: git push --follow-tags
