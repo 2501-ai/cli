@@ -1,3 +1,5 @@
+import { Actions, FunctionName } from '../helpers/actions';
+
 /**
  * @property {string} path - workspace path
  * @property {string} state_hash - hash of the workspace state
@@ -49,16 +51,12 @@ export type StreamEventStatus =
   | 'failed'
   | 'requires_action';
 
-export type FunctionAction = {
+// TODO: rename this to a clearer name.
+export type FunctionAction<N extends FunctionName = FunctionName> = {
   id: string; // ex: "call_fPPBsOHeRJGmpcZQeT3wRVTK",
   type: string; // ex: 'function'
-  function:
-    | {
-        name: string; // ex: 'update_file';
-        arguments: any;
-      }
-    | string; // ex: 'update_file';
-  args: any;
+  function: N;
+  args: Parameters<Actions[N]>[0];
 };
 
 export type QueryResponseDTO = {

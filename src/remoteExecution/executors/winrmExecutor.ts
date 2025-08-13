@@ -120,7 +120,8 @@ export class WinRMExecutor implements IRemoteExecutor {
   async executeCommand(
     command: string,
     stdin?: string,
-    rawCmd = false
+    rawCmd = false,
+    onPrompt?: (command: string, stdout: string) => Promise<string>
   ): Promise<string> {
     try {
       await this.connect();
@@ -131,8 +132,14 @@ export class WinRMExecutor implements IRemoteExecutor {
 
       // Note: stdin is not supported in WinRM like it is in SSH
       if (stdin) {
-        Logger.debug(
+        Logger.warn(
           'WinRM does not support stdin input, ignoring stdin parameter'
+        );
+      }
+
+      if (onPrompt) {
+        Logger.warn(
+          'WinRM does not support interactive commands, ignoring onPrompt parameter'
         );
       }
 

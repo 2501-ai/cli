@@ -3,6 +3,7 @@ import fs from 'fs';
 
 import {
   browse_url,
+  Actions,
   read_file,
   run_shell,
   task_completed,
@@ -19,15 +20,24 @@ import {
   FunctionAction,
   FunctionExecutionResult,
 } from '../utils/types';
+import { promptInput } from '../helpers/api';
 
-export const ACTION_FNS = {
+export const ACTION_FNS: Actions = {
   browse_url,
   read_file,
   run_shell,
   write_file,
   update_file,
   task_completed,
-} as const;
+};
+
+const BLACKLISTED_ERROR_MESSAGE = [
+  `EXECUTION BLOCKED: Content contains blocked command`,
+  'SECURITY VIOLATION:',
+  `Interactive terminal editors (${BLACKLISTED_COMMANDS.join(', ')}) are strictly prohibited in this environment.`,
+  'These commands require direct user interaction and violate the automated execution policy.',
+  'NOTE: All content containing editor commands will be systematically blocked.',
+].join('\n');
 
 function isBlacklistedCommand(command: string): boolean {
   return BLACKLISTED_COMMANDS.some((blocked) => {
@@ -44,15 +54,34 @@ function isBlacklistedCommand(command: string): boolean {
 export class AgentManager {
   workspace: string;
   agentConfig: AgentConfig;
+  taskId: string;
 
-  constructor(options: { workspace: string; agentConfig: AgentConfig }) {
+  constructor(options: {
+    workspace: string;
+    agentConfig: AgentConfig;
+    taskId: string;
+  }) {
     this.workspace = options.workspace;
     this.agentConfig = options.agentConfig;
+    this.taskId = options.taskId;
   }
 
-  async executeAction(
-    action: FunctionAction,
-    args: any
+  /**
+   * Handle cases where the agent needs to provide input to the commands.
+   */
+  async onPrompt(command: string, stdout: string): Promise<string> {
+    const agentInput = await promptInput(
+      this.agentConfig.id,
+      this.taskId,
+      command,
+      stdout
+    );
+    return agentInput;
+  }
+
+  async executeAction<FA extends FunctionAction>(
+    action: FA,
+    args: any //TODO: type this
   ): Promise<FunctionExecutionResult> {
     const functionName = getFunctionName(action);
 
@@ -66,68 +95,35 @@ export class AgentManager {
 
     if (args.command) {
       if (isBlacklistedCommand(args.command)) {
-        const errorMessage = [
-          `EXECUTION BLOCKED: Content contains blocked command`,
-          'SECURITY VIOLATION:',
-          `Interactive terminal editors (${BLACKLISTED_COMMANDS.join(', ')}) are strictly prohibited in this environment.`,
-          'These commands require direct user interaction and violate the automated execution policy.',
-          'NOTE: All content containing editor commands will be systematically blocked.',
-        ].join('\n');
-
         return {
           tool_call_id: action.id,
-          output: errorMessage,
+          output: BLACKLISTED_ERROR_MESSAGE,
           success: false,
         };
       }
     }
 
-    let taskTitle: string = args.answer || args.command || '';
+    let taskTitle: string = args.answer || '';
     if (args.url) {
       taskTitle = 'Browsing: ' + args.url;
     }
+
     // Logger.debug('Action args:', args);
     let corrected = false;
+
     // Specific to write_file action
-    if (args.path && args.content) {
-      const previous =
-        ACTION_FNS.read_file({ path: args.path }) || 'NO PREVIOUS VERSION';
-      try {
-        const { data: correctionData } = await axios.post(
-          `/agents/${this.agentConfig.id}/verifyOutput`,
-          {
-            task: taskTitle,
-            previous,
-            proposal: args.content,
-          },
-          {
-            timeout: 150_000,
-          }
-        );
-
-        Logger.debug('Correction data:', correctionData);
-
-        if (
-          correctionData.corrected_output &&
-          correctionData.corrected_output !== args.content
-        ) {
-          corrected = true;
-          args.content = correctionData.corrected_output;
-
-          // prevent calling update function
-          // if (args.updates) {
-          //   delete args.updates;
-          //   function_name = ACTION_FNS.write_file.name as typeof function_name;
-          // }
-        }
-      } catch (e) {
-        Logger.error('verifyOutput error or timeout', e);
-        throw e;
-      }
+    const isWritefile =
+      args.path && args.content && functionName === 'write_file';
+    if (isWritefile) {
+      corrected = await this.verifyOutputContent(args, taskTitle);
     }
     Logger.debug(
       `   Processing action: ${taskTitle} | On function ${functionName}`
     );
+
+    if (action.function === 'run_shell') {
+      args.onPrompt = this.onPrompt.bind(this);
+    }
 
     try {
       let output = (await ACTION_FNS[functionName](args)) as string;
@@ -178,5 +174,44 @@ export class AgentManager {
         success: false,
       };
     }
+  }
+
+  /**
+   * Verify the output content for the write_file action.
+   */
+  private async verifyOutputContent(
+    args: any,
+    taskTitle: string
+  ): Promise<boolean> {
+    let corrected = false;
+    const previous =
+      ACTION_FNS.read_file({ path: args.path }) || 'NO PREVIOUS VERSION';
+    try {
+      const { data: correctionData } = await axios.post(
+        `/agents/${this.agentConfig.id}/verifyOutput`,
+        {
+          task: taskTitle,
+          previous,
+          proposal: args.content,
+        },
+        {
+          timeout: 150000,
+        }
+      );
+
+      Logger.debug('Correction data:', correctionData);
+
+      if (
+        correctionData.corrected_output &&
+        correctionData.corrected_output !== args.content
+      ) {
+        corrected = true;
+        args.content = correctionData.corrected_output;
+      }
+    } catch (e) {
+      Logger.error('verifyOutput error or timeout', e);
+      throw e;
+    }
+    return corrected;
   }
 }

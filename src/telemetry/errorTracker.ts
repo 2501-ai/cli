@@ -209,5 +209,7 @@ export async function trackError(
   error: Error,
   context?: { metadata?: Record<string, any> }
 ): Promise<void> {
-  await errorTracker.trackError(error, context).catch(() => {});
+  await errorTracker.trackError(error, context).catch(() => {
+    Logger.debug('Failed to send error event:', error);
+  });
 }

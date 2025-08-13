@@ -1,15 +1,15 @@
-import fs from 'fs';
-import path from 'path';
 import * as cheerio from 'cheerio';
 import execa from 'execa';
+import fs from 'fs';
+import path from 'path';
 import TurndownService from 'turndown';
 
 import { CONFIG_DIR } from '../constants';
-import { modifyCodeSections } from '../utils/sectionUpdate';
+import { isCommandNotFound } from '../remoteExecution/connectionParser';
+import { RemoteExecutor } from '../remoteExecution/remoteExecutor';
 import { IgnoreManager } from '../utils/ignore';
 import Logger from '../utils/logger';
-import { RemoteExecutor } from '../remoteExecution/remoteExecutor';
-import { isCommandNotFound } from '../remoteExecution/connectionParser';
+import { modifyCodeSections } from '../utils/sectionUpdate';
 
 export const LOG_DIR = path.join(CONFIG_DIR, 'logs');
 export const LOGFILE_PATH = path.join(LOG_DIR, 'commands.log');
@@ -96,9 +96,9 @@ export async function update_file({
   sectionsDiff,
   path,
 }: {
-  path: string;
   answer: string;
   sectionsDiff: string[];
+  path: string;
 }) {
   Logger.debug('Updating sections:', sectionsDiff);
 
@@ -161,16 +161,23 @@ export async function run_shell({
   command,
   shell,
   env,
+  onPrompt,
 }: {
   command: string;
   shell?: boolean | string;
   env?: { [key: string]: string };
+  onPrompt?: () => Promise<string>;
 }): Promise<string> {
   Logger.debug(`Running shell command: ${command}`);
 
   if (RemoteExecutor.instance.isEnabled()) {
     try {
-      const result = await RemoteExecutor.instance.executeCommand(command);
+      const result = await RemoteExecutor.instance.executeCommand(
+        command,
+        undefined,
+        false,
+        onPrompt
+      );
 
       logExecution(result);
 
@@ -231,9 +238,23 @@ export async function browse_url(args: { url: string }) {
   `;
 }
 
-export async function task_completed(args: {
-  output?: string;
-  summary?: string;
-}) {
-  return args?.summary || args?.output || 'Task completed!';
+export async function task_completed(args: { response?: string }) {
+  return args?.response || 'Task completed!';
+}
+
+export type FunctionName =
+  | 'update_file'
+  | 'write_file'
+  | 'read_file'
+  | 'run_shell'
+  | 'browse_url'
+  | 'task_completed';
+
+export interface Actions extends Record<FunctionName, (...args: any[]) => any> {
+  read_file: typeof read_file;
+  write_file: typeof write_file;
+  update_file: typeof update_file;
+  run_shell: typeof run_shell;
+  browse_url: typeof browse_url;
+  task_completed: typeof task_completed;
 }

@@ -102,6 +102,21 @@ export const updateHostInfo = async (
   await axios.put(`/agents/${agentId}/host`, hostInfo);
 };
 
+export const promptInput = async (
+  agentId: string,
+  taskId: string,
+  command: string,
+  output: string
+) => {
+  const { data } = await axios.post(`/agents/${agentId}/promptInput`, {
+    taskId,
+    command,
+    output,
+    stream: false,
+  });
+  return data;
+};
+
 /**
  * Submit tool outputs to the agent
  */

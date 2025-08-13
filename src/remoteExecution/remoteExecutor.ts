@@ -9,7 +9,8 @@ export interface IRemoteExecutor {
   executeCommand(
     command: string,
     stdin?: string,
-    rawCmd?: boolean
+    rawCmd?: boolean,
+    onPrompt?: (command: string, stdout: string) => Promise<string>
   ): Promise<string>;
 
   disconnect?(): Promise<void>;
@@ -85,12 +86,13 @@ export class RemoteExecutor {
   async executeCommand(
     command: string,
     stdin?: string,
-    rawCmd?: boolean
+    rawCmd?: boolean,
+    onPrompt?: (command: string, stdout: string) => Promise<string>
   ): Promise<string> {
     this.throwIfNotInitialized();
 
     Logger.debug(`Executing remote command: ${command}`);
-    return this.executor.executeCommand(command, stdin, rawCmd);
+    return this.executor.executeCommand(command, stdin, rawCmd, onPrompt);
   }
 
   async validateConnection(): Promise<boolean> {
