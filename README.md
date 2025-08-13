@@ -83,7 +83,7 @@ That’s precisely why the MoM approach shines and 2501’s autonomy does not st
 - Description: Execute a query using the specified agent.
 - Common usage: `@2501 Implement authentication in my express app`
   - This will execute the query using the agent assigned to the current workspace.
-- Custom Usage: `@2501 query <query> [--workspace <path>] [--agentId <id>]`
+- Custom Usage: `@2501 <query> [--workspace <path>] [--agentId <id>]`
 
 ### Init Command
 

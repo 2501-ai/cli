@@ -4,11 +4,12 @@ import { FormData } from 'formdata-node';
 import { API_HOST, API_VERSION } from '../constants';
 import { ConfigManager } from '../managers/configManager';
 import { pluginService } from '../utils/plugins';
-import { getHostInfo } from '../utils/systemInfo';
 import {
-  CreateAgentResponse,
   Configuration,
+  CreateAgentResponse,
   EngineType,
+  GetAgentResponse,
+  HostInfo,
   QueryResponseDTO,
   SystemInfo,
 } from '../utils/types';
@@ -33,10 +34,9 @@ export const createAgent = async (
   workspace: string,
   selected_config: Configuration,
   sysinfo: SystemInfo,
-  engine: EngineType
+  engine: EngineType,
+  hostInfo: HostInfo
 ): Promise<CreateAgentResponse> => {
-  const hostInfo = await getHostInfo();
-
   const { data: createResponse } = await axios.post('/agents', {
     workspace,
     configuration: selected_config.id,
@@ -48,6 +48,21 @@ export const createAgent = async (
 
   // TODO: make engine return less data.
   return createResponse;
+};
+
+export const getAgent = async (agentId: string): Promise<GetAgentResponse> => {
+  const { data } = await axios.get(`/agents/${agentId}`);
+  return data;
+};
+
+export const updateAgent = async (
+  agentId: string,
+  data: {
+    workspace?: string;
+    cli_data?: Record<string, any>;
+  }
+): Promise<void> => {
+  await axios.put(`/agents/${agentId}`, data);
 };
 
 /**
@@ -78,6 +93,13 @@ export const queryAgent = async (
   );
 
   return data;
+};
+
+export const updateHostInfo = async (
+  agentId: string,
+  hostInfo: HostInfo
+): Promise<void> => {
+  await axios.put(`/agents/${agentId}/host`, hostInfo);
 };
 
 /**

@@ -258,7 +258,7 @@ export async function tasksSubscriptionCommand(options: {
 
   // Handle case where getTfzoExecPath fails
   if (!tfzoExecPath) {
-    return Logger.error('Failed to get TFZO executable path');
+    throw new Error('Failed to get TFZO executable path');
   }
 
   if (options.subscribe) {
@@ -266,12 +266,14 @@ export async function tasksSubscriptionCommand(options: {
 
     const error = await subscribeToTasks(workspace, tfzoExecPath);
     if (error) {
-      return Logger.error('Subscription failed:', error);
+      Logger.error('Subscription failed:', error);
+      return;
     }
 
-    return logger.stop(
+    logger.stop(
       `Subscribed to the API for new tasks on workspace ${workspace}`
     );
+    return;
   }
 
   if (options.unsubscribe) {
@@ -279,19 +281,22 @@ export async function tasksSubscriptionCommand(options: {
 
     const error = await unsubscribeFromTasks(workspace, tfzoExecPath);
     if (error) {
-      return Logger.error('Unsubscription failed:', error);
+      Logger.error('Unsubscription failed:', error);
+      return;
     }
 
-    return logger.stop(
+    logger.stop(
       `Unsubscribed to the API for new tasks on workspace ${workspace}`
     );
+    return;
   }
 
   if (options.listen) {
     try {
       const agent = getEligibleAgent(workspace);
       if (!agent) {
-        return logger.outro('No agents available in the workspace');
+        logger.outro('No agents available in the workspace');
+        return;
       }
 
       // A spinner start requires a stop before returning.
@@ -311,6 +316,7 @@ export async function tasksSubscriptionCommand(options: {
 
       logger.log(`Found ${tasks.length} tasks to execute`);
 
+      const exitCodes: number[] = [];
       for (const idx in tasks) {
         logger.log(`Processing task ${tasks[idx].id}`);
         // The engine will update the task as in_progress.
@@ -325,13 +331,18 @@ export async function tasksSubscriptionCommand(options: {
             result: `CLI Error: ${error}`,
           });
           Logger.error(`Task ${tasks[idx].id} failed: ${error}`);
+          exitCodes.push(1);
         });
       }
-      logger.log('All tasks have been processed');
+      logger.log(
+        `${exitCodes.length}/${tasks.length} tasks have been processed`
+      );
+      logger.stop();
     } catch (error) {
-      Logger.error('Tasks error:', error);
+      logger.stop('Tasks error', 1);
+      throw error;
     }
-    // Make sure the logger spinner is stopped.
-    logger.stop();
   }
+  // There should have been an option to listen for tasks.
+  throw new Error('No option provided to listen for tasks.');
 }

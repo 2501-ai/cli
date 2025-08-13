@@ -16,6 +16,7 @@ import Logger from './utils/logger';
 import { getTempPath2501 } from './utils/platform';
 import { initPlugins } from './utils/plugins';
 import { RemoteExecutor } from './remoteExecution/remoteExecutor';
+import { startTaskCommand } from './commands/startTask';
 
 // Initialize global error handlers before any other code
 errorHandler.initializeGlobalHandlers();
@@ -33,6 +34,9 @@ process.on('SIGTERM', async () => {
 const program = new Command();
 const programName = os.platform() === 'win32' ? 'a2501' : '@2501';
 
+let timeout: NodeJS.Timeout;
+
+// General program options.
 program
   .name(programName)
   .description(
@@ -65,12 +69,17 @@ program
   )
   .option('--remote-exec-password <password>', 'Password for remote execution')
   .option('--remote-skip-test <skipTest>', 'Skip the remote connection test')
-  // Register a cleanup hook that runs after any command completes
-  // This ensures the RemoteExecutor connection is properly closed to avoid:
-  // - Resource leaks (hanging SSH/WinRM connections)  
-  // - Process not exiting cleanly
-  // - Connection pool exhaustion on remote hosts
+  .hook('preAction', (cmd) => {
+    // Logger.debug('Pre-action hook', cmd);
+    const TWENTY_MINUTES = 20 * 60 * 1000;
+    timeout = setTimeout(() => {
+      Logger.error(`Command ${cmd.name()} timed out`);
+      process.exit(1);
+    }, TWENTY_MINUTES);
+  })
   .hook('postAction', () => {
+    Logger.debug('Post-action hook clearing timeout');
+    clearTimeout(timeout);
     RemoteExecutor.instance.disconnect();
   })
   .on('command:*', async (args) => {
@@ -88,30 +97,13 @@ program
       await authMiddleware();
       await queryCommand(query, options);
     } catch (error) {
-      await errorHandler.handleCommandError(error as Error, 'fallback-query', {
-        exitCode: 1,
-      });
+      // The 'onCommand*' listener is handled differently than the actions,
+      // and will trigger an unhandledRejection if an error is thrown.
+      await errorHandler.handleCommandError(error as Error, 'fallback-query');
+      // Makes sure the program exits with the correct error code.
+      process.exit(1);
     }
   });
-
-// Monkey-patch Commander.js's .action to auto-wrap all actions in try/catch
-const originalAction = Command.prototype.action;
-Command.prototype.action = function (fn) {
-  return originalAction.call(this, function (...args) {
-    // Use a regular function to preserve 'this' context
-    return (async () => {
-      try {
-        await fn.apply(this, args);
-      } catch (error) {
-        await errorHandler.handleCommandError(
-          error as Error,
-          this.name ? this.name() : 'unknown',
-          { exitCode: 1 }
-        );
-      }
-    })();
-  });
-};
 
 // Config command
 program
@@ -122,22 +114,22 @@ program
     await configCommand();
   });
 
-// Query command
+// Start task command
 program
-  .command('query')
-  .argument('<query>', 'Query to execute')
-  .description('Execute a query using the specified agent')
+  .command('start-task')
+  .argument('<taskId>', 'Task ID to start')
+  .description('Start a task')
   .option('--workspace <path>', 'Specify a different workspace path')
-  .option('--agentId <id>', 'Specify the agent ID')
+  .option('--agent-id <agentId>', 'Specify the agent ID')
   .option('--stream [stream]', 'Stream the output of the query', true)
-  .option('--plugins <path>', 'Path to plugins configuration file')
-  .option('--env <path>', 'Path to .env file containing credentials')
   .hook('preAction', authMiddleware)
   .hook('preAction', initPlugins)
   .hook('preAction', initPluginCredentials)
-  .action(async (query, options) => {
-    Logger.debug('Query options:', options);
-    await queryCommand(query, options);
+  .action(async (taskId, cmdOptions) => {
+    const options = program.opts();
+    const allOptions = { ...cmdOptions, ...options, taskId };
+    Logger.debug(`Starting task ${taskId}`);
+    await startTaskCommand(allOptions);
   });
 
 // Init command
@@ -151,6 +143,8 @@ program
     `Will not sync the current workspace and will create a temporary one in ${getTempPath2501()}`
   )
   .option('--config <configKey>', 'Specify the configuration Key to use')
+  .option('--agent-id <agentId>', 'Specify the agent ID')
+  .option('--task-id <taskId>', 'Specify the task ID')
   .hook('preAction', authMiddleware)
   .action(async (cmdOptions) => {
     const options = program.opts();
@@ -207,10 +201,10 @@ program
 (async () => {
   try {
     await handleAutoUpdate();
-    program.parse(process.argv);
+    await program.parseAsync(process.argv);
   } catch (error) {
-    await errorHandler.handleCommandError(error as Error, 'main', {
-      exitCode: 0,
-    });
+    await errorHandler.handleCommandError(error as Error, program.args[0]);
+    // Makes sure the program exits with the correct error code.
+    process.exit(1);
   }
 })();

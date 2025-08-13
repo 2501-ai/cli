@@ -230,7 +230,10 @@ const parseAgentResponse = async (
   return [actions, queryResponse];
 };
 
-export const queryCommand = async (query: string, options: QueryOptions) => {
+export const queryCommand = async (
+  query: string,
+  options: QueryOptions
+): Promise<void> => {
   Logger.debug('Options:', options);
 
   const context = {
@@ -347,6 +350,7 @@ export const queryCommand = async (query: string, options: QueryOptions) => {
       Logger.agent(finalResponse);
     }
   } catch (error) {
-    logger.handleError(error as Error);
+    logger.stop('Query execution error', 1);
+    throw error;
   }
 };
