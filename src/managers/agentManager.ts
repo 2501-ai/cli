@@ -76,7 +76,8 @@ export class AgentManager {
       command,
       stdout
     );
-    return agentInput;
+    Logger.debug('Agent input:', agentInput);
+    return agentInput.response;
   }
 
   async executeAction<FA extends FunctionAction>(

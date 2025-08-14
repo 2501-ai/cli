@@ -96,6 +96,10 @@ program
     try {
       await authMiddleware();
       await queryCommand(query, options);
+      await RemoteExecutor.instance.disconnect();
+      // TODO: for some reason, with Remote exec the process is still running but nothing happens.
+      // That's why we use process.exit(); here. This is a temporary fix.
+      process.exit();
     } catch (error) {
       // The 'onCommand*' listener is handled differently than the actions,
       // and will trigger an unhandledRejection if an error is thrown.

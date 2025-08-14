@@ -107,7 +107,10 @@ export const promptInput = async (
   taskId: string,
   command: string,
   output: string
-) => {
+): Promise<{
+  success: boolean;
+  response: string;
+}> => {
   const { data } = await axios.post(`/agents/${agentId}/promptInput`, {
     taskId,
     command,

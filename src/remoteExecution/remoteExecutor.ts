@@ -155,11 +155,7 @@ export class RemoteExecutor {
   }
 
   async disconnect(): Promise<void> {
-    if (
-      this.executor &&
-      'disconnect' in this.executor &&
-      this.executor.disconnect
-    ) {
+    if (this.executor && this.executor.disconnect) {
       await this.executor.disconnect();
       Logger.debug('Remote executor disconnected');
     }

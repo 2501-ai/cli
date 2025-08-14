@@ -166,7 +166,7 @@ export async function run_shell({
   command: string;
   shell?: boolean | string;
   env?: { [key: string]: string };
-  onPrompt?: () => Promise<string>;
+  onPrompt?: (command: string, stdout: string) => Promise<string>;
 }): Promise<string> {
   Logger.debug(`Running shell command: ${command}`);
 

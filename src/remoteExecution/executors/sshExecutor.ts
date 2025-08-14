@@ -158,7 +158,7 @@ export class SSHExecutor implements IRemoteExecutor {
                   reject(error);
                 }
               }
-            }, 3000); // 3 seconds timeout for prompt detection
+            }, 5_000); // 5 seconds timeout for prompt detection
           };
 
           stream.on('close', (code: number) => {
@@ -178,6 +178,8 @@ export class SSHExecutor implements IRemoteExecutor {
 
           stream.on('data', (data: Buffer) => {
             stdout += data.toString();
+            Logger.debug('stdout:', { stdout });
+            // Logger.debug('data:', { data: data.toString() });
             checkForPrompt();
           });
 
@@ -201,6 +203,8 @@ export class SSHExecutor implements IRemoteExecutor {
   async disconnect(): Promise<void> {
     if (this.client) {
       this.client.end();
+      this.client.destroy();
+      this.client.removeAllListeners();
       this.client = null;
       this.connected = false;
       this.config = null;
