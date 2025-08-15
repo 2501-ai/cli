@@ -104,6 +104,40 @@ That’s precisely why the MoM approach shines and 2501’s autonomy does not st
   - `--unsubscribe`: Unsubscribe the current workspace for new jobs.
   - `--listen`: Listen for new jobs from the API and execute them.
 
+### Remote Execution
+
+Execute commands on remote servers using the `--remote-exec` option. Supports multiple authentication methods:
+
+#### SSH Authentication Methods
+
+```bash
+# Basic connection
+@2501 init --remote-exec user@server.com:22
+
+# With private key authentication (works with PEM or RSA keys (default ~/.ssh/id_rsa))
+@2501 init --remote-exec user@server.com:22 --remote-private-key $(cat ./some.pem)
+
+# With password authentication
+@2501 init --remote-exec user@server.com:22 --remote-exec-password yourpassword
+
+# Specify connection type (ssh is default)
+@2501 init --remote-exec user@server.com:22 --remote-exec-type ssh
+```
+
+#### WinRM Authentication (Windows)
+
+```bash
+# WinRM connection with password
+@2501 init --remote-exec user@windows-server.com:5985 --remote-exec-type winrm --remote-exec-password yourpassword
+```
+
+#### Options
+
+- `--remote-exec <connection>`: Enable remote execution (user@host:port)
+- `--remote-private-key <privateKey>`: Path to private key for remote execution
+- `--remote-exec-type <type>`: Type of remote execution: ssh or winrm (defaults to ssh)
+- `--remote-exec-password <password>`: Password for remote execution
+
 ## 🤝 Contributing
 
 We welcome contributions! Have questions or suggestions? Reach out to us:

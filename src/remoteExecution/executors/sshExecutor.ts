@@ -43,14 +43,44 @@ export class SSHExecutor implements IRemoteExecutor {
       host: this.config.target,
       port: this.config.port,
       username: this.config.user,
-      password: this.config.password,
       // debug: (message: string) => Logger.debug(message),
     };
-    // Add private key if specified
+
+    const fs = require('fs');
+    const path = require('path');
+    const os = require('os');
+
+    // Handle authentication methods - try multiple methods for better compatibility
+    // 1. PEM private key (private_key with optional passphrase)
     if (this.config.private_key) {
-      Logger.debug('Using private key:', this.config.private_key);
-      const fs = require('fs');
+      Logger.debug('Using PEM private key:', this.config.private_key);
       connectionConfig.privateKey = fs.readFileSync(this.config.private_key);
+      if (this.config.password) {
+        connectionConfig.passphrase = this.config.password;
+      }
+    }
+
+    // 2. RSA private key (custom path or default ~/.ssh/id_rsa)
+    const rsaKeyPath =
+      this.config.rsa_key || path.join(os.homedir(), '.ssh', 'id_rsa');
+    if (fs.existsSync(rsaKeyPath)) {
+      Logger.debug('Using RSA private key:', rsaKeyPath);
+      if (!connectionConfig.privateKey) {
+        // Only use RSA key if no PEM key was specified
+        connectionConfig.privateKey = fs.readFileSync(rsaKeyPath);
+      }
+    }
+
+    // 3. Password authentication
+    if (this.config.password && !this.config.private_key) {
+      Logger.debug('Using password authentication');
+      connectionConfig.password = this.config.password;
+    }
+
+    // 4. SSH agent as fallback
+    if (!connectionConfig.privateKey && !connectionConfig.password) {
+      Logger.debug('Trying SSH agent as fallback');
+      connectionConfig.agent = process.env.SSH_AUTH_SOCK;
     }
 
     return connectionConfig;
