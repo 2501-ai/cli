@@ -177,7 +177,7 @@ export class SSHExecutor implements IRemoteExecutor {
                   reject(error);
                 }
               }
-            }, 5_000); // 5 seconds timeout for prompt detection
+            }, 15_000); // 5 seconds timeout for prompt detection
           };
 
           stream.on('close', (code: number) => {
