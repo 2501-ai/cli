@@ -192,6 +192,10 @@ export const initCommand = async (
       // @NOTE : decide if we need to keep this workaround for non-swarm
       delete hostInfo.public_ip;
       delete hostInfo.public_ip_note;
+
+      // This might make non-swarm stuff break...
+      delete hostInfo.private_ip;
+
       await updateHostInfo(id, hostInfo);
 
       // Update the system info for the agent.
