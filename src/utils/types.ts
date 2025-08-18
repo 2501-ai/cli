@@ -130,7 +130,7 @@ export interface RemoteExecConfig {
   platform: 'windows' | 'unix';
   user: string;
   password?: string;
-  private_key?: string;
+  private_key?: string; // PEM key file path (password-protected)
   remote_workspace: string;
 }
 
