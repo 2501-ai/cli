@@ -131,7 +131,6 @@ export interface RemoteExecConfig {
   user: string;
   password?: string;
   private_key?: string; // PEM key file path (password-protected)
-  rsa_key?: string; // RSA private key path (default: ~/.ssh/id_rsa)
   remote_workspace: string;
 }
 
