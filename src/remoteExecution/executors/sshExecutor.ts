@@ -1,3 +1,6 @@
+import fs from 'fs';
+import path from 'path';
+import os from 'os';
 import { Client, ConnectConfig } from 'ssh2';
 import Logger from '../../utils/logger';
 import { RemoteExecConfig } from '../../utils/types';
@@ -43,14 +46,30 @@ export class SSHExecutor implements IRemoteExecutor {
       host: this.config.target,
       port: this.config.port,
       username: this.config.user,
-      password: this.config.password,
       // debug: (message: string) => Logger.debug(message),
     };
-    // Add private key if specified
+
+    // Handle authentication methods - try multiple methods for better compatibility
+    // 1. PEM private key (private_key, pem, rsa)
     if (this.config.private_key) {
-      Logger.debug('Using private key:', this.config.private_key);
-      const fs = require('fs');
+      Logger.debug('Using PEM private key:', this.config.private_key);
       connectionConfig.privateKey = fs.readFileSync(this.config.private_key);
+      if (this.config.password) {
+        connectionConfig.passphrase = this.config.password;
+      }
+    }
+
+    // 2. RSA private key (default ~/.ssh/id_rsa)
+    const rsaKeyPath = path.join(os.homedir(), '.ssh', 'id_rsa');
+    if (!connectionConfig.privateKey && fs.existsSync(rsaKeyPath)) {
+      Logger.debug('Using RSA private key:', rsaKeyPath);
+      connectionConfig.privateKey = fs.readFileSync(rsaKeyPath);
+    }
+
+    // 3. Password authentication
+    if (this.config.password) {
+      Logger.debug('Using password authentication');
+      connectionConfig.password = this.config.password;
     }
 
     return connectionConfig;

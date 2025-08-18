@@ -1,0 +1,82 @@
+name: Version Bump
+
+on:
+  workflow_dispatch:
+    inputs:
+      version_type:
+        description: 'Version bump type'
+        required: true
+        default: 'patch'
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  version-bump:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Configure Git
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Run tests
+        run: npm test
+
+      - name: Bump version
+        run: npm version ${{ github.event.inputs.version_type }}
+
+      - name: Create Pull Request
+        id: create-pr
+        run: |
+          BRANCH_NAME="version-bump-$(date +%s)"
+          git checkout -b $BRANCH_NAME
+          git push -u origin $BRANCH_NAME
+
+          # Get the new version from package.json
+          NEW_VERSION=$(node -p "require('./package.json').version")
+
+          # Create PR
+          PR_URL=$(gh pr create \
+            --title "chore: bump version to $NEW_VERSION" \
+            --body "Automated version bump to $NEW_VERSION" \
+            --base main \
+            --head $BRANCH_NAME)
+
+          echo "pr_url=$PR_URL" >> $GITHUB_OUTPUT
+          echo "branch_name=$BRANCH_NAME" >> $GITHUB_OUTPUT
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Auto-merge PR
+        run: |
+          # Extract PR number from URL
+          PR_NUMBER=$(echo "${{ steps.create-pr.outputs.pr_url }}" | sed 's/.*\/pull\///')
+
+          # Enable auto-merge
+          gh pr merge $PR_NUMBER --merge --auto
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
