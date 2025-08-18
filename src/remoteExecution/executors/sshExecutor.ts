@@ -1,3 +1,6 @@
+import fs from 'fs';
+import path from 'path';
+import os from 'os';
 import { Client, ConnectConfig } from 'ssh2';
 import Logger from '../../utils/logger';
 import { RemoteExecConfig } from '../../utils/types';
@@ -46,12 +49,8 @@ export class SSHExecutor implements IRemoteExecutor {
       // debug: (message: string) => Logger.debug(message),
     };
 
-    const fs = require('fs');
-    const path = require('path');
-    const os = require('os');
-
     // Handle authentication methods - try multiple methods for better compatibility
-    // 1. PEM private key (private_key with optional passphrase)
+    // 1. PEM private key (private_key, pem, rsa)
     if (this.config.private_key) {
       Logger.debug('Using PEM private key:', this.config.private_key);
       connectionConfig.privateKey = fs.readFileSync(this.config.private_key);
@@ -60,27 +59,17 @@ export class SSHExecutor implements IRemoteExecutor {
       }
     }
 
-    // 2. RSA private key (custom path or default ~/.ssh/id_rsa)
-    const rsaKeyPath =
-      this.config.rsa_key || path.join(os.homedir(), '.ssh', 'id_rsa');
-    if (fs.existsSync(rsaKeyPath)) {
+    // 2. RSA private key (default ~/.ssh/id_rsa)
+    const rsaKeyPath = path.join(os.homedir(), '.ssh', 'id_rsa');
+    if (!connectionConfig.privateKey && fs.existsSync(rsaKeyPath)) {
       Logger.debug('Using RSA private key:', rsaKeyPath);
-      if (!connectionConfig.privateKey) {
-        // Only use RSA key if no PEM key was specified
-        connectionConfig.privateKey = fs.readFileSync(rsaKeyPath);
-      }
+      connectionConfig.privateKey = fs.readFileSync(rsaKeyPath);
     }
 
     // 3. Password authentication
-    if (this.config.password && !this.config.private_key) {
+    if (this.config.password) {
       Logger.debug('Using password authentication');
       connectionConfig.password = this.config.password;
-    }
-
-    // 4. SSH agent as fallback
-    if (!connectionConfig.privateKey && !connectionConfig.password) {
-      Logger.debug('Trying SSH agent as fallback');
-      connectionConfig.agent = process.env.SSH_AUTH_SOCK;
     }
 
     return connectionConfig;
