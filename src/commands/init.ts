@@ -189,12 +189,12 @@ export const initCommand = async (
         throw new Error('Agent is not idle.');
       }
 
-      // @NOTE : decide if we need to keep this workaround for non-swarm
-      delete hostInfo.public_ip;
-      delete hostInfo.public_ip_note;
-
-      // This might make non-swarm stuff break...
-      delete hostInfo.private_ip;
+      if (RemoteExecutor.instance.isEnabled()) {
+        // hack to avoid ips to be overriden on remote-exec usages
+        delete hostInfo.public_ip;
+        delete hostInfo.public_ip_note;
+        delete hostInfo.private_ip;
+      }
 
       await updateHostInfo(id, hostInfo);
 
