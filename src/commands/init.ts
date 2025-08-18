@@ -189,6 +189,9 @@ export const initCommand = async (
         throw new Error('Agent is not idle.');
       }
 
+      // @NOTE : decide if we need to keep this workaround for non-swarm
+      delete hostInfo.public_ip;
+      delete hostInfo.public_ip_note;
       await updateHostInfo(id, hostInfo);
 
       // Update the system info for the agent.
