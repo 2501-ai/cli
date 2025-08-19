@@ -114,7 +114,7 @@ export type EngineType = 'rhino' | 'rabbit';
 
 export interface HostInfo {
   unique_id: string; // Matches Host.unique_id
-  name: string; // Matches Host.name
+  name?: string; // Matches Host.name
   private_ip?: string | null; // Optional, matches Host.private_ip
   additional_names?: string[]; // Optional, matches Host.additional_names
   mac?: string | null; // Optional, matches Host.mac
