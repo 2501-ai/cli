@@ -1,7 +1,6 @@
 import winrm from 'nodejs-winrm';
 import Logger from '../../utils/logger';
-import { RemoteExecConfig } from '../../utils/types';
-import { IRemoteExecutor } from '../remoteExecutor';
+import { ExecutionResult, IRemoteExecutor, RemoteExecConfig } from '../types';
 
 // Powershell is the default command wrapper for winrm
 // A space is left at the end for the command concatenation.
@@ -119,10 +118,10 @@ export class WinRMExecutor implements IRemoteExecutor {
 
   async executeCommand(
     command: string,
-    stdin?: string,
     rawCmd = false,
+    stdin?: string,
     onPrompt?: (command: string, stdout: string) => Promise<string>
-  ): Promise<string> {
+  ): Promise<ExecutionResult> {
     try {
       await this.connect();
 
@@ -164,7 +163,9 @@ export class WinRMExecutor implements IRemoteExecutor {
         result,
       });
 
-      return result || '';
+      return {
+        stdout: result || '',
+      };
     } catch (error) {
       Logger.error('WinRM command execution failed:', error);
       throw error;

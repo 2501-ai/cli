@@ -1,4 +1,5 @@
 import { Actions, FunctionName } from '../helpers/actions';
+import { RemoteExecConfig } from '../remoteExecution/types';
 
 /**
  * @property {string} path - workspace path
@@ -120,18 +121,6 @@ export interface HostInfo {
   public_ip_note?: string | null; // Optional, matches Host.public_ip_note
 }
 
-export interface RemoteExecConfig {
-  enabled: boolean;
-  target: string;
-  port: number;
-  type: (typeof REMOTE_EXEC_TYPES)[number]; // 'ssh' | 'winrm'
-  platform: 'windows' | 'unix';
-  user: string;
-  password?: string;
-  private_key?: string; // PEM key file path (password-protected)
-  remote_workspace: string;
-}
-
 export interface CreateAgentResponse {
   id: string;
   name: string;
@@ -164,8 +153,6 @@ export interface AgentConfig extends CreateAgentResponse {
   // Remote workspace path (optional, per-agent)
   remote_workspace?: string;
 }
-
-export const REMOTE_EXEC_TYPES = ['ssh', 'winrm'] as const;
 
 export type LocalConfig = {
   workspace_disabled: boolean;

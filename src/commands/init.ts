@@ -18,11 +18,12 @@ import {
 } from '../remoteExecution/connectionParser';
 import { RemoteExecutor } from '../remoteExecution/remoteExecutor';
 import { getRemoteSystemInfo } from '../remoteExecution/remoteSystemInfo';
+import { RemoteExecConfig } from '../remoteExecution/types';
 import { addAgent, getEligibleAgent } from '../utils/conf';
 import Logger from '../utils/logger';
 import { getTempPath2501 } from '../utils/platform';
 import { getHostInfo, getSystemInfo } from '../utils/systemInfo';
-import { Configuration, RemoteExecConfig } from '../utils/types';
+import { Configuration } from '../utils/types';
 
 export interface InitCommandOptions {
   name?: string;

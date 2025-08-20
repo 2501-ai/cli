@@ -41,7 +41,7 @@ export async function write_file(args: {
     try {
       if (config.type === 'winrm') {
         // For WinRM, we need to use the `echo` command to write the file
-        const result = await RemoteExecutor.instance.executeCommand(
+        const { stdout: result } = await RemoteExecutor.instance.executeCommand(
           `powershell Write-Host ${escapedContent || ''} -NoNewline > "${args.path}"`
         );
         if (isCommandNotFound(result)) {
@@ -103,9 +103,15 @@ export async function update_file({
   Logger.debug('Updating sections:', sectionsDiff);
 
   try {
-    const fileContent = RemoteExecutor.instance.isEnabled()
-      ? await RemoteExecutor.instance.executeCommand(`cat "${path}"`)
-      : fs.readFileSync(path, 'utf8');
+    let fileContent: string;
+    if (RemoteExecutor.instance.isEnabled()) {
+      const { stdout } = await RemoteExecutor.instance.executeCommand(
+        `cat "${path}"`
+      );
+      fileContent = stdout;
+    } else {
+      fileContent = fs.readFileSync(path, 'utf8');
+    }
 
     const newContent = modifyCodeSections({
       originalContent: fileContent,
@@ -172,7 +178,7 @@ export async function run_shell({
 
   if (RemoteExecutor.instance.isEnabled()) {
     try {
-      const result = await RemoteExecutor.instance.executeCommand(
+      const { stdout: result } = await RemoteExecutor.instance.executeCommand(
         command,
         undefined,
         false,
