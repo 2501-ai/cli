@@ -195,6 +195,7 @@ export const initCommand = async (
         delete hostInfo.public_ip;
         delete hostInfo.public_ip_note;
         delete hostInfo.private_ip;
+        delete hostInfo.name;
       }
 
       await updateHostInfo(id, hostInfo);
