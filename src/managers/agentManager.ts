@@ -78,7 +78,7 @@ export class AgentManager {
       stdout
     );
     Logger.log(
-      `${chalk.gray('│')}  REPL mode - Sending input to stream: ${agentInput}`
+      `${chalk.gray('│')}  REPL mode - Sending input to stream: ${agentInput.response}`
     );
     return agentInput.response;
   }
