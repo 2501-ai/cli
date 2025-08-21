@@ -136,9 +136,6 @@ export class SSHExecutor implements IRemoteExecutor {
     stdin?: string,
     onPrompt?: PromptCallback
   ): Promise<ExecutionResult> {
-    const startTime = Date.now();
-    let promptsDetected = 0;
-
     await this.connect();
 
     return new Promise((resolve, reject) => {
@@ -154,7 +151,6 @@ export class SSHExecutor implements IRemoteExecutor {
           return;
         }
 
-        let detectionTime = 0;
         const outputBuffer = new OutputBuffer();
         let isWaitingForPrompt = false;
 
@@ -162,14 +158,11 @@ export class SSHExecutor implements IRemoteExecutor {
           if (isWaitingForPrompt || !onPrompt) return;
 
           isWaitingForPrompt = true;
-          promptsDetected++;
 
           try {
             const stdout = outputBuffer.getBuffer();
             const stderr = outputBuffer.getStderrBuffer();
-            const detectionStart = Date.now();
             const input = await onPrompt(command, stdout, stderr);
-            detectionTime = Date.now() - detectionStart;
 
             stream.stdin.write(input + '\n');
             isWaitingForPrompt = false;
@@ -178,10 +171,6 @@ export class SSHExecutor implements IRemoteExecutor {
               stdout: outputBuffer.getBuffer(),
               stderr: outputBuffer.getStderrBuffer(),
               exitCode: -1,
-              detectionTime,
-              executionTime: Date.now() - startTime,
-              promptsDetected,
-              reasons: [`Prompt response failed: ${(error as Error).message}`],
             } as ExecutionResult);
           }
         };
@@ -189,7 +178,6 @@ export class SSHExecutor implements IRemoteExecutor {
         stream.on('close', (code: number) => {
           clearAllPromptTimeouts();
 
-          const executionTime = Date.now() - startTime;
           const stdout = outputBuffer.getBuffer();
           const stderr = outputBuffer.getStderrBuffer();
 
@@ -198,20 +186,12 @@ export class SSHExecutor implements IRemoteExecutor {
               stdout,
               stderr: `Command failed with exit code ${code}: ${stderr}`,
               exitCode: code,
-              detectionTime,
-              executionTime,
-              promptsDetected,
-              reasons: [`Command failed with exit code ${code}: ${stderr}`],
             } as ExecutionResult);
           } else {
             resolve({
               stdout,
               stderr,
               exitCode: code,
-              detectionTime,
-              executionTime,
-              promptsDetected,
-              reasons: [],
             } as ExecutionResult);
           }
         });

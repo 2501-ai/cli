@@ -36,7 +36,6 @@ const HIGH_CONFIDENCE_PATTERNS = [
 let promptTimeout: NodeJS.Timeout | null = null;
 function clearPromptTimeout() {
   if (promptTimeout) {
-    Logger.debug('Clearing prompt timeout');
     clearTimeout(promptTimeout);
     promptTimeout = null;
   }
@@ -46,7 +45,6 @@ function clearPromptTimeout() {
 let debouncePromptCheckTimeout: NodeJS.Timeout | null = null;
 const clearDebouncePromptCheckTimeout = () => {
   if (debouncePromptCheckTimeout) {
-    Logger.debug('Clearing debounce prompt check timeout');
     clearTimeout(debouncePromptCheckTimeout);
     debouncePromptCheckTimeout = null;
   }

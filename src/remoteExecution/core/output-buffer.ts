@@ -1,5 +1,3 @@
-import Logger from '../../utils/logger';
-
 export class OutputBuffer {
   private buffer = '';
   private stderrBuffer = '';
@@ -13,12 +11,6 @@ export class OutputBuffer {
     }
 
     this.lastUpdateTime = Date.now();
-
-    Logger.debug('Data appended', {
-      dataLength: data.length,
-      isStderr,
-      preview: data.substring(0, 100) + (data.length > 100 ? '...' : ''),
-    });
   }
 
   getBuffer(): string {
