@@ -163,7 +163,7 @@ export class SSHExecutor implements IRemoteExecutor {
             const stdout = outputBuffer.getBuffer();
             const stderr = outputBuffer.getStderrBuffer();
             const input = await onPrompt(command, stdout, stderr);
-
+            Logger.log(`REPL mode - Sending input to stream: ${input}`);
             stream.stdin.write(input + '\n');
             stream.stdin.end();
             isWaitingForPrompt = false;
