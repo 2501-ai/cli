@@ -2,8 +2,8 @@ import axios from 'axios';
 import fs from 'fs';
 
 import {
-  browse_url,
   Actions,
+  browse_url,
   read_file,
   run_shell,
   task_completed,
@@ -13,14 +13,15 @@ import {
 
 import Logger from '../utils/logger';
 
+import chalk from 'chalk';
 import { BLACKLISTED_COMMANDS } from '../constants';
+import { promptInput } from '../helpers/api';
 import { getFunctionName } from '../utils/actions';
 import {
   AgentConfig,
   FunctionAction,
   FunctionExecutionResult,
 } from '../utils/types';
-import { promptInput } from '../helpers/api';
 
 export const ACTION_FNS: Actions = {
   browse_url,
@@ -76,7 +77,9 @@ export class AgentManager {
       command,
       stdout
     );
-    Logger.debug('Agent input:', agentInput);
+    Logger.log(
+      `${chalk.gray('│')}  REPL mode - Sending input to stream: ${agentInput}`
+    );
     return agentInput.response;
   }
 
