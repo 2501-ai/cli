@@ -165,6 +165,7 @@ export class SSHExecutor implements IRemoteExecutor {
             const input = await onPrompt(command, stdout, stderr);
 
             stream.stdin.write(input + '\n');
+            stream.stdin.end();
             isWaitingForPrompt = false;
           } catch (error) {
             reject({
@@ -210,6 +211,7 @@ export class SSHExecutor implements IRemoteExecutor {
           stream.stdin.write(stdin + '\n');
           stream.stdin.end();
         }
+        debouncePromptCheck(outputBuffer, handlePrompt);
       });
     });
   }
