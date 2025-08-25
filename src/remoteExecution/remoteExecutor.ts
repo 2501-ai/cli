@@ -1,25 +1,7 @@
 import Logger from '../utils/logger';
-import { RemoteExecConfig } from '../utils/types';
 import { SSHExecutor } from './executors/sshExecutor';
 import { WinRMExecutor } from './executors/winrmExecutor';
-
-export interface IRemoteExecutor {
-  init(config: RemoteExecConfig): void;
-
-  executeCommand(
-    command: string,
-    stdin?: string,
-    rawCmd?: boolean
-  ): Promise<string>;
-
-  disconnect?(): Promise<void>;
-
-  connect(): Promise<void>;
-
-  isConnected(): boolean;
-
-  wrapper?: string;
-}
+import { ExecutionResult, IRemoteExecutor, RemoteExecConfig } from './types';
 
 export class RemoteExecutor {
   private static _instance: RemoteExecutor;
@@ -31,10 +13,6 @@ export class RemoteExecutor {
       RemoteExecutor._instance = new RemoteExecutor();
     }
     return RemoteExecutor._instance;
-  }
-
-  get isConnected(): boolean {
-    return this.executor?.isConnected() ?? false;
   }
 
   init(config: RemoteExecConfig): void {
@@ -85,12 +63,13 @@ export class RemoteExecutor {
   async executeCommand(
     command: string,
     stdin?: string,
-    rawCmd?: boolean
-  ): Promise<string> {
+    rawCmd?: boolean,
+    onPrompt?: (command: string, stdout: string) => Promise<string>
+  ): Promise<ExecutionResult> {
     this.throwIfNotInitialized();
 
     Logger.debug(`Executing remote command: ${command}`);
-    return this.executor.executeCommand(command, stdin, rawCmd);
+    return this.executor.executeCommand(command, rawCmd, stdin, onPrompt);
   }
 
   async validateConnection(): Promise<boolean> {
@@ -112,7 +91,7 @@ export class RemoteExecutor {
     }
 
     try {
-      const result = await this.executeCommand(
+      const { stdout: result } = await this.executeCommand(
         'uname -s 2>&1 || ver',
         '',
         true
@@ -153,11 +132,7 @@ export class RemoteExecutor {
   }
 
   async disconnect(): Promise<void> {
-    if (
-      this.executor &&
-      'disconnect' in this.executor &&
-      this.executor.disconnect
-    ) {
+    if (this.executor && this.executor.disconnect) {
       await this.executor.disconnect();
       Logger.debug('Remote executor disconnected');
     }

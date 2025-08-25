@@ -1,3 +1,6 @@
+import { Actions, FunctionName } from '../helpers/actions';
+import { RemoteExecConfig } from '../remoteExecution/types';
+
 /**
  * @property {string} path - workspace path
  * @property {string} state_hash - hash of the workspace state
@@ -49,16 +52,12 @@ export type StreamEventStatus =
   | 'failed'
   | 'requires_action';
 
-export type FunctionAction = {
+// TODO: rename this to a clearer name.
+export type FunctionAction<N extends FunctionName = FunctionName> = {
   id: string; // ex: "call_fPPBsOHeRJGmpcZQeT3wRVTK",
   type: string; // ex: 'function'
-  function:
-    | {
-        name: string; // ex: 'update_file';
-        arguments: any;
-      }
-    | string; // ex: 'update_file';
-  args: any;
+  function: N;
+  args: Parameters<Actions[N]>[0];
 };
 
 export type QueryResponseDTO = {
@@ -122,18 +121,6 @@ export interface HostInfo {
   public_ip_note?: string | null; // Optional, matches Host.public_ip_note
 }
 
-export interface RemoteExecConfig {
-  enabled: boolean;
-  target: string;
-  port: number;
-  type: (typeof REMOTE_EXEC_TYPES)[number]; // 'ssh' | 'winrm'
-  platform: 'windows' | 'unix';
-  user: string;
-  password?: string;
-  private_key?: string; // PEM key file path (password-protected)
-  remote_workspace: string;
-}
-
 export interface CreateAgentResponse {
   id: string;
   name: string;
@@ -166,8 +153,6 @@ export interface AgentConfig extends CreateAgentResponse {
   // Remote workspace path (optional, per-agent)
   remote_workspace?: string;
 }
-
-export const REMOTE_EXEC_TYPES = ['ssh', 'winrm'] as const;
 
 export type LocalConfig = {
   workspace_disabled: boolean;

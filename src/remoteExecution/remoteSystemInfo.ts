@@ -20,7 +20,7 @@ async function getRemoteGlobalNpmPackages(
         : 'npm list -g --depth=0 | awk "{print $2}" | grep @';
 
     const executor = RemoteExecutor.instance;
-    const output = await executor.executeCommand(command);
+    const { stdout: output } = await executor.executeCommand(command);
     const packageLines = output.trim().split('\n').filter(Boolean);
 
     if (platform === 'windows') {
@@ -62,11 +62,11 @@ async function getRemoteGlobalNpmPackages(
 async function getRemoteVersion(command: string): Promise<string> {
   try {
     const executor = RemoteExecutor.instance;
-    const result = await executor.executeCommand(command);
-    if (isCommandNotFound(result)) {
+    const { stdout } = await executor.executeCommand(command);
+    if (isCommandNotFound(stdout)) {
       return '(not found)';
     }
-    return sanitizeWindowsOutput(result.trim());
+    return sanitizeWindowsOutput(stdout.trim());
   } catch (error) {
     Logger.debug(
       `Failed to get remote version for command "${command}":`,
@@ -99,8 +99,8 @@ async function getRemoteOSInfo(platform: 'windows' | 'unix'): Promise<string> {
   const command = platform === 'windows' ? 'systeminfo' : 'uname -a';
   try {
     const executor = RemoteExecutor.instance;
-    const result = await executor.executeCommand(command);
-    return sanitizeWindowsOutput(result.trim());
+    const { stdout: output } = await executor.executeCommand(command);
+    return sanitizeWindowsOutput(output.trim());
   } catch (error) {
     Logger.debug(
       `Failed to get remote OS info for command "${command}":`,
@@ -116,7 +116,7 @@ async function getUnixRemotePackages(): Promise<Record<string, string>> {
 
   // 1. Detect if Linux or macOS
   try {
-    const uname = await executor.executeCommand('uname -s');
+    const { stdout: uname } = await executor.executeCommand('uname -s');
     if (uname.toLowerCase().includes('linux')) {
       platformPms = LINUX_PACKAGE_MANAGERS;
       Logger.debug('Detected remote OS: Linux');
@@ -161,7 +161,7 @@ async function getUnixRemotePackages(): Promise<Record<string, string>> {
     detectedPms.map(async (pm) => {
       try {
         const listCmd = pm.listCmd(exclusionPattern);
-        const stdout = await executor.executeCommand(listCmd);
+        const { stdout } = await executor.executeCommand(listCmd);
         const packages = stdout.split('\n').filter(Boolean).sort();
         if (packages.length > 0) {
           return { [`packages installed via ${pm.cmd}`]: packages.join(',') };
@@ -194,7 +194,9 @@ async function getWindowsRemotePackages(): Promise<Record<string, string>> {
       platformPms.map(async (pm) => {
         try {
           // `where` is the equivalent of `command -v` on Windows
-          const output = await executor.executeCommand(`where ${pm.cmd}`);
+          const { stdout: output } = await executor.executeCommand(
+            `where ${pm.cmd}`
+          );
           if (isCommandNotFound(output)) {
             return null;
           }
@@ -221,7 +223,7 @@ async function getWindowsRemotePackages(): Promise<Record<string, string>> {
     detectedPms.map(async (pm) => {
       try {
         const listCmd = pm.listCmd(exclusionPattern);
-        const stdout = await executor.executeCommand(listCmd);
+        const { stdout } = await executor.executeCommand(listCmd);
         const packages = sanitizeWindowsOutput(stdout)
           .split('\n')
           .filter(Boolean)
@@ -257,10 +259,6 @@ export async function getRemoteSystemInfo(): Promise<SystemInfo> {
   const { target, platform } = config;
 
   Logger.debug(`Getting remote system info for host: ${target} (${platform})`);
-
-  if (!RemoteExecutor.instance.isConnected) {
-    await RemoteExecutor.instance.connect();
-  }
 
   const [
     installed_packages,
