@@ -120,14 +120,11 @@ export class WinRMExecutor implements IRemoteExecutor {
     command: string,
     rawCmd = false,
     stdin?: string,
-    onPrompt?: (command: string, stdout: string) => Promise<string>
+    onPrompt?: (command: string, stdout: string) => Promise<string>,
+    detectPrompt?: (content: string) => Promise<boolean>
   ): Promise<ExecutionResult> {
     try {
       await this.connect();
-
-      if (!this.session) {
-        throw new Error('WinRM session not initialized');
-      }
 
       // Note: stdin is not supported in WinRM like it is in SSH
       if (stdin) {
@@ -136,36 +133,42 @@ export class WinRMExecutor implements IRemoteExecutor {
         );
       }
 
-      if (onPrompt) {
-        Logger.warn(
-          'WinRM does not support interactive commands, ignoring onPrompt parameter'
-        );
+      if (!this.session) {
+        throw new Error('WinRM session not initialized');
+      }
+      // Escape double quotes for PowerShell
+      let currentCommand = command.replace(/"/g, '""');
+      const maxPrompts = 15;
+      let promptCount = 0;
+
+      while (promptCount < maxPrompts) {
+        const wrappedCommand = rawCmd
+          ? command
+          : `${this.wrapper}"${currentCommand}"`; // Wrap in double quotes
+
+        const cmdId = await winrm.command.doExecuteCommand({
+          ...this.session,
+          command: wrappedCommand,
+        });
+
+        const result = await winrm.command.doReceiveOutput({
+          ...this.session,
+          commandId: cmdId,
+        });
+
+        if (onPrompt && (await detectPrompt?.(result))) {
+          const userInput = await onPrompt(currentCommand, result);
+          currentCommand = userInput;
+          promptCount++;
+        } else {
+          Logger.debug('WinRM command result:', result);
+          return {
+            stdout: result || '',
+          };
+        }
       }
 
-      const escapedCommand = command.replace(/"/g, '""'); // Escape double quotes for PowerShell
-      const wrappedCommand = rawCmd
-        ? command
-        : `${this.wrapper}"${escapedCommand}"`; // Wrap in double quotes
-
-      const cmdId = await winrm.command.doExecuteCommand({
-        ...this.session,
-        command: wrappedCommand,
-      });
-
-      const result = await winrm.command.doReceiveOutput({
-        ...this.session,
-        commandId: cmdId,
-      });
-
-      Logger.debug('WinRM command result:', {
-        wrappedCommand,
-        cmdId,
-        result,
-      });
-
-      return {
-        stdout: result || '',
-      };
+      throw new Error('Max prompts reached');
     } catch (error) {
       Logger.error('WinRM command execution failed:', error);
       throw error;

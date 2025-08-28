@@ -168,11 +168,13 @@ export async function run_shell({
   shell,
   env,
   onPrompt,
+  detectPrompt,
 }: {
   command: string;
   shell?: boolean | string;
   env?: { [key: string]: string };
   onPrompt?: (command: string, stdout: string) => Promise<string>;
+  detectPrompt?: (content: string) => Promise<boolean>;
 }): Promise<string> {
   Logger.debug(`Running shell command: ${command}`);
 
@@ -182,7 +184,8 @@ export async function run_shell({
         command,
         undefined,
         false,
-        onPrompt
+        onPrompt,
+        detectPrompt
       );
 
       logExecution(result);

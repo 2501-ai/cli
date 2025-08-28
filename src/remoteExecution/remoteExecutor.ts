@@ -64,12 +64,19 @@ export class RemoteExecutor {
     command: string,
     stdin?: string,
     rawCmd?: boolean,
-    onPrompt?: (command: string, stdout: string) => Promise<string>
+    onPrompt?: (command: string, stdout: string) => Promise<string>,
+    detectPrompt?: (content: string) => Promise<boolean>
   ): Promise<ExecutionResult> {
     this.throwIfNotInitialized();
 
     Logger.debug(`Executing remote command: ${command}`);
-    return this.executor.executeCommand(command, rawCmd, stdin, onPrompt);
+    return this.executor.executeCommand(
+      command,
+      rawCmd,
+      stdin,
+      onPrompt,
+      detectPrompt
+    );
   }
 
   async validateConnection(): Promise<boolean> {

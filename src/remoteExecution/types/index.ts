@@ -19,7 +19,8 @@ export interface IRemoteExecutor {
     command: string,
     rawCmd?: boolean,
     stdin?: string,
-    onPrompt?: (command: string, stdout: string) => Promise<string>
+    onPrompt?: (command: string, stdout: string) => Promise<string>,
+    detectPrompt?: (content: string) => Promise<boolean>
   ): Promise<ExecutionResult>;
 
   disconnect?(): Promise<void>;

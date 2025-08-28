@@ -15,7 +15,7 @@ import Logger from '../utils/logger';
 
 import chalk from 'chalk';
 import { BLACKLISTED_COMMANDS } from '../constants';
-import { promptInput } from '../helpers/api';
+import { detectPromptWithLLM, promptInput } from '../helpers/api';
 import { getFunctionName } from '../utils/actions';
 import {
   AgentConfig,
@@ -83,6 +83,15 @@ export class AgentManager {
     return agentInput.response;
   }
 
+  async detectPrompt(content: string): Promise<boolean> {
+    const { response } = await detectPromptWithLLM(
+      this.agentConfig.id,
+      this.taskId,
+      content
+    );
+    return response === 'yes';
+  }
+
   async executeAction<FA extends FunctionAction>(
     action: FA,
     args: any //TODO: type this
@@ -127,6 +136,7 @@ export class AgentManager {
 
     if (action.function === 'run_shell') {
       args.onPrompt = this.onPrompt.bind(this);
+      args.detectPrompt = this.detectPrompt.bind(this);
     }
 
     try {

@@ -120,6 +120,22 @@ export const promptInput = async (
   return data;
 };
 
+export const detectPromptWithLLM = async (
+  agentId: string,
+  taskId: string,
+  output: string
+) => {
+  const { data } = await axios.post<{ response: string }>(
+    `/agents/${agentId}/detectPrompt`,
+    {
+      output,
+      taskId,
+      stream: false,
+    }
+  );
+  return data;
+};
+
 /**
  * Submit tool outputs to the agent
  */
