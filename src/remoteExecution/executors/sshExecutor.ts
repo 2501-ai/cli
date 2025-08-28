@@ -164,7 +164,7 @@ export class SSHExecutor implements IRemoteExecutor {
             const stderr = outputBuffer.getStderrBuffer();
             const input = await onPrompt(command, stdout, stderr);
             stream.stdin.write(input + '\n');
-            stream.stdin.end();
+            // stream.stdin.end(); // <- Check that this isn't needed
             isWaitingForPrompt = false;
           } catch (error) {
             reject({

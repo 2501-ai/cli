@@ -106,7 +106,8 @@ export const promptInput = async (
   agentId: string,
   taskId: string,
   command: string,
-  output: string
+  output: string,
+  promptsSent: string[]
 ): Promise<{
   success: boolean;
   response: string;
@@ -116,6 +117,7 @@ export const promptInput = async (
     command,
     output,
     stream: false,
+    promptsSent,
   });
   return data;
 };
@@ -151,7 +153,7 @@ export const submitToolOutputs = async (
  */
 export async function indexFiles(
   agentId: string,
-  files: { path: string; data: Buffer }[]
+  files: { path: string; data: string }[]
 ) {
   const data = new FormData();
   for (let i = 0; i < files.length; i++) {

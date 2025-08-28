@@ -56,6 +56,7 @@ export class AgentManager {
   workspace: string;
   agentConfig: AgentConfig;
   taskId: string;
+  promptsSent: string[] = [];
 
   constructor(options: {
     workspace: string;
@@ -75,10 +76,12 @@ export class AgentManager {
       this.agentConfig.id,
       this.taskId,
       command,
-      stdout
+      stdout,
+      this.promptsSent
     );
+    this.promptsSent.push(agentInput.response);
     Logger.log(
-      `${chalk.gray('│')}  REPL mode - Sending input to stream: ${agentInput.response}`
+      `${chalk.gray('│')}  REPL mode - Sending input to stream: ${JSON.stringify(agentInput.response)}`
     );
     return agentInput.response;
   }

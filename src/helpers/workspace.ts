@@ -215,7 +215,7 @@ export function getWorkspaceDiff(
 export async function generateWorkspaceZip(
   workspace: string,
   workspaceFiles?: { fileHashes: Map<string, string>; totalSize: number }
-): Promise<{ path: string; data: Buffer }[]> {
+): Promise<{ path: string; data: string }[]> {
   const fileId = Math.floor(Math.random() * 100000);
   const outputFilePath = path.join(
     getTempPath2501('_files'),
@@ -265,7 +265,7 @@ export async function generateWorkspaceZip(
   return [
     {
       path: outputFilePath,
-      data: fs.readFileSync(outputFilePath),
+      data: fs.readFileSync(outputFilePath).toString(),
     },
   ];
 }
