@@ -26,6 +26,7 @@ import {
 import { AgentManager } from '../managers/agentManager';
 import { ConfigManager } from '../managers/configManager';
 import { TelemetryManager } from '../managers/telemetryManager';
+import { RemoteExecutor } from '../remoteExecution/remoteExecutor';
 import { getFunctionArgs } from '../utils/actions';
 import { getEligibleAgent } from '../utils/conf';
 import { credentialsService } from '../utils/credentials';
@@ -33,13 +34,12 @@ import { getDirectoryMd5Hash } from '../utils/files';
 import Logger, { getTerminalWidth } from '../utils/logger';
 import { isLooping } from '../utils/loopDetection';
 import {
-  AgentConfig,
   FunctionAction,
+  AgentConfig,
   FunctionExecutionResult,
   WorkspaceState,
 } from '../utils/types';
 import { initCommand } from './init';
-import { RemoteExecutor } from '../remoteExecution/remoteExecutor';
 
 marked.use(markedTerminal() as MarkedExtension);
 
@@ -219,7 +219,10 @@ const parseAgentResponse = async (
   }
 
   // Completion is a special action that is used to indicate that the task is completed.
-  const completion = actions.find((a) => a.function === 'task_completed');
+  const completion = actions.find((a) => a.function === 'task_completed') as
+    | FunctionAction<'task_completed'>
+    | undefined;
+
   if (completion) {
     return [
       actions.filter((a) => a.function !== 'task_completed'),
@@ -293,6 +296,7 @@ export const queryCommand = async (
     const agentManager = new AgentManager({
       workspace: resolvedWorkspace,
       agentConfig,
+      taskId,
     });
     logger.start('Thinking');
     const agentResponse = await queryAgent(

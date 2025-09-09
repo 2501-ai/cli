@@ -1,3 +1,4 @@
+import { AxiosError } from 'axios';
 import { trackError } from '../telemetry';
 import Logger from '../utils/logger';
 
@@ -78,10 +79,28 @@ export class ErrorHandler {
     const { silent = false } = options || {};
 
     if (!silent) {
-      Logger.error(
-        `Command failed${commandName ? ` (${commandName})` : ''}: ${error.message}`
-      );
-      Logger.debug('Error details:', error.stack || 'No stack trace available');
+      if (error instanceof AxiosError) {
+        const errorData = error.toJSON();
+        const errorMessage =
+          'Engine response: ' +
+            (error.response?.data as { error: string })?.error || '';
+
+        Logger.error(
+          `Command failed${commandName ? ` (${commandName})` : ''}: ${error.message}.` +
+            '\n' +
+            errorMessage
+        );
+        Logger.debug('Error details:', errorData);
+      } else {
+        Logger.error(
+          `Command failed${commandName ? ` (${commandName})` : ''}: ${error.message}`,
+          error
+        );
+        Logger.debug(
+          'Error details:',
+          error.stack || 'No stack trace available'
+        );
+      }
     }
 
     await this.handleError(error, {

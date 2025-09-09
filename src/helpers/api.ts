@@ -102,6 +102,26 @@ export const updateHostInfo = async (
   await axios.put(`/agents/${agentId}/host`, hostInfo);
 };
 
+export const promptInput = async (
+  agentId: string,
+  taskId: string,
+  command: string,
+  output: string,
+  promptsSent: string[]
+): Promise<{
+  success: boolean;
+  response: string;
+}> => {
+  const { data } = await axios.post(`/agents/${agentId}/promptInput`, {
+    taskId,
+    command,
+    output,
+    stream: false,
+    promptsSent,
+  });
+  return data;
+};
+
 /**
  * Submit tool outputs to the agent
  */
@@ -133,7 +153,7 @@ export const submitToolOutputs = async (
  */
 export async function indexFiles(
   agentId: string,
-  files: { path: string; data: Buffer }[]
+  files: { path: string; data: string }[]
 ) {
   const data = new FormData();
   for (let i = 0; i < files.length; i++) {

@@ -3,8 +3,17 @@ import path from 'path';
 import os from 'os';
 import { Client, ConnectConfig } from 'ssh2';
 import Logger from '../../utils/logger';
-import { RemoteExecConfig } from '../../utils/types';
-import { IRemoteExecutor } from '../remoteExecutor';
+import {
+  ExecutionResult,
+  IRemoteExecutor,
+  PromptCallback,
+  RemoteExecConfig,
+} from '../types';
+import {
+  clearAllPromptTimeouts,
+  debouncePromptCheck,
+} from '../core/prompt-detector';
+import { OutputBuffer } from '../core/output-buffer';
 
 const UNIX_COMMAND_WRAPPER = `source ~/.bashrc 2>/dev/null || true; source ~/.profile 2>/dev/null || true; source ~/.nvm/nvm.sh 2>/dev/null || true;`;
 const WINDOWS_CMD_WRAPPER = 'powershell ';
@@ -123,70 +132,94 @@ export class SSHExecutor implements IRemoteExecutor {
 
   async executeCommand(
     command: string,
+    rawCmd = false,
     stdin?: string,
-    rawCmd = false
-  ): Promise<string> {
-    try {
-      await this.connect();
+    onPrompt?: PromptCallback
+  ): Promise<ExecutionResult> {
+    await this.connect();
 
-      if (!this.config || !this.config.enabled) {
-        throw new Error('Remote execution not configured');
+    return new Promise((resolve, reject) => {
+      if (!this.client) {
+        reject(new Error('Not connected to SSH'));
+        return;
       }
 
-      return new Promise((resolve, reject) => {
-        if (!this.client) {
-          reject(new Error('SSH client not initialized'));
+      const finalCommand = rawCmd ? command : this.wrapper + command;
+      this.client.exec(finalCommand, (err, stream) => {
+        if (err) {
+          reject(err);
           return;
         }
 
-        // Use platform-appropriate command wrapper
-        this.client.exec(
-          rawCmd ? command : this.wrapper + command,
-          (err, stream) => {
-            if (err) {
-              reject(err);
-              return;
-            }
+        const outputBuffer = new OutputBuffer();
+        let isWaitingForPrompt = false;
 
-            let stdout = '';
-            let stderr = '';
+        const handlePrompt = async () => {
+          if (isWaitingForPrompt || !onPrompt) return;
 
-            stream.on('close', (code: number) => {
-              if (code !== 0) {
-                reject(
-                  new Error(`Command failed with exit code ${code}: ${stderr}`)
-                );
-              } else {
-                // Remove the command wrapper from the output if used
-                const result = stdout.replace(this.wrapper, '').trim();
-                resolve(result);
-              }
-            });
+          isWaitingForPrompt = true;
 
-            stream.on('data', (data: Buffer) => {
-              stdout += data.toString();
-            });
-
-            stream.stderr.on('data', (data: Buffer) => {
-              stderr += data.toString();
-            });
-
-            if (stdin) {
-              stream.stdin.write(stdin);
-              stream.stdin.end();
-            }
+          try {
+            const stdout = outputBuffer.getBuffer();
+            const stderr = outputBuffer.getStderrBuffer();
+            const input = await onPrompt(command, stdout, stderr);
+            stream.stdin.write(input + '\n');
+            // stream.stdin.end(); // <- Check that this isn't needed
+            isWaitingForPrompt = false;
+          } catch (error) {
+            reject({
+              stdout: outputBuffer.getBuffer(),
+              stderr: outputBuffer.getStderrBuffer(),
+              exitCode: -1,
+            } as ExecutionResult);
           }
-        );
+        };
+
+        stream.on('close', (code: number) => {
+          clearAllPromptTimeouts();
+
+          const stdout = outputBuffer.getBuffer();
+          const stderr = outputBuffer.getStderrBuffer();
+
+          if (code !== 0) {
+            reject({
+              stdout,
+              stderr: `Command failed with exit code ${code}: ${stderr}`,
+              exitCode: code,
+            } as ExecutionResult);
+          } else {
+            resolve({
+              stdout,
+              stderr,
+              exitCode: code,
+            } as ExecutionResult);
+          }
+        });
+
+        stream.stdout.on('data', (data: Buffer) => {
+          outputBuffer.append(data.toString());
+          debouncePromptCheck(outputBuffer, handlePrompt);
+        });
+
+        stream.stderr.on('data', (data: Buffer) => {
+          outputBuffer.append(data.toString(), true);
+          debouncePromptCheck(outputBuffer, handlePrompt);
+        });
+
+        if (stdin) {
+          stream.stdin.write(stdin + '\n');
+          stream.stdin.end();
+        }
+        debouncePromptCheck(outputBuffer, handlePrompt);
       });
-    } catch (error) {
-      Logger.error('Remote command execution failed:', error);
-      throw error;
-    }
+    });
   }
 
   async disconnect(): Promise<void> {
     if (this.client) {
       this.client.end();
+      this.client.destroy();
+      this.client.removeAllListeners();
       this.client = null;
       this.connected = false;
       this.config = null;

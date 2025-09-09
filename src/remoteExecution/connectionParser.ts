@@ -1,7 +1,7 @@
 import { RemoteExecutor } from './remoteExecutor';
 import { InitCommandOptions } from '../commands/init';
 import Logger from '../utils/logger';
-import { REMOTE_EXEC_TYPES, RemoteExecConfig } from '../utils/types';
+import { REMOTE_EXEC_TYPES, RemoteExecConfig } from './types';
 import {
   lookupConnectionInSSHConfig,
   hasSSHConfig,
