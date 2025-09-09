@@ -69,6 +69,7 @@ program
   )
   .option('--remote-exec-password <password>', 'Password for remote execution')
   .option('--remote-skip-test <skipTest>', 'Skip the remote connection test')
+  .option('--workspace <path>', 'Specify a different workspace path')
   .hook('preAction', (cmd) => {
     // Logger.debug('Pre-action hook', cmd);
     const TWENTY_MINUTES = 20 * 60 * 1000;
