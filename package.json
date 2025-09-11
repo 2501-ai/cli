@@ -9,6 +9,7 @@
   },
   "scripts": {
     "build": "tsc",
+    "build:watch": "tsc --watch",
     "build:clean": "rm -rf dist && tsc",
     "build:link": "npm run build && npm link && npm link @2501-ai/cli",
     "unlink": "npm unlink -g @2501-ai/cli",
@@ -17,7 +18,6 @@
     "lint": "tsc --noEmit -p tsconfig.json && eslint . --fix",
     "prepare": "husky",
     "test": "jest --silent",
-    "watch": "tsc --watch",
     "dev": "ts-node ./src/index.ts",
     "version:beta:bump": "npm version --prerelease --preid beta",
     "prepublishOnly": "npm run build:clean"
@@ -58,11 +58,11 @@
     "jsonrepair": "^3.8.0",
     "marked": "^12.0.2",
     "marked-terminal": "^7.1.0",
-    "nodejs-winrm": "^1.1.3",
     "ssh2": "^1.16.0",
     "terminal-kit": "^3.1.1",
     "turndown": "^7.2.0",
-    "uuid": "^11.1.0"
+    "uuid": "^11.1.0",
+    "winrm-client": "^0.0.3"
   },
   "devDependencies": {
     "@eslint/js": "^9.34.0",

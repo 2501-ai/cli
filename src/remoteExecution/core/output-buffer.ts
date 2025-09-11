@@ -3,6 +3,12 @@ export class OutputBuffer {
   private stderrBuffer = '';
   private lastUpdateTime = Date.now();
 
+  static from(data: string): OutputBuffer {
+    const buffer = new OutputBuffer();
+    buffer.append(data);
+    return buffer;
+  }
+
   append(data: string, isStderr = false): void {
     if (isStderr) {
       this.stderrBuffer += data;

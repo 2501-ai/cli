@@ -1,6 +1,8 @@
-import winrm from 'nodejs-winrm';
+import { Command, Shell, monitorCommandOutput } from 'winrm-client';
 import Logger from '../../utils/logger';
 import { ExecutionResult, IRemoteExecutor, RemoteExecConfig } from '../types';
+import { debouncePromptCheck } from '../core/prompt-detector';
+import { OutputBuffer } from '../core/output-buffer';
 
 // Powershell is the default command wrapper for winrm
 // A space is left at the end for the command concatenation.
@@ -92,7 +94,7 @@ export class WinRMExecutor implements IRemoteExecutor {
       });
 
       // Connect
-      const shellId = await winrm.shell.doCreateShell({
+      const shellId = await Shell.doCreateShell({
         host: connectionConfig.host,
         port: connectionConfig.port,
         auth,
@@ -136,10 +138,8 @@ export class WinRMExecutor implements IRemoteExecutor {
         );
       }
 
-      if (onPrompt) {
-        Logger.warn(
-          'WinRM does not support interactive commands, ignoring onPrompt parameter'
-        );
+      if (command.includes('powershell -Command')) {
+        rawCmd = true;
       }
 
       const escapedCommand = command.replace(/"/g, '""'); // Escape double quotes for PowerShell
@@ -147,24 +147,47 @@ export class WinRMExecutor implements IRemoteExecutor {
         ? command
         : `${this.wrapper}"${escapedCommand}"`; // Wrap in double quotes
 
-      const cmdId = await winrm.command.doExecuteCommand({
+      const cmdId = await Command.doExecuteCommand({
         ...this.session,
         command: wrappedCommand,
       });
 
-      const result = await winrm.command.doReceiveOutput({
+      Logger.debug('WinRM command executed:', {
+        cmdId,
+        wrappedCommand,
+      });
+
+      const asyncDetector = async (output: string) => {
+        if (!onPrompt) {
+          throw new Error('No onPrompt function provided');
+        }
+
+        Logger.debug('WinRM interactive command output:', output);
+        const result = await new Promise<string>((resolve) => {
+          const onPromptDetected = async () => {
+            resolve(await onPrompt(command, output));
+          };
+          debouncePromptCheck(OutputBuffer.from(output), onPromptDetected);
+        });
+
+        return result;
+      };
+
+      const output = await monitorCommandOutput({
         ...this.session,
         commandId: cmdId,
+        executionTimeout: 5 * 60 * 1000, // 5 minutes
+        prompts: [{ asyncDetector }],
       });
 
       Logger.debug('WinRM command result:', {
         wrappedCommand,
         cmdId,
-        result,
+        result: output,
       });
 
       return {
-        stdout: result || '',
+        stdout: output || '',
       };
     } catch (error) {
       Logger.error('WinRM command execution failed:', error);
@@ -174,7 +197,7 @@ export class WinRMExecutor implements IRemoteExecutor {
 
   async disconnect(): Promise<void> {
     if (this.session) {
-      await winrm.shell.doDeleteShell(this.session);
+      await Shell.doDeleteShell(this.session);
       Logger.debug('WinRM connection closed');
     }
     this.session = null;
