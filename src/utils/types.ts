@@ -132,6 +132,7 @@ export interface RemoteExecConfig {
   password?: string;
   private_key?: string; // PEM key file path (password-protected)
   remote_workspace: string;
+  raw_ssh?: boolean;
 }
 
 export interface CreateAgentResponse {

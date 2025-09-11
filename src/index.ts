@@ -69,6 +69,10 @@ program
   )
   .option('--remote-exec-password <password>', 'Password for remote execution')
   .option('--remote-skip-test <skipTest>', 'Skip the remote connection test')
+  .option(
+    '--raw-ssh',
+    'Execute SSH commands without automatic wrapper (skip shell initialization)'
+  )
   .option('--workspace <path>', 'Specify a different workspace path')
   .hook('preAction', (cmd) => {
     // Logger.debug('Pre-action hook', cmd);

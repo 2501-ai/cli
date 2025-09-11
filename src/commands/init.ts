@@ -35,6 +35,7 @@ export interface InitCommandOptions {
   remoteExecType?: string;
   remoteExecPassword?: string;
   agentId?: string;
+  rawSsh?: boolean;
 }
 
 const logger = new Logger();

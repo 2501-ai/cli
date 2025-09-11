@@ -163,6 +163,7 @@ export function configureRemoteExecution(
     password: options.remoteExecPassword,
     private_key: connectionDetails.identityFile || options.remotePrivateKey,
     remote_workspace: options.remoteWorkspace || '',
+    raw_ssh: options.rawSsh,
   };
 }
 
