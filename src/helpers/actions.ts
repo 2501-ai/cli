@@ -170,7 +170,14 @@ export async function run_shell({
 
   if (RemoteExecutor.instance.isEnabled()) {
     try {
-      const result = await RemoteExecutor.instance.executeCommand(command);
+      const config = RemoteExecutor.instance.getConfig();
+      const rawCmd = config.raw_ssh || false;
+      Logger.debug('Raw SSH:', rawCmd);
+      const result = await RemoteExecutor.instance.executeCommand(
+        command,
+        undefined,
+        rawCmd
+      );
 
       logExecution(result);
 

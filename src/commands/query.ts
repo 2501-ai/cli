@@ -55,6 +55,7 @@ interface QueryOptions {
   remotePrivateKey?: string;
   remoteExecPassword?: string;
   remoteExecType?: string;
+  rawSsh?: boolean;
 }
 
 const logger = new Logger();
