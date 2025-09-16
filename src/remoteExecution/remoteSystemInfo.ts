@@ -110,40 +110,89 @@ function parseFortigateSystemInfo(output: string): string {
     const lines = output.split('\n').map((line) => line.trim());
     let version = '';
     let model = '';
+    let serialNumber = '';
+    let hostname = '';
+    let licenseStatus = '';
+    let operationMode = '';
+    let haMode = '';
+    let resources = '';
 
     for (const line of lines) {
-      // Extract FortiOS version
-      if (line.startsWith('Version:') || line.includes('FortiOS')) {
-        const versionMatch = line.match(/v?(\d+\.\d+\.\d+)/);
+      // Extract FortiOS version and model from Version line
+      if (line.includes('Version:')) {
+        const versionMatch = line.match(/Version:\s*([^,]+)/);
         if (versionMatch) {
-          version = `v${versionMatch[1]}`;
-        }
-        // Also try to extract build number
-        const buildMatch = line.match(/build\s+(\d+)/i);
-        if (buildMatch) {
-          version += ` (build ${buildMatch[1]})`;
+          const fullVersion = versionMatch[1].trim();
+          // Extract model (e.g., FortiGate-VM64)
+          const modelMatch = fullVersion.match(/(FortiGate[^\s]*)/i);
+          if (modelMatch) {
+            model = modelMatch[1];
+          }
+          // Extract version (e.g., v7.4.8)
+          const versionNumMatch = fullVersion.match(/v?(\d+\.\d+\.\d+)/);
+          if (versionNumMatch) {
+            version = `v${versionNumMatch[1]}`;
+          }
+          // Extract build number
+          const buildMatch = line.match(/build(\d+)/i);
+          if (buildMatch) {
+            version += ` (build ${buildMatch[1]})`;
+          }
         }
       }
 
-      // Extract FortiGate model
-      if (line.startsWith('Model:') || line.includes('FortiGate')) {
-        const modelMatch = line.match(/FortiGate[^\s]*/i);
-        if (modelMatch) {
-          model = modelMatch[0];
-        }
+      // Extract other valuable information
+      if (line.includes('Serial-Number:')) {
+        serialNumber = line.split(':')[1]?.trim() || '';
+      }
+      if (line.includes('Hostname:')) {
+        hostname = line.split(':')[1]?.trim() || '';
+      }
+      if (line.includes('License Status:')) {
+        licenseStatus = line.split(':')[1]?.trim() || '';
+      }
+      if (line.includes('Operation Mode:')) {
+        operationMode = line.split(':')[1]?.trim() || '';
+      }
+      if (line.includes('Current HA mode:')) {
+        haMode = line.split(':')[1]?.trim() || '';
+      }
+      if (line.includes('VM Resources:')) {
+        resources = line.split(':')[1]?.trim() || '';
       }
     }
 
-    // Construct descriptive system info
+    // Construct comprehensive system info
+    const parts = [];
+
     if (model && version) {
-      return `${model} FortiOS ${version}`;
+      parts.push(`${model} FortiOS ${version}`);
     } else if (version) {
-      return `FortiGate FortiOS ${version}`;
-    } else if (model) {
-      return `${model} FortiOS`;
+      parts.push(`FortiGate FortiOS ${version}`);
     } else {
-      return 'FortiGate FortiOS';
+      parts.push('FortiGate FortiOS');
     }
+
+    if (hostname) {
+      parts.push(`Hostname: ${hostname}`);
+    }
+    if (serialNumber) {
+      parts.push(`S/N: ${serialNumber}`);
+    }
+    if (operationMode) {
+      parts.push(`Mode: ${operationMode}`);
+    }
+    if (haMode && haMode !== 'standalone') {
+      parts.push(`HA: ${haMode}`);
+    }
+    if (licenseStatus) {
+      parts.push(`License: ${licenseStatus}`);
+    }
+    if (resources) {
+      parts.push(`Resources: ${resources}`);
+    }
+
+    return parts.join(' | ');
   } catch (error) {
     Logger.debug('Error parsing FortiGate system info:', error);
     return 'FortiGate FortiOS';

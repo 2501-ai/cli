@@ -38,6 +38,15 @@
       "envFile": "${workspaceFolder}/.env"
     },
     {
+      "name": "run remote exec fortinet init",
+      "type": "node",
+      "request": "launch",
+      "cwd": "${workspaceFolder}",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev:fortinet"],
+      "console": "integratedTerminal"
+    },
+    {
       "name": "jobs listen",
       "type": "node",
       "request": "launch",
