@@ -11,8 +11,11 @@ import { isCommandNotFound } from './connectionParser';
 import { RemoteExecutor } from './remoteExecutor';
 
 async function getRemoteGlobalNpmPackages(
-  platform: 'windows' | 'unix'
+  platform: 'windows' | 'unix' | 'fortigate'
 ): Promise<string[]> {
+  if (platform === 'fortigate') {
+    return [];
+  }
   try {
     const command =
       platform === 'windows'
@@ -81,8 +84,12 @@ async function getRemoteVersion(command: string): Promise<string> {
 }
 
 async function getRemotePythonVersion(
-  platform: 'windows' | 'unix'
+  platform: 'windows' | 'unix' | 'fortigate'
 ): Promise<string> {
+  if (platform === 'fortigate') {
+    return '(not applicable)';
+  }
+
   // For Unix-like systems, python3 is preferred.
   if (platform === 'unix') {
     const py3Version = await getRemoteVersion('python3 --version');
@@ -95,18 +102,91 @@ async function getRemotePythonVersion(
   return sanitizeWindowsOutput(output);
 }
 
-async function getRemoteOSInfo(platform: 'windows' | 'unix'): Promise<string> {
-  const command = platform === 'windows' ? 'systeminfo' : 'uname -a';
+/**
+ * Parses FortiOS system information from 'get system status' command output.
+ */
+function parseFortigateSystemInfo(output: string): string {
   try {
-    const executor = RemoteExecutor.instance;
-    const result = await executor.executeCommand(command);
+    const lines = output.split('\n').map((line) => line.trim());
+    let version = '';
+    let model = '';
+
+    for (const line of lines) {
+      // Extract FortiOS version
+      if (line.startsWith('Version:') || line.includes('FortiOS')) {
+        const versionMatch = line.match(/v?(\d+\.\d+\.\d+)/);
+        if (versionMatch) {
+          version = `v${versionMatch[1]}`;
+        }
+        // Also try to extract build number
+        const buildMatch = line.match(/build\s+(\d+)/i);
+        if (buildMatch) {
+          version += ` (build ${buildMatch[1]})`;
+        }
+      }
+
+      // Extract FortiGate model
+      if (line.startsWith('Model:') || line.includes('FortiGate')) {
+        const modelMatch = line.match(/FortiGate[^\s]*/i);
+        if (modelMatch) {
+          model = modelMatch[0];
+        }
+      }
+    }
+
+    // Construct descriptive system info
+    if (model && version) {
+      return `${model} FortiOS ${version}`;
+    } else if (version) {
+      return `FortiGate FortiOS ${version}`;
+    } else if (model) {
+      return `${model} FortiOS`;
+    } else {
+      return 'FortiGate FortiOS';
+    }
+  } catch (error) {
+    Logger.debug('Error parsing FortiGate system info:', error);
+    return 'FortiGate FortiOS';
+  }
+}
+
+async function getRemoteOSInfo(
+  platform: 'windows' | 'unix' | 'fortigate'
+): Promise<string> {
+  const executor = RemoteExecutor.instance;
+  // Windows OS Info
+  if (platform === 'windows') {
+    try {
+      const result = await executor.executeCommand('systeminfo');
+      return sanitizeWindowsOutput(result.trim());
+    } catch (error) {
+      Logger.debug('Failed to get remote Windows OS info:', error);
+      return '(windows - OS info unavailable)';
+    }
+  }
+
+  // Retrieve Fortigate OS Info
+  if (platform === 'fortigate') {
+    Logger.debug(
+      'Attempting FortiGate detection with "get system status" command'
+    );
+    const fortigateResult = await executor.executeCommand(
+      'get system status',
+      undefined,
+      true
+    );
+
+    return parseFortigateSystemInfo(fortigateResult);
+  }
+
+  // Standard Linux detection fallback
+  try {
+    Logger.debug('Attempting standard Linux detection with "uname -a" command');
+    const result = await executor.executeCommand('uname -a');
     return sanitizeWindowsOutput(result.trim());
   } catch (error) {
-    Logger.debug(
-      `Failed to get remote OS info for command "${command}":`,
-      error
-    );
-    return `(${platform} - OS info unavailable)`;
+    Logger.debug('Failed to get remote Unix OS info:', error);
+    return '(unix - OS info unavailable)';
   }
 }
 
@@ -184,6 +264,16 @@ function sanitizeWindowsOutput(output: string): string {
   return output.trim().replace(/[\u0000-\u001F\u007F-\u009F]/g, '');
 }
 
+async function getFortigateRemotePackages(): Promise<Record<string, string>> {
+  const executor = RemoteExecutor.instance;
+  const result = await executor.executeCommand(
+    'get system global',
+    undefined,
+    true
+  );
+  return { FortiGate: result };
+}
+
 async function getWindowsRemotePackages(): Promise<Record<string, string>> {
   const executor = RemoteExecutor.instance;
   const platformPms = WINDOWS_PACKAGE_MANAGERS;
@@ -241,15 +331,35 @@ async function getWindowsRemotePackages(): Promise<Record<string, string>> {
 }
 
 async function getRemoteInstalledPackages(
-  platform: 'windows' | 'unix'
+  platform: 'windows' | 'unix' | 'fortigate'
 ): Promise<Record<string, string>> {
   Logger.debug(`Getting remote packages for platform: ${platform}`);
 
   if (platform === 'windows') {
     return getWindowsRemotePackages();
+  } else if (platform === 'fortigate') {
+    return getFortigateRemotePackages();
   } else {
     return getUnixRemotePackages();
   }
+}
+
+async function getPhpInfo(
+  platform: 'windows' | 'unix' | 'fortigate'
+): Promise<string> {
+  if (platform === 'fortigate') {
+    return '(not applicable)';
+  }
+  return getRemoteVersion('php --version');
+}
+
+async function getNodeInfo(
+  platform: 'windows' | 'unix' | 'fortigate'
+): Promise<string> {
+  if (platform === 'fortigate') {
+    return '(not applicable)';
+  }
+  return getRemoteVersion('node --version');
 }
 
 export async function getRemoteSystemInfo(): Promise<SystemInfo> {
@@ -268,12 +378,14 @@ export async function getRemoteSystemInfo(): Promise<SystemInfo> {
     pythonVersion,
     phpVersion,
     globalNpmPackages,
+    nodeVersion,
   ] = await Promise.all([
     getRemoteInstalledPackages(platform),
     getRemoteOSInfo(platform),
     getRemotePythonVersion(platform),
-    getRemoteVersion('php --version'),
+    getPhpInfo(platform),
     getRemoteGlobalNpmPackages(platform),
+    getNodeInfo(platform),
   ]);
 
   const sysInfo: SystemInfo['sysInfo'] = {
@@ -285,7 +397,7 @@ export async function getRemoteSystemInfo(): Promise<SystemInfo> {
   return {
     sysInfo,
     nodeInfo: {
-      version: await getRemoteVersion('node --version'),
+      version: nodeVersion,
       global_packages: globalNpmPackages,
     },
     pythonInfo: {

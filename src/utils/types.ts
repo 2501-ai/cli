@@ -127,7 +127,7 @@ export interface RemoteExecConfig {
   target: string;
   port: number;
   type: (typeof REMOTE_EXEC_TYPES)[number]; // 'ssh' | 'winrm'
-  platform: 'windows' | 'unix';
+  platform: 'windows' | 'unix' | 'fortigate';
   user: string;
   password?: string;
   private_key?: string; // PEM key file path (password-protected)

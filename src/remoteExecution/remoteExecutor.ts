@@ -100,7 +100,9 @@ export class RemoteExecutor {
     return (await this.detectRemotePlatform()) !== null;
   }
 
-  async detectRemotePlatform(): Promise<'windows' | 'unix' | null> {
+  async detectRemotePlatform(): Promise<
+    'windows' | 'unix' | 'fortigate' | null
+  > {
     this.throwIfNotInitialized();
 
     await this.connect(); // initialize the connection to the remote host
@@ -109,6 +111,37 @@ export class RemoteExecutor {
       this.config.platform = 'windows';
       console.log('windows');
       return 'windows';
+    }
+
+    // Try FortiGate detection first
+    try {
+      Logger.debug(
+        'Attempting FortiGate platform detection with "get system status" command'
+      );
+      const fortigateResult = await this.executeCommand(
+        'get system status',
+        undefined,
+        true
+      );
+
+      // Check if the output indicates this is a FortiGate system
+      if (
+        fortigateResult &&
+        (fortigateResult.includes('FortiGate') ||
+          fortigateResult.includes('FortiOS') ||
+          (fortigateResult.includes('Version:') &&
+            fortigateResult.includes('Model:')))
+      ) {
+        Logger.debug('FortiGate system detected');
+        this.config.platform = 'fortigate';
+        return 'fortigate';
+      }
+    } catch (error) {
+      // Not a Fortigate or command failed, continue to standard detection
+      Logger.debug(
+        'FortiGate platform detection failed, falling back to standard detection:',
+        error
+      );
     }
 
     try {
