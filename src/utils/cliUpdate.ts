@@ -45,12 +45,12 @@ export async function handleAutoUpdate(): Promise<boolean> {
   }
 
   if (!config.get('auto_update')) {
-    const isLatest = await isLatestVersion();
-    if (!isLatest) {
-      Logger.log(
-        'UPDATE AVAILABLE: A new version of 2501 CLI is available. Run `npm i -g @2501-ai/cli` to update or enable auto-update with `@2501 set auto_update true`'
-      );
-    }
+    // const isLatest = await isLatestVersion();
+    // if (!isLatest) {
+    //   Logger.log(
+    //     'UPDATE AVAILABLE: A new version of 2501 CLI is available. Run `npm i -g @2501-ai/cli` to update or enable auto-update with `@2501 set auto_update true`'
+    //   );
+    // }
     return false;
   }
 

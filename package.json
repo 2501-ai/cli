@@ -1,6 +1,6 @@
 {
   "name": "@2501-ai/cli",
-  "version": "0.3.3",
+  "version": "0.3.4",
   "description": "",
   "main": "dist/index.js",
   "bin": {
@@ -19,6 +19,7 @@
     "test": "jest --silent",
     "watch": "tsc --watch",
     "dev": "ts-node ./src/index.ts",
+    "dev:fortinet": "source .env && ts-node ./src/index.ts init --workspace .debug-workspace --remote-exec $FORTINET_USER@$FORTINET_HOST --remote-exec-password $FORTINET_PASSWORD",
     "version:beta:bump": "npm version --prerelease --preid beta",
     "prepublishOnly": "npm run build:clean"
   },

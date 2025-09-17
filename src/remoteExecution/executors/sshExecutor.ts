@@ -27,10 +27,14 @@ export class SSHExecutor implements IRemoteExecutor {
     this.config = config;
     this.client = null;
     this.connected = false;
-    this.wrapper =
-      config.platform === 'windows'
-        ? WINDOWS_CMD_WRAPPER
-        : UNIX_COMMAND_WRAPPER;
+    if (config.platform === 'fortigate') {
+      this.wrapper = '';
+    } else {
+      this.wrapper =
+        config.platform === 'windows'
+          ? WINDOWS_CMD_WRAPPER
+          : UNIX_COMMAND_WRAPPER;
+    }
   }
 
   isConnected(): boolean {
