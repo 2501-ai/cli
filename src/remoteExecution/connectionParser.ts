@@ -198,7 +198,7 @@ export async function detectPlatformAndAdjustWorkspace(
   logger: Logger
 ): Promise<void> {
   try {
-    const { target, type, platform } = remoteExecConfig;
+    const { target, type } = remoteExecConfig;
     logger.start(`Connecting to remote host ${target} using ${type}...`);
 
     const isValid = await RemoteExecutor.instance.validateConnection();
@@ -206,6 +206,7 @@ export async function detectPlatformAndAdjustWorkspace(
       throw new Error('Remote connection failed. Please check your settings.');
     }
 
+    const { platform } = RemoteExecutor.instance.getConfig();
     logger.message(`Detected platform: ${platform} for ${target}`);
     logger.stop('Remote connection validated successfully');
 
