@@ -25,3 +25,8 @@ jobs:
         run: npm publish
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  trigger-ecr-build:
+    needs: release
+    uses: 2501-ai/infra/.github/workflows/build-and-push-ecr.yml@main
+    secrets: inherit
