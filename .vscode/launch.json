@@ -10,12 +10,11 @@
         "run",
         "dev",
         "--",
-        "query",
+        "What's the free RAM of this machine?",
         "--workspace",
         "${workspaceFolder}/.debug-workspace",
         "--env",
-        "${workspaceFolder}/.env.test",
-        "Read the excel doc and give me the list of projects that are 100% complete. store them in a list.txt file, one project per line"
+        "${workspaceFolder}/.env"
       ],
       "console": "integratedTerminal",
       "envFile": "${workspaceFolder}/.env"
