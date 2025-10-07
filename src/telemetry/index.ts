@@ -1,7 +1,7 @@
 /**
  * Telemetry Module
  */
-export { errorTracker, trackError, getSessionId } from './errorTracker';
+export { errorTracker, trackError } from './errorTracker';
 export { trackLog } from './logTracker';
 export {
   updateContext,

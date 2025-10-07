@@ -26,7 +26,6 @@ export interface TelemetryContext {
 }
 
 export interface TelemetryPayload {
-  sessionId: string;
   eventType: EventType;
   events: TelemetryEvent[];
   context?: TelemetryContext;

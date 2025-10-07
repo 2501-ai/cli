@@ -3,7 +3,6 @@
  */
 import { EventType } from './types';
 import { sendTelemetry } from './apiClient';
-import { getSessionId } from './errorTracker';
 import { getContext, getCurrentCommand } from './contextBuilder';
 
 /**
@@ -16,7 +15,6 @@ export const trackLog = (
 ): void => {
   // Fire and forget
   sendTelemetry({
-    sessionId: getSessionId(),
     eventType: level,
     events: [
       {

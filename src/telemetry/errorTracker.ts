@@ -2,11 +2,8 @@
  * Error Tracker
  */
 import axios from 'axios';
-import { v4 as uuidv4 } from 'uuid';
 import { sendTelemetry } from './apiClient';
 import { getContext, getCurrentCommand } from './contextBuilder';
-
-const sessionId = uuidv4();
 
 /**
  * Track an error
@@ -25,7 +22,6 @@ export const trackError = async (
     }
 
     await sendTelemetry({
-      sessionId,
       eventType: 'error',
       events: [
         {
@@ -50,13 +46,10 @@ export const trackError = async (
   }
 };
 
-export const getSessionId = (): string => sessionId;
-
 // Legacy compatibility
 export const errorTracker = {
   trackError: (error: Error, ctx?: { metadata?: Record<string, any> }) =>
     trackError(error, ctx?.metadata),
-  getSessionId,
   isEnabled: () => true,
   updateContext: () => {}, // No-op, context managed in contextBuilder
 };
