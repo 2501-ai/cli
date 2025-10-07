@@ -12,7 +12,6 @@ import {
 
 import Logger from '../utils/logger';
 
-import { BLACKLISTED_COMMANDS } from '../constants';
 import { getFunctionName } from '../utils/actions';
 import {
   AgentConfig,
@@ -28,18 +27,6 @@ export const ACTION_FNS = {
   update_file,
   task_completed,
 } as const;
-
-function isBlacklistedCommand(command: string): boolean {
-  return BLACKLISTED_COMMANDS.some((blocked) => {
-    // Create a regex pattern that matches the blocked word as a standalone command
-    // This checks for word boundaries or command separators around the blocked term
-    const pattern = new RegExp(
-      `(^|\\s|;|\\||&|>|<)${blocked}($|\\s|;|\\||&|>|<)`,
-      'i'
-    );
-    return pattern.test(command);
-  });
-}
 
 export class AgentManager {
   workspace: string;
@@ -62,24 +49,6 @@ export class AgentManager {
         output: `Function '${functionName}' not found. Please verify the function name and try again.`,
         success: false,
       };
-    }
-
-    if (args.command) {
-      if (isBlacklistedCommand(args.command)) {
-        const errorMessage = [
-          `EXECUTION BLOCKED: Content contains blocked command`,
-          'SECURITY VIOLATION:',
-          `Interactive terminal editors (${BLACKLISTED_COMMANDS.join(', ')}) are strictly prohibited in this environment.`,
-          'These commands require direct user interaction and violate the automated execution policy.',
-          'NOTE: All content containing editor commands will be systematically blocked.',
-        ].join('\n');
-
-        return {
-          tool_call_id: action.id,
-          output: errorMessage,
-          success: false,
-        };
-      }
     }
 
     let taskTitle: string = args.answer || args.command || '';
