@@ -1,50 +1,33 @@
 /**
- * Telemetry Types - Keep It Simple
+ * Telemetry Types - Matches API Schema
  */
 
-export type TelemetryEventType =
-  | 'error'
-  | 'command'
-  | 'performance'
-  | 'feature_usage'
-  | 'system';
+export type EventType = 'info' | 'error' | 'debug' | 'warn';
 
-export interface BaseTelemetryEvent {
-  id: string;
-  type: TelemetryEventType;
-  timestamp: number;
-  sessionId: string;
+export interface TelemetryEvent {
+  data?: Record<string, any>;
+  error?: {
+    message: string;
+    stack?: string;
+    code?: string;
+  };
+  metadata?: {
+    command?: string;
+    feature?: string;
+    endpoint?: string;
+  };
 }
 
 export interface TelemetryContext {
-  // Core AI context - set once
-  agentId?: string;
-  taskId?: string;
-  workspacePath?: string;
-
-  // System context
-  nodeVersion: string;
-  platform: string;
-  cliVersion: string;
-
-  // Per-event context
-  command?: string;
-  metadata?: Record<string, any>;
+  tenantId?: string;
+  orgId?: string;
+  userId?: string;
+  requestId?: string;
 }
 
-export interface ErrorTelemetryEvent extends BaseTelemetryEvent {
-  type: 'error';
-  error: {
-    message: string;
-    stack?: string;
-    name: string;
-  };
-  context: any;
-}
-
-export type TelemetryEvent = ErrorTelemetryEvent;
-
-export interface TelemetryConfig {
-  batchSize: number;
-  flushInterval: number;
+export interface TelemetryPayload {
+  sessionId: string;
+  eventType: EventType;
+  events: TelemetryEvent[];
+  context?: TelemetryContext;
 }

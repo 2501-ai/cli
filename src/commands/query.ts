@@ -25,7 +25,7 @@ import {
 } from '../helpers/workspace';
 import { AgentManager } from '../managers/agentManager';
 import { ConfigManager } from '../managers/configManager';
-import { TelemetryManager } from '../managers/telemetryManager';
+import { updateContext } from '../telemetry/contextBuilder';
 import { getFunctionArgs } from '../utils/actions';
 import { getEligibleAgent } from '../utils/conf';
 import { credentialsService } from '../utils/credentials';
@@ -246,7 +246,7 @@ export const queryCommand = async (
 
   Logger.debug('Context:', context);
 
-  TelemetryManager.instance.updateContext(context);
+  updateContext(context);
 
   try {
     const configManager = ConfigManager.instance;

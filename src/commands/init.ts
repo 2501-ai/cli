@@ -11,7 +11,7 @@ import {
 import { isDirUnsafe } from '../helpers/security';
 import { resolveWorkspacePath } from '../helpers/workspace';
 import { ConfigManager } from '../managers/configManager';
-import { TelemetryManager } from '../managers/telemetryManager';
+import { updateContext, updateUserContext } from '../telemetry/contextBuilder';
 import {
   configureAndValidateRemoteExecution,
   detectPlatformAndAdjustWorkspace,
@@ -162,7 +162,7 @@ export const initCommand = async (
 
     const [systemInfo, agentConfig] = await Promise.all(parallelPromises);
 
-    TelemetryManager.instance.updateContext({
+    updateContext({
       workspacePath: workspacePath,
     });
 
@@ -182,6 +182,10 @@ export const initCommand = async (
       id = agent.id;
       name = agent.name;
       Logger.debug('Agent retrieved:', { agent });
+
+      // Extract and cache user context
+      updateUserContext(agent);
+
       // TODO: add status check for the agent with new statuses ?
       if (agent.status !== 'idle') {
         logger.cancel(
@@ -218,6 +222,9 @@ export const initCommand = async (
       Logger.debug('Agent created:', { agent: createdAgent });
       id = createdAgent.id;
       name = createdAgent.name;
+
+      // Extract and cache user context
+      updateUserContext(createdAgent);
     }
 
     // Add agent to local config.
@@ -230,7 +237,7 @@ export const initCommand = async (
       remote_exec: remoteExecConfig ?? undefined,
     });
 
-    TelemetryManager.instance.updateContext({
+    updateContext({
       agentId: id,
     });
     logger.stop(`Agent ${id} ${options.agentId ? 'retrieved' : 'created'}`);

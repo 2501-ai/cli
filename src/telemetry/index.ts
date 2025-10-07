@@ -1,7 +1,14 @@
 /**
  * Telemetry Module
- *
- * Centralized telemetry system for 2501 CLI
  */
-export { errorTracker, trackError } from './errorTracker';
+export { errorTracker, trackError, getSessionId } from './errorTracker';
+export { trackLog } from './logTracker';
+export {
+  updateContext,
+  updateUserContext,
+  getContext,
+  getCurrentCommand,
+  clearContext,
+} from './contextBuilder';
+export { sendTelemetry } from './apiClient';
 export * from './types';
