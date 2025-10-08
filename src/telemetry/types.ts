@@ -13,16 +13,16 @@ export interface TelemetryEvent {
   };
   metadata?: {
     command?: string;
-    feature?: string;
-    endpoint?: string;
+    log_type?: 'error' | 'info';
   };
 }
 
 export interface TelemetryContext {
   tenantId?: string;
   orgId?: string;
-  userId?: string;
-  requestId?: string;
+  hostId?: string;
+  agentId?: string;
+  taskId?: string;
 }
 
 export interface TelemetryPayload {

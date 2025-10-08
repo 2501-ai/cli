@@ -4,42 +4,32 @@
 import { TelemetryContext } from './types';
 
 // Stored context
-let userContext: TelemetryContext = {};
-let agentId: string | undefined;
-let taskId: string | undefined;
+let telemetryContext: TelemetryContext = {};
 
 /**
  * Update user context from agent data
  */
-export const updateUserContext = (agentData: any): void => {
-  userContext = {
-    tenantId: agentData?.tenantId || agentData?.tenant_id,
-    orgId:
-      agentData?.organizationId ||
-      agentData?.organization_id ||
-      agentData?.orgId,
-    userId: agentData?.userId || agentData?.user_id,
-    requestId: agentData?.requestId,
+export const updateTelemetryContext = ({
+  orgId,
+  tenantId,
+  hostId,
+  agentId,
+  taskId,
+}: TelemetryContext): void => {
+  telemetryContext = {
+    tenantId: tenantId || telemetryContext.tenantId,
+    orgId: orgId || telemetryContext.orgId,
+    hostId: hostId || telemetryContext.hostId,
+    agentId: agentId || telemetryContext.agentId,
+    taskId: taskId || telemetryContext.taskId,
   };
-};
-
-/**
- * Update agent/command context
- */
-export const updateContext = (context: {
-  agentId?: string;
-  taskId?: string;
-  workspacePath?: string;
-}): void => {
-  if (context.agentId) agentId = context.agentId;
-  if (context.taskId) taskId = context.taskId;
 };
 
 /**
  * Get current context for telemetry
  */
 export const getContext = (): TelemetryContext => {
-  return userContext;
+  return telemetryContext;
 };
 
 /**
@@ -47,23 +37,4 @@ export const getContext = (): TelemetryContext => {
  */
 export const getCurrentCommand = (): string => {
   return process.argv.slice(2).join(' ') || 'unknown';
-};
-
-/**
- * Get agent ID
- */
-export const getAgentId = (): string | undefined => agentId;
-
-/**
- * Get task ID
- */
-export const getTaskId = (): string | undefined => taskId;
-
-/**
- * Clear all context
- */
-export const clearContext = (): void => {
-  userContext = {};
-  agentId = undefined;
-  taskId = undefined;
 };

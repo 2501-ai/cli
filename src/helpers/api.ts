@@ -1,8 +1,9 @@
-import axios from 'axios';
+import axios, { AxiosError } from 'axios';
 
 import { FormData } from 'formdata-node';
 import { API_HOST, API_VERSION } from '../constants';
 import { ConfigManager } from '../managers/configManager';
+import { TelemetryPayload } from '../telemetry';
 import { pluginService } from '../utils/plugins';
 import {
   Configuration,
@@ -18,6 +19,8 @@ import {
 const FIVE_MINUTES_MILLIS = 5 * 60 * 1000;
 const TEN_MINUTES_MILLIS = 10 * 60 * 1000;
 
+let isInitialized = false;
+
 export const initAxios = async () => {
   const apiKey = ConfigManager.instance.get('api_key');
   if (!apiKey) {
@@ -28,6 +31,43 @@ export const initAxios = async () => {
   axios.defaults.baseURL = `${API_HOST}${API_VERSION}`;
   axios.defaults.timeout = FIVE_MINUTES_MILLIS;
   axios.defaults.headers.common['Authorization'] = `Bearer ${apiKey}`;
+  isInitialized = true;
+};
+
+/**
+ * Send telemetry to API
+ */
+export const sendTelemetry = async (
+  payload: TelemetryPayload
+): Promise<void> => {
+  try {
+    if (!isInitialized) {
+      if (process.env.TFZO_DEBUG === 'true') {
+        console.debug('[Telemetry] Not initialized, skipping send');
+      }
+      return;
+    }
+    await axios.post('/telemetry', payload, { timeout: 3_000 });
+  } catch (error) {
+    // Silent fail
+    if (process.env.TFZO_DEBUG === 'true') {
+      const axiosError = error as AxiosError;
+      console.error('[Telemetry] Failed to send:', {
+        payload: JSON.stringify(payload),
+        request: {
+          url: axiosError.config?.url,
+          method: axiosError.config?.method,
+          data: axiosError.config?.data,
+        },
+        response: {
+          status: axiosError.response?.status,
+          statusText: axiosError.response?.statusText,
+          data: JSON.stringify(axiosError.response?.data || 'no data'),
+        },
+        message: (error as Error).message,
+      });
+    }
+  }
 };
 
 export const createAgent = async (

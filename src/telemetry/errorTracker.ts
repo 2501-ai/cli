@@ -2,7 +2,7 @@
  * Error Tracker
  */
 import axios from 'axios';
-import { sendTelemetry } from './apiClient';
+import { sendTelemetry } from '../helpers/api';
 import { getContext, getCurrentCommand } from './contextBuilder';
 
 /**
@@ -32,6 +32,7 @@ export const trackError = async (
           },
           metadata: {
             command: getCurrentCommand(),
+            log_type: 'error',
             ...metadata,
           },
         },

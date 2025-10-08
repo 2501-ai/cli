@@ -144,9 +144,11 @@ export interface CreateAgentResponse {
   host_id?: string; // Optional, matches Agent.host_id
   key?: string; // Matches Agent.key
   cli_data?: Record<string, any>; // Matches Agent.cli_data
+  organization: {
+    id: string;
+    tenant_id: string;
+  };
 }
-
-export type AgentStatus = 'idle' | 'running' | 'error';
 
 export interface GetAgentResponse {
   id: string;
@@ -158,10 +160,22 @@ export interface GetAgentResponse {
   key?: string; // Matches Agent.key
   cli_data?: Record<string, any>; // Matches Agent.cli_data
   // TODO: add remote_exec config from somewhere.
-  status: AgentStatus;
+  status: 'idle' | 'running' | 'error';
+  organization: {
+    id: string;
+    tenant_id: string;
+  };
 }
 
-export interface AgentConfig extends CreateAgentResponse {
+export interface AgentConfig {
+  id: string;
+  name: string;
+  workspace: string;
+  engine: EngineType;
+  org_id: string;
+  tenant_id: string;
+  host_id: string;
+  configuration: string;
   // Remote execution configuration (optional, per-agent)
   remote_exec?: RemoteExecConfig;
   // Remote workspace path (optional, per-agent)

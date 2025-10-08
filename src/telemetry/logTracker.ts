@@ -2,7 +2,7 @@
  * Log Tracker
  */
 import { EventType } from './types';
-import { sendTelemetry } from './apiClient';
+import { sendTelemetry } from '../helpers/api';
 import { getContext, getCurrentCommand } from './contextBuilder';
 
 /**
@@ -21,10 +21,11 @@ export const trackLog = (
         data: { message },
         metadata: {
           command: getCurrentCommand(),
+          log_type: 'info',
           ...metadata,
         },
       },
     ],
     context: getContext(),
-  }).catch(() => {}); // Silent fail
+  });
 };

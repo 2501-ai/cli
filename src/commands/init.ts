@@ -11,7 +11,7 @@ import {
 import { isDirUnsafe } from '../helpers/security';
 import { resolveWorkspacePath } from '../helpers/workspace';
 import { ConfigManager } from '../managers/configManager';
-import { updateContext, updateUserContext } from '../telemetry/contextBuilder';
+import { updateTelemetryContext } from '../telemetry/contextBuilder';
 import {
   configureAndValidateRemoteExecution,
   detectPlatformAndAdjustWorkspace,
@@ -162,10 +162,6 @@ export const initCommand = async (
 
     const [systemInfo, agentConfig] = await Promise.all(parallelPromises);
 
-    updateContext({
-      workspacePath: workspacePath,
-    });
-
     Logger.debug('systemInfo results:', { systemInfo });
     logger.start('Creating agent');
 
@@ -177,14 +173,17 @@ export const initCommand = async (
     let name: string;
     const hostInfo = await getHostInfo();
 
+    const context = {
+      orgId: '',
+      tenantId: '',
+      hostId: '',
+    };
+
     if (options.agentId) {
       const agent = await getAgent(options.agentId);
       id = agent.id;
       name = agent.name;
       Logger.debug('Agent retrieved:', { agent });
-
-      // Extract and cache user context
-      updateUserContext(agent);
 
       // TODO: add status check for the agent with new statuses ?
       if (agent.status !== 'idle') {
@@ -211,6 +210,9 @@ export const initCommand = async (
           systemInfo,
         },
       });
+      context.orgId = agent.organization.id;
+      context.tenantId = agent.organization.tenant_id;
+      context.hostId = agent.host_id ?? '';
     } else {
       const createdAgent = await createAgent(
         path,
@@ -222,10 +224,13 @@ export const initCommand = async (
       Logger.debug('Agent created:', { agent: createdAgent });
       id = createdAgent.id;
       name = createdAgent.name;
-
-      // Extract and cache user context
-      updateUserContext(createdAgent);
+      context.orgId = createdAgent.organization.id;
+      context.tenantId = createdAgent.organization.tenant_id;
+      context.hostId = createdAgent.host_id ?? '';
     }
+
+    // Extract and cache user context
+    updateTelemetryContext(context);
 
     // Add agent to local config.
     addAgent({
@@ -235,11 +240,11 @@ export const initCommand = async (
       configuration: agentConfig.id,
       engine: configManager.get('engine'),
       remote_exec: remoteExecConfig ?? undefined,
+      org_id: context.orgId,
+      tenant_id: context.tenantId,
+      host_id: context.hostId,
     });
 
-    updateContext({
-      agentId: id,
-    });
     logger.stop(`Agent ${id} ${options.agentId ? 'retrieved' : 'created'}`);
   } catch (error) {
     logger.stop('Failed to initialize agent', 1);
