@@ -272,11 +272,10 @@ export const queryCommand = async (
     if (!taskId) {
       const taskResult = await createTask(agentConfig.id, query);
       taskId = taskResult.id;
+      updateTelemetryContext({
+        taskId: taskId,
+      });
     }
-
-    updateTelemetryContext({
-      taskId: taskId,
-    });
 
     Logger.debug('Task ID:', taskId);
 

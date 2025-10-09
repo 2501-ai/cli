@@ -177,6 +177,7 @@ export const initCommand = async (
       orgId: '',
       tenantId: '',
       hostId: '',
+      agentId: '',
     };
 
     if (options.agentId) {
@@ -213,6 +214,7 @@ export const initCommand = async (
       context.orgId = agent.organization.id;
       context.tenantId = agent.organization.tenant_id;
       context.hostId = agent.host_id ?? '';
+      context.agentId = agent.id;
     } else {
       const createdAgent = await createAgent(
         path,
@@ -227,6 +229,7 @@ export const initCommand = async (
       context.orgId = createdAgent.organization.id;
       context.tenantId = createdAgent.organization.tenant_id;
       context.hostId = createdAgent.host_id ?? '';
+      context.agentId = createdAgent.id;
     }
 
     // Extract and cache user context
