@@ -36,5 +36,5 @@ export const getContext = (): TelemetryContext => {
  * Get current command
  */
 export const getCurrentCommand = (): string => {
-  return process.argv.slice(2).join(' ') || 'unknown';
+  return process.argv.slice(2).join(' ');
 };
