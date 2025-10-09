@@ -300,7 +300,7 @@ export default class Logger {
     const message = args
       .map((a) => (typeof a === 'object' ? JSON.stringify(a) : String(a)))
       .join(' ');
-    trackLog('debug', message);
+    trackLog('info', message);
   }
 
   static warn(...args: unknown[]) {
