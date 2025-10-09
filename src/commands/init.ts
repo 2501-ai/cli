@@ -23,6 +23,7 @@ import Logger from '../utils/logger';
 import { getTempPath2501 } from '../utils/platform';
 import { getHostInfo, getSystemInfo } from '../utils/systemInfo';
 import { Configuration, RemoteExecConfig } from '../utils/types';
+import { TelemetryContext } from '../telemetry';
 
 export interface InitCommandOptions {
   name?: string;
@@ -173,12 +174,7 @@ export const initCommand = async (
     let name: string;
     const hostInfo = await getHostInfo();
 
-    const context = {
-      orgId: '',
-      tenantId: '',
-      hostId: '',
-      agentId: '',
-    };
+    const context: TelemetryContext = {};
 
     if (options.agentId) {
       const agent = await getAgent(options.agentId);
@@ -213,7 +209,6 @@ export const initCommand = async (
       });
       context.orgId = agent.organization.id;
       context.tenantId = agent.organization.tenant_id;
-      context.hostId = agent.host_id ?? '';
       context.agentId = agent.id;
     } else {
       const createdAgent = await createAgent(
@@ -228,7 +223,7 @@ export const initCommand = async (
       name = createdAgent.name;
       context.orgId = createdAgent.organization.id;
       context.tenantId = createdAgent.organization.tenant_id;
-      context.hostId = createdAgent.host_id ?? '';
+      context.hostId = createdAgent.host_id;
       context.agentId = createdAgent.id;
     }
 

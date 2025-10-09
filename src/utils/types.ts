@@ -174,7 +174,7 @@ export interface AgentConfig {
   engine: EngineType;
   org_id: string;
   tenant_id: string;
-  host_id: string;
+  host_id?: string;
   configuration: string;
   // Remote execution configuration (optional, per-agent)
   remote_exec?: RemoteExecConfig;
