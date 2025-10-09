@@ -5,6 +5,7 @@ import { marked } from 'marked';
 import { terminal } from 'terminal-kit';
 import { ConfigManager } from '../managers/configManager';
 import { trackError } from '../telemetry';
+import { trackLog } from '../telemetry/logTracker';
 const isDebug = process.env.TFZO_DEBUG === 'true';
 
 enum Colors {
@@ -68,6 +69,7 @@ export default class Logger {
 
   log(message: string) {
     p.log.message(message);
+    trackLog('info', message);
   }
 
   outro(message: string) {
@@ -270,19 +272,42 @@ export default class Logger {
         (a) => (typeof a === 'object' ? JSON.stringify(a, null, 2) : a) + '\n'
       )
     );
+    const message = args
+      .map((a) => (typeof a === 'object' ? JSON.stringify(a) : String(a)))
+      .join(' ');
+    trackLog('info', message);
   }
 
   static error(...args: (Error | AxiosError | string | unknown)[]) {
     terminal[Colors.RED]('\n[ERROR] ').defaultColor(...stringify(args));
+    const message = args
+      .map((a) => {
+        if (a instanceof Error) {
+          return `${a.message}\n${a.stack}`;
+        }
+        return typeof a === 'object' ? JSON.stringify(a) : String(a);
+      })
+      .join(' ');
+    trackLog('error', message);
   }
 
   static debug(...args: unknown[]) {
     if (isDebug) {
       terminal[Colors.MAGENTA]('[DEBUG] ').defaultColor(...stringify(args));
     }
+    //TODO: We dont track debug logs for now.
+
+    const message = args
+      .map((a) => (typeof a === 'object' ? JSON.stringify(a) : String(a)))
+      .join(' ');
+    trackLog('debug', message);
   }
 
   static warn(...args: unknown[]) {
     terminal[Colors.YELLOW]('[WARN] ').defaultColor(...stringify(args));
+    const message = args
+      .map((a) => (typeof a === 'object' ? JSON.stringify(a) : String(a)))
+      .join(' ');
+    trackLog('warn', message);
   }
 }

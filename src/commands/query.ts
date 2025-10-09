@@ -25,7 +25,6 @@ import {
 } from '../helpers/workspace';
 import { AgentManager } from '../managers/agentManager';
 import { ConfigManager } from '../managers/configManager';
-import { TelemetryManager } from '../managers/telemetryManager';
 import { getFunctionArgs } from '../utils/actions';
 import { getEligibleAgent } from '../utils/conf';
 import { credentialsService } from '../utils/credentials';
@@ -40,6 +39,7 @@ import {
 } from '../utils/types';
 import { initCommand } from './init';
 import { RemoteExecutor } from '../remoteExecution/remoteExecutor';
+import { updateTelemetryContext } from '../telemetry';
 
 marked.use(markedTerminal() as MarkedExtension);
 
@@ -237,17 +237,6 @@ export const queryCommand = async (
 ): Promise<void> => {
   Logger.debug('Options:', options);
 
-  const context = {
-    command: query,
-    taskId: options.taskId,
-    workspacePath: options.workspace,
-    agentId: options.agentId,
-  };
-
-  Logger.debug('Context:', context);
-
-  TelemetryManager.instance.updateContext(context);
-
   try {
     const configManager = ConfigManager.instance;
     const resolvedWorkspace = resolveWorkspacePath(options);
@@ -266,6 +255,14 @@ export const queryCommand = async (
       return;
     }
 
+    updateTelemetryContext({
+      orgId: agentConfig.org_id,
+      tenantId: agentConfig.tenant_id,
+      hostId: agentConfig.host_id,
+      agentId: agentConfig.id,
+      taskId: options.taskId,
+    });
+
     if (agentConfig.remote_exec?.enabled) {
       RemoteExecutor.instance.init(agentConfig.remote_exec);
     }
@@ -275,6 +272,9 @@ export const queryCommand = async (
     if (!taskId) {
       const taskResult = await createTask(agentConfig.id, query);
       taskId = taskResult.id;
+      updateTelemetryContext({
+        taskId: taskId,
+      });
     }
 
     Logger.debug('Task ID:', taskId);
