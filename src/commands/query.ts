@@ -235,6 +235,7 @@ export const queryCommand = async (
   query: string,
   options: QueryOptions
 ): Promise<void> => {
+  updateTelemetryContext({ taskId: options.taskId, agentId: options.agentId });
   Logger.debug('Options:', options);
 
   try {
@@ -260,7 +261,6 @@ export const queryCommand = async (
       tenantId: agentConfig.tenant_id,
       hostId: agentConfig.host_id,
       agentId: agentConfig.id,
-      taskId: options.taskId,
     });
 
     if (agentConfig.remote_exec?.enabled) {

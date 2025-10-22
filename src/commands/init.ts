@@ -139,6 +139,7 @@ export const initCommand = async (
   options: InitCommandOptions
 ): Promise<void> => {
   try {
+    updateTelemetryContext({ agentId: options.agentId });
     const configManager = ConfigManager.instance;
 
     if (process.env.TFZO_DISABLE_SPINNER) {
@@ -163,7 +164,7 @@ export const initCommand = async (
 
     const [systemInfo, agentConfig] = await Promise.all(parallelPromises);
 
-    Logger.debug('systemInfo results:', { systemInfo });
+    Logger.debug('systemInfo results:', systemInfo);
     logger.start('Creating agent');
 
     // Give the agent a workspace that is the remote workspace if remote execution is enabled.
@@ -174,7 +175,9 @@ export const initCommand = async (
     let name: string;
     const hostInfo = await getHostInfo();
 
-    const context: TelemetryContext = {};
+    const context: TelemetryContext = {
+      agentId: options.agentId,
+    };
 
     if (options.agentId) {
       const agent = await getAgent(options.agentId);
@@ -204,7 +207,7 @@ export const initCommand = async (
       await updateAgent(id, {
         workspace: path,
         cli_data: {
-          systemInfo,
+          ...systemInfo,
         },
       });
       context.orgId = agent.organization.id;
