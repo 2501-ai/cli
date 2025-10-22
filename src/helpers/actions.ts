@@ -48,10 +48,23 @@ export async function write_file(args: {
           throw new Error(`Failed to write file: '${result}'`);
         }
       } else {
-        await RemoteExecutor.instance.executeCommand(
-          `tee "${args.path}"`,
-          escapedContent
-        );
+        // For ssh
+        try {
+          // Try to write the file remotely.
+          await RemoteExecutor.instance.executeCommand(
+            `tee "${args.path}"`,
+            escapedContent
+          );
+        } catch (error) {
+          // As a fallback, try to write the file locally with elevated privileges.
+          if ((error as Error).message.includes('Permission denied')) {
+            await run_shell({
+              command: `echo "${escapedContent}" | sudo tee "${args.path}" > /dev/null`,
+            });
+          } else {
+            throw error;
+          }
+        }
       }
     } catch (error) {
       throw new Error(`Failed to write file: ${error}`);
@@ -119,6 +132,7 @@ export async function update_file({
       try {
         fs.writeFileSync(path, newContent);
       } catch (error) {
+        // As a fallback, try to write the file locally with elevated privileges.
         if ((error as NodeJS.ErrnoException).code === 'EACCES') {
           try {
             const escapedContent = newContent.replace(/"/g, '\\"');
