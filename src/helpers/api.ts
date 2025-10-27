@@ -16,8 +16,8 @@ import {
 } from '../utils/types';
 
 // const ONE_MINUTES_MILLIS = 60 * 1000;
-const FIVE_MINUTES_MILLIS = 5 * 60 * 1000;
-const TEN_MINUTES_MILLIS = 10 * 60 * 1000;
+const FIVE_MINUTES_MS = 5 * 60 * 1000;
+const TEN_MINUTES_MS = 10 * 60 * 1000;
 
 let isInitialized = false;
 
@@ -29,7 +29,7 @@ export const initAxios = async () => {
 
   // Set all axios defaults in one place
   axios.defaults.baseURL = `${API_HOST}${API_VERSION}`;
-  axios.defaults.timeout = FIVE_MINUTES_MILLIS;
+  axios.defaults.timeout = TEN_MINUTES_MS;
   axios.defaults.headers.common['Authorization'] = `Bearer ${apiKey}`;
   isInitialized = true;
 };
@@ -128,7 +128,7 @@ export const queryAgent = async (
     },
     {
       responseType: stream ? 'stream' : 'json',
-      timeout: stream ? TEN_MINUTES_MILLIS : FIVE_MINUTES_MILLIS,
+      timeout: TEN_MINUTES_MS,
     }
   );
 
@@ -159,7 +159,7 @@ export const submitToolOutputs = async (
       stream,
     },
     {
-      timeout: stream ? TEN_MINUTES_MILLIS : FIVE_MINUTES_MILLIS,
+      timeout: stream ? TEN_MINUTES_MS : FIVE_MINUTES_MS,
       responseType: stream ? 'stream' : 'json',
     }
   );

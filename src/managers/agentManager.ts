@@ -1,4 +1,3 @@
-import axios from 'axios';
 import fs from 'fs';
 
 import {
@@ -55,55 +54,12 @@ export class AgentManager {
     if (args.url) {
       taskTitle = 'Browsing: ' + args.url;
     }
-    // Logger.debug('Action args:', args);
-    let corrected = false;
-    // Specific to write_file action
-    if (args.path && args.content) {
-      const previous =
-        ACTION_FNS.read_file({ path: args.path }) || 'NO PREVIOUS VERSION';
-      try {
-        const { data: correctionData } = await axios.post(
-          `/agents/${this.agentConfig.id}/verifyOutput`,
-          {
-            task: taskTitle,
-            previous,
-            proposal: args.content,
-          },
-          {
-            timeout: 150_000,
-          }
-        );
-
-        Logger.debug('Correction data:', correctionData);
-
-        if (
-          correctionData.corrected_output &&
-          correctionData.corrected_output !== args.content
-        ) {
-          corrected = true;
-          args.content = correctionData.corrected_output;
-
-          // prevent calling update function
-          // if (args.updates) {
-          //   delete args.updates;
-          //   function_name = ACTION_FNS.write_file.name as typeof function_name;
-          // }
-        }
-      } catch (e) {
-        Logger.error('verifyOutput error or timeout', e);
-        throw e;
-      }
-    }
     Logger.debug(
       `   Processing action: ${taskTitle} | On function ${functionName}`
     );
 
     try {
       let output = (await ACTION_FNS[functionName](args)) as string;
-
-      if (corrected) {
-        output += `\n\n NOTE: your original content for ${args.path} was corrected with the new version below before running the function: \n\n${args.content}`;
-      }
 
       if (output.length > 50000) {
         output = `
