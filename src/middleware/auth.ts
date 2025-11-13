@@ -20,7 +20,7 @@ export async function authMiddleware() {
     );
     process.exit(1);
   }
-  await initAxios();
+  initAxios();
 }
 
 async function showFirstTimeMessage() {

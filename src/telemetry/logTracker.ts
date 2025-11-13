@@ -4,7 +4,7 @@
 import { EventType } from './types';
 import { sendTelemetry } from '../helpers/api';
 import { getContext, getCurrentCommand } from './contextBuilder';
-
+import Logger from '../utils/logger';
 /**
  * Track a log message
  */
@@ -27,5 +27,7 @@ export const trackLog = (
       },
     ],
     context: getContext(),
+  }).catch((error) => {
+    Logger.error('Error sending telemetry:', error);
   });
 };

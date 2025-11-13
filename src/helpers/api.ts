@@ -21,7 +21,7 @@ const TEN_MINUTES_MS = 10 * 60 * 1000;
 
 let isInitialized = false;
 
-export const initAxios = async () => {
+export const initAxios = () => {
   const apiKey = ConfigManager.instance.get('api_key');
   if (!apiKey) {
     throw new Error('API key must be set.');
@@ -178,7 +178,7 @@ export async function indexFiles(
   const data = new FormData();
   for (let i = 0; i < files.length; i++) {
     const name = files[i].path.split('/').pop();
-    data.set('file' + i, new Blob([files[i].data]), name);
+    data.set('file' + i, new Blob([new Uint8Array(files[i].data)]), name);
   }
 
   await axios.post(`/agents/${agentId}/files/index`, data);

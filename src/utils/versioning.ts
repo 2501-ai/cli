@@ -1,4 +1,6 @@
 import axios from 'axios';
+import fs from 'fs';
+import path from 'path';
 import Logger from './logger';
 
 export async function isLatestVersion() {
@@ -7,7 +9,7 @@ export async function isLatestVersion() {
       'https://registry.npmjs.org/@2501-ai/cli/latest'
     );
     const latestVersion = data.version;
-    const currentVersion = require('../../package.json').version;
+    const currentVersion = JSON.parse(fs.readFileSync(path.join(__dirname, '../../package.json'), 'utf8')).version;
 
     const isLatest = latestVersion === currentVersion;
     Logger.debug(

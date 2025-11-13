@@ -4,7 +4,7 @@
   },
   "compilerOptions": {
     "target": "ES6",
-    "module": "commonjs",
+    "module": "nodenext",
     "rootDir": "./src",
     "outDir": "./dist",
     "esModuleInterop": true,
@@ -12,8 +12,12 @@
     "forceConsistentCasingInFileNames": true,
     "noImplicitAny": true,
     "resolveJsonModule": true,
-    "skipLibCheck": true,
-    "removeComments": true
+    "moduleResolution": "nodenext",
+    "removeComments": true,
+    "strictNullChecks": true,
+    "strictFunctionTypes": true,
+    "strictBindCallApply": true,
+    "strictPropertyInitialization": true
   },
   "include": ["src/**/*.ts", "src/**/*.d.ts"],
   "exclude": ["node_modules", "**/__tests__/*"]

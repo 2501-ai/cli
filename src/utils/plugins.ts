@@ -44,10 +44,10 @@ class PluginService {
 
 export const pluginService = PluginService.getInstance();
 
-export const initPlugins = async (
+export const initPlugins = (
   thisCommand: Command,
   actionCommand: Command
-) => {
+): void => {
   const defaultPluginsPath = path.join(CONFIG_DIR, 'plugins.json');
   const options = actionCommand.opts();
 

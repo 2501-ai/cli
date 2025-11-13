@@ -14,7 +14,7 @@
     "unlink": "npm unlink -g @2501-ai/cli",
     "relink": "npm run unlink && npm run build:link",
     "start": "node .",
-    "lint": "tsc --noEmit && eslint . --ext .ts,.tsx --fix",
+    "lint": "tsc --noEmit && eslint . --fix",
     "prepare": "husky",
     "test": "jest --silent",
     "watch": "tsc --watch",
@@ -80,7 +80,8 @@
     "prettier": "^3.3.3",
     "ts-jest": "^29.2.4",
     "ts-node": "^10.9.2",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.46.4"
   },
   "husky": {
     "hooks": {

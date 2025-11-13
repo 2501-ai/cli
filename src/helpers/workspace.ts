@@ -100,10 +100,10 @@ export function writeWorkspaceState(state: WorkspaceState): void {
  *
  * This function will update the hash and files properties of the workspace state.
  */
-export async function updateWorkspaceState(
+export function updateWorkspaceState(
   workspace: string,
   agentId: string
-): Promise<boolean> {
+): boolean {
   Logger.debug('Syncing workspace state:', workspace);
   const currentState = readWorkspaceState(workspace, agentId);
   const { md5, fileHashes } = getDirectoryMd5Hash({
@@ -127,7 +127,7 @@ export async function getWorkspaceHash(
   if (executor.isEnabled()) {
     // TODO: Later we can use the remote executor to get the workspace state.
     // const remoteState = await getRemoteWorkspaceState(workspace, agentId);
-    return {
+    return Promise.resolve({
       hash: {
         md5: '',
         fileHashes: new Map(),
@@ -141,7 +141,7 @@ export async function getWorkspaceHash(
         hasChanges: false,
         isEmpty: true,
       },
-    };
+    });
   }
   // Compute hash only once
   const currentState = getDirectoryMd5Hash({
@@ -157,10 +157,10 @@ export async function getWorkspaceHash(
     agent_id: agentId,
   });
 
-  return {
+  return Promise.resolve({
     hash: currentState,
     diff,
-  };
+  });
 }
 
 // Modify getWorkspaceChanges to use the shared computation
