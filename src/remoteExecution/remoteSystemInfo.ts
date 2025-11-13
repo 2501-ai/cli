@@ -268,7 +268,7 @@ async function getUnixRemotePackages(): Promise<Record<string, string>> {
         try {
           await executor.executeCommand(`command -v ${pm.cmd}`);
           return pm;
-        } catch (e) {
+        } catch {
           return null;
         }
       })
@@ -310,7 +310,8 @@ async function getUnixRemotePackages(): Promise<Record<string, string>> {
  * Helper function to sanitize Windows command output.
  */
 function sanitizeWindowsOutput(output: string): string {
-  return output.trim().replace(/[\u0000-\u001F\u007F-\u009F]/g, '');
+  // eslint-disable-next-line no-control-regex
+  return output.trim().replace(/[\x00-\x1F\x7F-\x9F]/g, '');
 }
 
 async function getFortigateRemotePackages(): Promise<Record<string, string>> {
@@ -338,7 +339,7 @@ async function getWindowsRemotePackages(): Promise<Record<string, string>> {
             return null;
           }
           return pm;
-        } catch (e) {
+        } catch {
           return null;
         }
       })

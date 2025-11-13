@@ -10,7 +10,7 @@ const KEYS_WITH_PARSING: LocalConfigKey[] = [
 ];
 const logger = new Logger();
 
-export async function setCommand(key: string, value?: string) {
+export function setCommand(key: string, value?: string) {
   const configKey = key as LocalConfigKey;
 
   if (!configKey) {

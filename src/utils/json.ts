@@ -10,7 +10,7 @@ export const convertFormToJSON = (inputString: string): string => {
     ) {
       return inputString;
     }
-  } catch (error) {
+  } catch {
     // If JSON.parse fails, assume the string is in the format "key=value"
     const [key, value] = inputString.split('=');
     if (key && value) {

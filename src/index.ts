@@ -2,6 +2,8 @@
 
 import { Command } from 'commander';
 import os from 'os';
+import fs from 'fs';
+import path from 'path';
 import { agentsCommand } from './commands/agents';
 import { configCommand } from './commands/config';
 import { initCommand } from './commands/init';
@@ -21,13 +23,17 @@ import { startTaskCommand } from './commands/startTask';
 // Initialize global error handlers before any other code
 errorHandler.initializeGlobalHandlers();
 
-process.on('SIGINT', async () => {
-  RemoteExecutor.instance.disconnect();
+process.on('SIGINT', () => {
+  RemoteExecutor.instance.disconnect().catch((error) => {
+    Logger.error('Error disconnecting from remote executor(SIGINT):', error);
+  });
   process.exit(0);
 });
 
-process.on('SIGTERM', async () => {
-  RemoteExecutor.instance.disconnect();
+process.on('SIGTERM', () => {
+  RemoteExecutor.instance.disconnect().catch((error) => {
+    Logger.error('Error disconnecting from remote executor(SIGTERM):', error);
+  });
   process.exit(0);
 });
 
@@ -52,8 +58,11 @@ program
         ---- AI Autonomous Systems ----
   `
   )
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  .version(require('../package.json').version)
+
+  .version(
+    JSON.parse(fs.readFileSync(path.join(__dirname, '../package.json'), 'utf8'))
+      .version
+  )
   .option(
     '--remote-exec <connection>',
     'Enable remote execution (user@host:port)'
@@ -85,33 +94,43 @@ program
   .hook('postAction', () => {
     Logger.debug('Post-action hook clearing timeout');
     clearTimeout(timeout);
-    RemoteExecutor.instance.disconnect();
-  })
-  .on('command:*', async (args) => {
-    const query = args?.join(' ');
-    if (!query) {
-      Logger.log(
-        'Please provide a query or use --help to see available commands'
+    RemoteExecutor.instance.disconnect().catch((error) => {
+      Logger.error(
+        'Error disconnecting from remote executor(postAction):',
+        error
       );
-      return;
-    }
-    const options = program.opts();
-    Logger.debug('Args:', { args, options });
+    });
+  })
+  .on('command:*', (args: string[]) => {
+    (async () => {
+      const query = args?.join(' ');
+      if (!query) {
+        Logger.log(
+          'Please provide a query or use --help to see available commands'
+        );
+        return;
+      }
+      const options = program.opts();
+      Logger.debug('Args:', { args, options });
 
-    try {
-      await authMiddleware();
-      await queryCommand(query, options);
-      await RemoteExecutor.instance.disconnect();
-      // TODO: for some reason, with Remote exec the process is still running but nothing happens.
-      // That's why we use process.exit(); here. This is a temporary fix.
-      process.exit();
-    } catch (error) {
-      // The 'onCommand*' listener is handled differently than the actions,
-      // and will trigger an unhandledRejection if an error is thrown.
-      await errorHandler.handleCommandError(error as Error, 'fallback-query');
-      // Makes sure the program exits with the correct error code.
-      process.exit(1);
-    }
+      try {
+        initPlugins(program, program);
+        await authMiddleware();
+        await queryCommand(query, options);
+        await RemoteExecutor.instance.disconnect();
+        // TODO: for some reason, with Remote exec the process is still running but nothing happens.
+        // That's why we use process.exit(); here. This is a temporary fix.
+        process.exit();
+      } catch (error) {
+        // The 'onCommand*' listener is handled differently than the actions,
+        // and will trigger an unhandledRejection if an error is thrown.
+        await errorHandler.handleCommandError(error as Error, 'fallback-query');
+        // Makes sure the program exits with the correct error code.
+        process.exit(1);
+      }
+    })().catch((error) => {
+      Logger.error('Error in onCommand* listener:', error);
+    });
   });
 
 // Config command
@@ -175,8 +194,8 @@ program
   .option('--workspace <path>', 'Specify a different workspace path')
   .option('--all', 'Parameter to target all agents during list or flush action')
   .option('--flush', 'Flush all agents from the configuration')
-  .action(async (options) => {
-    await agentsCommand(options);
+  .action((options) => {
+    agentsCommand(options);
   });
 
 // Tasks command
@@ -205,7 +224,7 @@ program
   .description('Set a configuration value')
   .argument('<key>', 'The key to set')
   .argument('<value>', 'The value to set')
-  .action(async (key, value) => await setCommand(key, value));
+  .action((key, value) => setCommand(key, value));
 
 (async () => {
   try {
@@ -216,4 +235,7 @@ program
     // Makes sure the program exits with the correct error code.
     process.exit(1);
   }
-})();
+})().catch((error) => {
+  Logger.error('Error in main program:', error);
+  process.exit(1);
+});

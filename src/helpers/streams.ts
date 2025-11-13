@@ -77,7 +77,7 @@ export function getActionPostfix(action: FunctionAction): string {
       return toItalic(` (Writing to file: ${path.basename(args.path)})`);
     case 'update_file':
       return toItalic(` (Updating file: ${path.basename(args.path)})`);
-    case 'run_shell':
+    case 'run_shell': {
       // avoid displaying the full cd command.
       const formatted =
         args.command.startsWith('cd') && args.command.indexOf('&&') > 0
@@ -86,6 +86,7 @@ export function getActionPostfix(action: FunctionAction): string {
               .slice(args.command.indexOf('&&') + 1)
           : args.command;
       return toItalic(` (Executing command: ${formatted})`);
+    }
     case 'browse_url':
       return toItalic(` (Browsing URL: ${args.url})`);
     default:
@@ -163,7 +164,7 @@ function parseStreamContent(
       streamEvents: [JSON.parse(content)],
       chunks: [],
     };
-  } catch (e) {
+  } catch {
     // Content might be chunked, use specialized parser
     const { parsed, remaining } = parseChunkedMessages<StreamEvent>(content);
 

@@ -95,7 +95,7 @@ export class SSHExecutor implements IRemoteExecutor {
 
     // Disconnect from previous connection if different agent
     if (this.connected && this.config.target !== this.config.target) {
-      this.disconnect();
+      await this.disconnect();
     }
 
     return new Promise((resolve, reject) => {
@@ -188,12 +188,13 @@ export class SSHExecutor implements IRemoteExecutor {
     }
   }
 
-  async disconnect(): Promise<void> {
+  disconnect(): Promise<void> {
     if (this.client) {
       this.client.end();
       this.client = null;
       this.connected = false;
       this.config = null;
     }
+    return Promise.resolve();
   }
 }

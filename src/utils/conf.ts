@@ -101,10 +101,7 @@ export function addAgent(newAgent: AgentConfig): void {
  * @param workspacePath - The workspace to be flushed
  * @param [all] - If true, clears all agents on the machine.
  */
-export async function flushAgents(
-  workspacePath: string,
-  all?: boolean
-): Promise<void> {
+export function flushAgents(workspacePath: string, all?: boolean): void {
   try {
     const config = readConfig();
     if (!config) {

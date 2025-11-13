@@ -115,7 +115,7 @@ export async function initRemoteExecution(
     return;
   }
 
-  const remoteExecConfig = await configureAndValidateRemoteExecution(options);
+  const remoteExecConfig = configureAndValidateRemoteExecution(options);
   if (!remoteExecConfig) {
     return;
   }

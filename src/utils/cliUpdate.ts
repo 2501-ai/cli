@@ -2,7 +2,7 @@ import { run_shell, hasError } from '../helpers/actions';
 import { isLatestVersion } from './versioning';
 import Logger from './logger';
 import { ConfigManager } from '../managers/configManager';
-import execa from 'execa';
+import { execa } from 'execa';
 
 const autoUpdate = async () => {
   try {

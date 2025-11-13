@@ -7,15 +7,15 @@ import {
 } from '../utils/conf';
 import { resolveWorkspacePath } from '../helpers/workspace';
 
-export const agentsCommand = async (options: {
+export const agentsCommand = (options: {
   all?: boolean;
   flush?: boolean;
   workspace?: string;
-}): Promise<void> => {
+}): void => {
   const workspaceUrl = resolveWorkspacePath({ workspace: options.workspace });
 
   if (options.flush) {
-    await flushAgents(workspaceUrl, options.all);
+    flushAgents(workspaceUrl, options.all);
     terminal('All agents have been flushed from the configuration.\n');
     return;
   }
