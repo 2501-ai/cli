@@ -170,9 +170,9 @@ export function configureRemoteExecution(
 /**
  * Configure and validate remote execution setup
  */
-export async function configureAndValidateRemoteExecution(
+export function configureAndValidateRemoteExecution(
   options: InitCommandOptions
-): Promise<RemoteExecConfig | undefined> {
+): RemoteExecConfig | undefined {
   let remoteExecConfig: RemoteExecConfig;
 
   try {

@@ -118,9 +118,11 @@ const executeActions = async (
       action,
       toolOutput.success
     );
-    toolOutput.success
-      ? logger.stop(subActionMessage, 0)
-      : logger.stop(`(failed) ${subActionMessage}`, 1);
+    if (toolOutput.success) {
+      logger.stop(subActionMessage, 0);
+    } else {
+      logger.stop(`(failed) ${subActionMessage}`, 1);
+    }
     results.push(toolOutput);
   }
 
@@ -197,7 +199,7 @@ const handleReasoningSteps = (streamResponse: Readable) => {
         logger.stop(stepMessage);
         logger.start('Processing');
       }
-    } catch (e) {
+    } catch {
       // Do nothing on purpose
     }
   });
@@ -309,11 +311,12 @@ export const queryCommand = async (
       handleReasoningSteps(streamResponse);
     }
 
-    // eslint-disable-next-line prefer-const
-    let [actions, queryResponse] = await parseAgentResponse(
+    const [initialActions, queryResponse] = await parseAgentResponse(
       agentResponse,
       stream
     );
+    let actions = initialActions;
+
     if (queryResponse) {
       logger.stop(queryResponse);
     }

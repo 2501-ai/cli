@@ -164,7 +164,7 @@ export default class Logger {
       });
     }
 
-    return p.select<any, boolean>({
+    return p.select<boolean>({
       message,
       options: [
         { value: true, label: 'Yes' },
@@ -191,7 +191,7 @@ export default class Logger {
 
       const axiosError = e as AxiosError;
       const errorData = axiosError.toJSON();
-      trackError(axiosError, {
+      await trackError(axiosError, {
         metadata: {
           defaultMsg,
           errorData,
@@ -215,7 +215,7 @@ export default class Logger {
 
     if (!axios.isAxiosError(e)) {
       Logger.error('Command error', e);
-      trackError(e, {
+      await trackError(e, {
         metadata: {
           defaultMsg,
         },
@@ -226,7 +226,7 @@ export default class Logger {
     const axiosError = e as AxiosError;
     const errorData = axiosError.toJSON();
 
-    trackError(axiosError, {
+    await trackError(axiosError, {
       metadata: {
         defaultMsg,
         errorData,

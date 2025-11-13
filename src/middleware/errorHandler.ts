@@ -22,39 +22,52 @@ export class ErrorHandler {
    */
   public initializeGlobalHandlers(): void {
     // Handle uncaught exceptions
-    process.on('uncaughtException', async (error: Error) => {
-      Logger.error('Uncaught Exception:', error.message);
-      Logger.debug('Stack trace:', error.stack || 'No stack trace available');
+    process.on('uncaughtException', (error: Error) => {
+      (async () => {
+        Logger.error('Uncaught Exception:', error.message);
+        Logger.debug('Stack trace:', error.stack || 'No stack trace available');
 
-      await this.handleError(error, {
-        type: 'uncaughtException',
-        fatal: true,
+        await this.handleError(error, {
+          type: 'uncaughtException',
+          fatal: true,
+        });
+
+        this.gracefulShutdown(1);
+      })().catch((err) => {
+        Logger.error('Error in uncaughtException handler:', err);
+        process.exit(1);
       });
-
-      await this.gracefulShutdown(1);
     });
 
     // Handle unhandled promise rejections
     process.on(
       'unhandledRejection',
-      async (reason: unknown, promise: Promise<any>) => {
-        const error =
-          reason instanceof Error ? reason : new Error(String(reason));
-        Logger.error(
-          'Unhandled Rejection at:',
-          promise,
-          'reason:',
-          error.message
-        );
-        Logger.debug('Stack trace:', error.stack || 'No stack trace available');
+      (reason: unknown, promise: Promise<any>) => {
+        (async () => {
+          const error =
+            reason instanceof Error ? reason : new Error(String(reason));
+          Logger.error(
+            'Unhandled Rejection at:',
+            promise,
+            'reason:',
+            error.message
+          );
+          Logger.debug(
+            'Stack trace:',
+            error.stack || 'No stack trace available'
+          );
 
-        await this.handleError(error, {
-          type: 'unhandledRejection',
-          fatal: true,
-          metadata: { reason: String(reason) },
+          await this.handleError(error, {
+            type: 'unhandledRejection',
+            fatal: true,
+            metadata: { reason: String(reason) },
+          });
+
+          this.gracefulShutdown(1);
+        })().catch((err) => {
+          Logger.error('Error in unhandledRejection handler:', err);
+          process.exit(1);
         });
-
-        await this.gracefulShutdown(1);
       }
     );
 
@@ -118,7 +131,7 @@ export class ErrorHandler {
   /**
    * Graceful shutdown with cleanup
    */
-  private async gracefulShutdown(exitCode: number): Promise<void> {
+  private gracefulShutdown(exitCode: number): void {
     try {
       Logger.debug('Initiating graceful shutdown...');
 

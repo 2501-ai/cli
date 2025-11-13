@@ -70,7 +70,9 @@ export class WinRMExecutor implements IRemoteExecutor {
 
     // Disconnect from previous connection if different agent
     if (this.connected && this.config.target !== this.config.target) {
-      this.disconnect();
+      this.disconnect().catch((error) => {
+        Logger.error('Error disconnecting from WinRM executor:', error);
+      });
     }
 
     try {

@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import * as cheerio from 'cheerio';
-import execa from 'execa';
+import { execa } from 'execa';
 import TurndownService from 'turndown';
 
 import { CONFIG_DIR } from '../constants';
@@ -252,9 +252,6 @@ export async function browse_url(args: { url: string }) {
   `;
 }
 
-export async function task_completed(args: {
-  output?: string;
-  summary?: string;
-}) {
+export function task_completed(args: { output?: string; summary?: string }) {
   return args?.summary || args?.output || 'Task completed!';
 }

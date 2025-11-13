@@ -182,7 +182,10 @@ export class ZipUtility {
 
         archive.append(processed.content, processed.options);
       }
-      archive.finalize();
+      archive.finalize().catch((error) => {
+        cleanup();
+        reject(error);
+      });
     });
   }
 }
