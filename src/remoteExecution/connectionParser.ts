@@ -237,21 +237,3 @@ function adjustWorkspacePathIfNeeded(
   remoteExecConfig.remote_workspace = adjustedWorkspace;
   Logger.debug(`Adjusted workspace path to: ${adjustedWorkspace}`);
 }
-
-/**
- * Helper function to check if a Windows command was found.
- */
-export function isCommandNotFound(output: string): boolean {
-  const lowerOutput = output.toLowerCase();
-  const notFoundIndicators = [
-    'not recognized as an internal or external command',
-    'is not recognized',
-    'command not found',
-    'was not found',
-    'could not find',
-  ];
-
-  return notFoundIndicators.some((indicator) =>
-    lowerOutput.includes(indicator)
-  );
-}

@@ -109,7 +109,6 @@ export class RemoteExecutor {
 
     if (this.config.type === 'winrm') {
       this.config.platform = 'windows';
-      console.log('windows');
       return 'windows';
     }
 

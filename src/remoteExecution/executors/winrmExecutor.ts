@@ -5,7 +5,7 @@ import { IRemoteExecutor } from '../remoteExecutor';
 
 // Powershell is the default command wrapper for winrm
 // A space is left at the end for the command concatenation.
-const WINDOWS_CMD_WRAPPER = 'powershell -Command ';
+const WINDOWS_CMD_WRAPPER = 'powershell';
 
 interface WinRMSession {
   shellId: string;
@@ -136,10 +136,13 @@ export class WinRMExecutor implements IRemoteExecutor {
         );
       }
 
-      const escapedCommand = command.replace(/"/g, '""'); // Escape double quotes for PowerShell
+      // Suppress progress output to avoid CLIXML noise
+      const fullCommand = `$ProgressPreference = 'SilentlyContinue'; ${command}`;
+      const encoded = Buffer.from(fullCommand, 'utf16le').toString('base64');
+
       const wrappedCommand = rawCmd
-        ? command
-        : `${this.wrapper}"${escapedCommand}"`; // Wrap in double quotes
+        ? `-Command ${command}`
+        : `${this.wrapper} -EncodedCommand ${encoded}`;
 
       const cmdId = await winrm.command.doExecuteCommand({
         ...this.session,
