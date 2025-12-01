@@ -13,7 +13,7 @@ const config: Config = {
   testMatch: ['<rootDir>/src/**/?(*.)+(spec|test).[tj]s'],
 
   // An array of regexp pattern strings that are matched against all test paths, matched tests are skipped
-  testPathIgnorePatterns: ['node_modules', 'dist', 'e2e'],
+  testPathIgnorePatterns: ['node_modules', 'dist'],
 };
 
 export default config;
