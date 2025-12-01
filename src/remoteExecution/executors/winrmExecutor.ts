@@ -136,7 +136,7 @@ export class WinRMExecutor implements IRemoteExecutor {
         );
       }
 
-      const escapedCommand = command.replace(/"/g, '""'); // Escape double quotes for PowerShell
+      const escapedCommand = command.replace(/"/g, "'"); // Replace double quotes with single quotes for PowerShell
       const wrappedCommand = rawCmd
         ? command
         : `${this.wrapper}"${escapedCommand}"`; // Wrap in double quotes

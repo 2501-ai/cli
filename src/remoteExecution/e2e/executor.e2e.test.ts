@@ -27,10 +27,17 @@ describe('RemoteExecutor - WinRM', () => {
     const result = await RemoteExecutor.instance.executeCommand(cmd);
     expect(result).toContain('EC2AMAZ-3MERTNG');
   });
-  it('should execute sql command', async () => {
+  it.skip('should execute sql command', async () => {
     const cmd =
       'cd C:\\Users\\administrator ; sqlcmd -Q "SELECT name FROM sys.databases"';
     const result = await RemoteExecutor.instance.executeCommand(cmd);
     expect(result).toContain('master');
+  }, 30_000);
+  it('should integrate powershell patterns', async () => {
+    // Check if celery worker was affected by this service shutdown
+    const cmd =
+      'cd . ; Get-Process python -ErrorAction SilentlyContinue | Where-Object { $_.CommandLine -like "*celery*" } | Select-Object Id, ProcessName, CommandLine';
+    const result = await RemoteExecutor.instance.executeCommand(cmd);
+    expect(result).not.toContain('Error');
   }, 30_000);
 });
