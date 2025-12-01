@@ -41,4 +41,12 @@ describe('RemoteExecutor - WinRM', () => {
     const result = await RemoteExecutor.instance.executeCommand(cmd);
     expect(result).not.toContain('error');
   }, 30_000);
+
+  it.only('should execute complex commands', async () => {
+    const cmd =
+      'cd . ; $result = @{}; $result.RabbitMQ = (Get-Service -Name "RabbitMQ" -ErrorAction SilentlyContinue).Status; $result.PostgreSQL = (Get-Service -Name "postgresql-x64-18" -ErrorAction SilentlyContinue).Status; $result.Celery = @(Get-Process -Name "celery" -ErrorAction SilentlyContinue).Count -gt 0; $result.Flower = (Get-Service -Name "FlowerMonitor" -ErrorAction SilentlyContinue).Status; ConvertTo-Json -InputObject $result -Depth 3';
+    const result = await RemoteExecutor.instance.executeCommand(cmd);
+    console.log(JSON.stringify(result, null, 2));
+    expect(result).not.toContain('error');
+  }, 30_000);
 });

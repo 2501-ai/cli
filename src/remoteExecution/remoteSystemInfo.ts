@@ -7,8 +7,8 @@ import {
   WINDOWS_PACKAGE_MANAGERS,
 } from '../utils/systemInfo';
 import { SystemInfo } from '../utils/types';
-import { isCommandNotFound } from './connectionParser';
 import { RemoteExecutor } from './remoteExecutor';
+import { isCommandNotFound, sanitizeWindowsOutput } from './windowsHelper';
 
 async function getRemoteGlobalNpmPackages(
   platform: 'windows' | 'unix' | 'fortigate'
@@ -304,13 +304,6 @@ async function getUnixRemotePackages(): Promise<Record<string, string>> {
   );
 
   return allPackages.reduce((acc, curr) => ({ ...acc, ...curr }), {});
-}
-
-/**
- * Helper function to sanitize Windows command output.
- */
-function sanitizeWindowsOutput(output: string): string {
-  return output.trim().replace(/[\u0000-\u001F\u007F-\u009F]/g, '');
 }
 
 async function getFortigateRemotePackages(): Promise<Record<string, string>> {
