@@ -25,7 +25,6 @@ describe('RemoteExecutor - WinRM', () => {
   it('should retrieve the hostname', async () => {
     const cmd = 'hostname';
     const result = await RemoteExecutor.instance.executeCommand(cmd);
-    console.log(result);
     expect(result).toContain('EC2AMAZ-3MERTNG');
   });
 
@@ -40,7 +39,6 @@ describe('RemoteExecutor - WinRM', () => {
     const cmd =
       'cd . ; Get-Process python -ErrorAction SilentlyContinue | Where-Object { $_.CommandLine -like "*celery*" } | Select-Object Id, ProcessName, CommandLine';
     const result = await RemoteExecutor.instance.executeCommand(cmd);
-    console.log(result);
     expect(result).not.toContain('error');
   }, 30_000);
 });
