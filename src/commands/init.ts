@@ -100,10 +100,11 @@ export async function getWorkspacePath(
 /**
  * Initialize the remote execution.
  *
- * 1. Validate the connection string.
- * 2. Initialize the remote execution.
- * 3. Validate the connection (and detect the platform through the connection).
- * 4. Adjust the workspace path based on the platform.
+ * 1. Configure the remote execution.
+ * 2. Validate the connection.
+ * 3. Initialize the remote execution.
+ * 4. Validate the connection (and detect the platform through the connection).
+ * 5. Adjust the workspace path based on the platform.
  */
 export async function initRemoteExecution(
   options: InitCommandOptions,
