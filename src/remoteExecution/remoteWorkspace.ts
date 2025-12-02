@@ -4,7 +4,7 @@ import Logger from '../utils/logger';
 import { RemoteExecConfig } from '../utils/types';
 
 /**
- * Check if remote workspace directory exists and create it if missing
+ * Ensure remote workspace directory exists, creating it if missing
  */
 async function ensureRemoteWorkspaceExists(
   remoteExecConfig: RemoteExecConfig,
@@ -25,39 +25,20 @@ async function ensureRemoteWorkspaceExists(
         ? `~/${workspacePath}`
         : workspacePath;
 
-    // Check if directory exists
-    const checkCommand = isWindows
-      ? `if exist "${resolvedPath}" echo exists`
-      : `test -d "${resolvedPath}" && echo exists`;
+    // Single command to create directory if it doesn't exist
+    // Unix: mkdir -p is idempotent
+    // Windows: if not exist creates it, otherwise does nothing
+    const createCommand = isWindows
+      ? `if not exist "${resolvedPath}" mkdir "${resolvedPath}"`
+      : `mkdir -p "${resolvedPath}"`;
 
-    const checkResult = await RemoteExecutor.instance.executeCommand(
-      checkCommand,
+    Logger.debug(`Ensuring remote workspace directory exists: ${resolvedPath}`);
+    await RemoteExecutor.instance.executeCommand(
+      createCommand,
       undefined,
       true
     );
-
-    const exists = checkResult.trim().includes('exists');
-
-    if (!exists) {
-      // Create directory
-      const createCommand = isWindows
-        ? `mkdir "${resolvedPath}"`
-        : `mkdir -p "${resolvedPath}"`;
-
-      Logger.debug(`Creating remote workspace directory: ${resolvedPath}`);
-      await RemoteExecutor.instance.executeCommand(
-        createCommand,
-        undefined,
-        true
-      );
-      Logger.debug(
-        `Successfully created remote workspace directory: ${resolvedPath}`
-      );
-    } else {
-      Logger.debug(
-        `Remote workspace directory already exists: ${resolvedPath}`
-      );
-    }
+    Logger.debug(`Remote workspace directory ready: ${resolvedPath}`);
   } catch (error) {
     Logger.debug(
       `Failed to ensure remote workspace exists: ${(error as Error).message}`
