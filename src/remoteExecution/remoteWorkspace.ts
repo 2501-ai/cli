@@ -6,7 +6,7 @@ import { RemoteExecConfig } from '../utils/types';
 /**
  * Ensure remote workspace directory exists, creating it if missing
  */
-async function ensureRemoteWorkspaceExists(
+export async function ensureRemoteWorkspaceExists(
   isWindows: boolean,
   workspacePath: string
 ): Promise<void> {
