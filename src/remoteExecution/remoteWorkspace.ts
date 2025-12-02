@@ -31,6 +31,8 @@ export async function setupRemoteWorkspace(
 
   // Determine workspace path
   let workspacePath = options.remoteWorkspace;
+  // TODO: This is hardcoded for now, but agents should always have a workspace defined in DB.
+  // We will fix this ASAP.
   if (!workspacePath) {
     workspacePath = isWindows
       ? 'C:\\ProgramData\\2501\\'
