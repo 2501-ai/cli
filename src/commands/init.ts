@@ -12,10 +12,8 @@ import { isDirUnsafe } from '../helpers/security';
 import { resolveWorkspacePath } from '../helpers/workspace';
 import { ConfigManager } from '../managers/configManager';
 import { updateTelemetryContext } from '../telemetry/contextBuilder';
-import {
-  configureAndValidateRemoteExecution,
-  detectPlatformAndAdjustWorkspace,
-} from '../remoteExecution/connectionParser';
+import { configureAndValidateRemoteExecution } from '../remoteExecution/connectionParser';
+import { setupRemoteWorkspace } from '../remoteExecution/remoteWorkspace';
 import { RemoteExecutor } from '../remoteExecution/remoteExecutor';
 import { getRemoteSystemInfo } from '../remoteExecution/remoteSystemInfo';
 import { addAgent, getEligibleAgent } from '../utils/conf';
@@ -104,7 +102,7 @@ export async function getWorkspacePath(
  *
  * 1. Validate the connection string.
  * 2. Initialize the remote execution.
- * 3. Connect and detect the platform.
+ * 3. Validate the connection (and detect the platform through the connection).
  * 4. Adjust the workspace path based on the platform.
  */
 export async function initRemoteExecution(
@@ -120,7 +118,25 @@ export async function initRemoteExecution(
     return;
   }
 
-  await detectPlatformAndAdjustWorkspace(remoteExecConfig, options, logger);
+  // Initialize executor to run the detection command
+  RemoteExecutor.instance.init(remoteExecConfig);
+
+  // Validate the connection and detect the platform.
+  const { target, type } = remoteExecConfig;
+  logger.start(`Connecting to remote host ${target} using ${type}...`);
+
+  const isValid = await RemoteExecutor.instance.validateConnection();
+  if (!isValid) {
+    throw new Error('Remote connection failed. Please check your settings.');
+  }
+  const { platform } = RemoteExecutor.instance.getConfig();
+  logger.message(`Detected platform: ${platform} for ${target}`);
+  logger.stop('Remote connection validated successfully');
+
+  // Initialize the remote workspace.
+  const remoteWorkspace = await setupRemoteWorkspace(remoteExecConfig, options);
+  remoteExecConfig.remote_workspace = remoteWorkspace;
+
   return remoteExecConfig;
 }
 

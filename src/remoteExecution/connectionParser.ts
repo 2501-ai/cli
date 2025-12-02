@@ -1,13 +1,12 @@
-import { RemoteExecutor } from './remoteExecutor';
 import { InitCommandOptions } from '../commands/init';
 import Logger from '../utils/logger';
-import { REMOTE_EXEC_TYPES, RemoteExecConfig } from '../utils/types';
 import {
-  lookupConnectionInSSHConfig,
-  hasSSHConfig,
-  getSSHConfigPath,
   ConnectionDetails,
+  getSSHConfigPath,
+  hasSSHConfig,
+  lookupConnectionInSSHConfig,
 } from '../utils/sshConfig';
+import { REMOTE_EXEC_TYPES, RemoteExecConfig } from '../utils/types';
 
 /**
  * Connection string patterns for parsing
@@ -109,7 +108,7 @@ export function parseConnectionString(
       connectionString,
       defaultPort
     );
-    console.log('sshConfigResult', { sshConfigResult });
+    Logger.log('sshConfigResult', { sshConfigResult });
     if (sshConfigResult) {
       return sshConfigResult;
     }
@@ -182,58 +181,5 @@ export async function configureAndValidateRemoteExecution(
       `Remote connection configuration failed: ${(error as Error).message}`
     );
   }
-
-  // Initialize executor to run the detection command
-  RemoteExecutor.instance.init(remoteExecConfig);
-
   return remoteExecConfig;
-}
-
-/**
- * Detect remote platform and adjust workspace path
- */
-export async function detectPlatformAndAdjustWorkspace(
-  remoteExecConfig: RemoteExecConfig,
-  options: InitCommandOptions,
-  logger: Logger
-): Promise<void> {
-  try {
-    const { target, type } = remoteExecConfig;
-    logger.start(`Connecting to remote host ${target} using ${type}...`);
-
-    const isValid = await RemoteExecutor.instance.validateConnection();
-    if (!isValid) {
-      throw new Error('Remote connection failed. Please check your settings.');
-    }
-
-    const { platform } = RemoteExecutor.instance.getConfig();
-    logger.message(`Detected platform: ${platform} for ${target}`);
-    logger.stop('Remote connection validated successfully');
-
-    adjustWorkspacePathIfNeeded(remoteExecConfig, options);
-  } catch (error) {
-    throw new Error(
-      `Remote connection validation failed: ${(error as Error).message}`
-    );
-  }
-}
-
-/**
- * Adjust workspace path based on detected platform if user didn't specify one
- */
-function adjustWorkspacePathIfNeeded(
-  remoteExecConfig: RemoteExecConfig,
-  options: InitCommandOptions
-): void {
-  if (options.remoteWorkspace) {
-    return;
-  }
-
-  const adjustedWorkspace =
-    remoteExecConfig.platform === 'windows'
-      ? `C:\\Users\\${remoteExecConfig.user}`
-      : `/home/${remoteExecConfig.user}`;
-
-  remoteExecConfig.remote_workspace = adjustedWorkspace;
-  Logger.debug(`Adjusted workspace path to: ${adjustedWorkspace}`);
 }
