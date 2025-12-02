@@ -165,21 +165,3 @@ export function configureRemoteExecution(
     raw_ssh: options.rawSsh,
   };
 }
-
-/**
- * Configure and validate remote execution setup
- */
-export async function configureAndValidateRemoteExecution(
-  options: InitCommandOptions
-): Promise<RemoteExecConfig | undefined> {
-  let remoteExecConfig: RemoteExecConfig;
-
-  try {
-    remoteExecConfig = configureRemoteExecution(options);
-  } catch (error) {
-    throw new Error(
-      `Remote connection configuration failed: ${(error as Error).message}`
-    );
-  }
-  return remoteExecConfig;
-}

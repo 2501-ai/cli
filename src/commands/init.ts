@@ -12,7 +12,7 @@ import { isDirUnsafe } from '../helpers/security';
 import { resolveWorkspacePath } from '../helpers/workspace';
 import { ConfigManager } from '../managers/configManager';
 import { updateTelemetryContext } from '../telemetry/contextBuilder';
-import { configureAndValidateRemoteExecution } from '../remoteExecution/connectionParser';
+import { configureRemoteExecution } from '../remoteExecution/connectionParser';
 import { setupRemoteWorkspace } from '../remoteExecution/remoteWorkspace';
 import { RemoteExecutor } from '../remoteExecution/remoteExecutor';
 import { getRemoteSystemInfo } from '../remoteExecution/remoteSystemInfo';
@@ -113,9 +113,14 @@ export async function initRemoteExecution(
     return;
   }
 
-  const remoteExecConfig = await configureAndValidateRemoteExecution(options);
-  if (!remoteExecConfig) {
-    return;
+  let remoteExecConfig: RemoteExecConfig;
+
+  try {
+    remoteExecConfig = configureRemoteExecution(options);
+  } catch (error) {
+    throw new Error(
+      `Remote connection configuration failed: ${(error as Error).message}`
+    );
   }
 
   // Initialize executor to run the detection command
