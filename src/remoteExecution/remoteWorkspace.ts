@@ -7,47 +7,17 @@ import { RemoteExecConfig } from '../utils/types';
  * Ensure remote workspace directory exists, creating it if missing
  */
 async function ensureRemoteWorkspaceExists(
-  remoteExecConfig: RemoteExecConfig,
+  isWindows: boolean,
   workspacePath: string
 ): Promise<void> {
-  if (!workspacePath) {
-    return;
-  }
+  // mkdir -p (Unix) and "if not exist" (Windows) are idempotent
+  const createCommand = isWindows
+    ? `if not exist "${workspacePath}" mkdir "${workspacePath}"`
+    : `mkdir -p "${workspacePath}"`;
 
-  const platform = remoteExecConfig.platform;
-  const isWindows = platform === 'windows';
-  const isSSH = remoteExecConfig.type === 'ssh';
-
-  try {
-    // For SSH with relative path, expand to home directory
-    const resolvedPath =
-      isSSH && !workspacePath.startsWith('/')
-        ? `~/${workspacePath}`
-        : workspacePath;
-
-    // Single command to create directory if it doesn't exist
-    // Unix: mkdir -p is idempotent
-    // Windows: if not exist creates it, otherwise does nothing
-    const createCommand = isWindows
-      ? `if not exist "${resolvedPath}" mkdir "${resolvedPath}"`
-      : `mkdir -p "${resolvedPath}"`;
-
-    Logger.debug(`Ensuring remote workspace directory exists: ${resolvedPath}`);
-    await RemoteExecutor.instance.executeCommand(
-      createCommand,
-      undefined,
-      true
-    );
-    Logger.debug(`Remote workspace directory ready: ${resolvedPath}`);
-  } catch (error) {
-    Logger.debug(
-      `Failed to ensure remote workspace exists: ${(error as Error).message}`
-    );
-    // Log warning but continue initialization
-    Logger.debug(
-      `Warning: Could not verify/create remote workspace directory. Continuing anyway.`
-    );
-  }
+  Logger.debug(`Ensuring remote workspace directory exists: ${workspacePath}`);
+  await RemoteExecutor.instance.executeCommand(createCommand, undefined, true);
+  Logger.debug(`Remote workspace directory ready: ${workspacePath}`);
 }
 
 /**
@@ -57,23 +27,17 @@ export async function setupRemoteWorkspace(
   remoteExecConfig: RemoteExecConfig,
   options: InitCommandOptions
 ): Promise<string> {
-  try {
-    let remoteWorkspace = options.remoteWorkspace;
-    if (!remoteWorkspace) {
-      remoteWorkspace =
-        remoteExecConfig.type === 'ssh'
-          ? `/home/${remoteExecConfig.user}/.2501/workspace`
-          : 'C:\\ProgramData\\2501\\';
+  const isWindows = remoteExecConfig.platform === 'windows';
 
-      Logger.debug(
-        `Default workspace path to: ${remoteExecConfig.remote_workspace}`
-      );
-    }
-    await ensureRemoteWorkspaceExists(remoteExecConfig, remoteWorkspace);
-    return remoteWorkspace;
-  } catch (error) {
-    throw new Error(
-      `Remote connection validation failed: ${(error as Error).message}`
-    );
+  // Determine workspace path
+  let workspacePath = options.remoteWorkspace;
+  if (!workspacePath) {
+    workspacePath = isWindows
+      ? 'C:\\ProgramData\\2501\\'
+      : `/home/${remoteExecConfig.user}/.2501/workspace`;
+    Logger.debug(`Using default workspace path: ${workspacePath}`);
   }
+
+  await ensureRemoteWorkspaceExists(isWindows, workspacePath);
+  return workspacePath;
 }
