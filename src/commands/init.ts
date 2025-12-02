@@ -12,10 +12,8 @@ import { isDirUnsafe } from '../helpers/security';
 import { resolveWorkspacePath } from '../helpers/workspace';
 import { ConfigManager } from '../managers/configManager';
 import { updateTelemetryContext } from '../telemetry/contextBuilder';
-import {
-  configureAndValidateRemoteExecution,
-  detectPlatformAndAdjustWorkspace,
-} from '../remoteExecution/connectionParser';
+import { configureRemoteExecution } from '../remoteExecution/connectionParser';
+import { setupRemoteWorkspace } from '../remoteExecution/remoteWorkspace';
 import { RemoteExecutor } from '../remoteExecution/remoteExecutor';
 import { getRemoteSystemInfo } from '../remoteExecution/remoteSystemInfo';
 import { addAgent, getEligibleAgent } from '../utils/conf';
@@ -102,10 +100,11 @@ export async function getWorkspacePath(
 /**
  * Initialize the remote execution.
  *
- * 1. Validate the connection string.
- * 2. Initialize the remote execution.
- * 3. Connect and detect the platform.
- * 4. Adjust the workspace path based on the platform.
+ * 1. Configure the remote execution.
+ * 2. Validate the connection.
+ * 3. Initialize the remote execution.
+ * 4. Validate the connection (and detect the platform through the connection).
+ * 5. Adjust the workspace path based on the platform.
  */
 export async function initRemoteExecution(
   options: InitCommandOptions,
@@ -115,12 +114,35 @@ export async function initRemoteExecution(
     return;
   }
 
-  const remoteExecConfig = await configureAndValidateRemoteExecution(options);
-  if (!remoteExecConfig) {
-    return;
+  let remoteExecConfig: RemoteExecConfig;
+
+  try {
+    remoteExecConfig = configureRemoteExecution(options);
+  } catch (error) {
+    throw new Error(
+      `Remote connection configuration failed: ${(error as Error).message}`
+    );
   }
 
-  await detectPlatformAndAdjustWorkspace(remoteExecConfig, options, logger);
+  // Initialize executor to run the detection command
+  RemoteExecutor.instance.init(remoteExecConfig);
+
+  // Validate the connection and detect the platform.
+  const { target, type } = remoteExecConfig;
+  logger.start(`Connecting to remote host ${target} using ${type}...`);
+
+  const isValid = await RemoteExecutor.instance.validateConnection();
+  if (!isValid) {
+    throw new Error('Remote connection failed. Please check your settings.');
+  }
+  const { platform } = RemoteExecutor.instance.getConfig();
+  logger.message(`Detected platform: ${platform} for ${target}`);
+  logger.stop('Remote connection validated successfully');
+
+  // Initialize the remote workspace.
+  const remoteWorkspace = await setupRemoteWorkspace(remoteExecConfig, options);
+  remoteExecConfig.remote_workspace = remoteWorkspace;
+
   return remoteExecConfig;
 }
 
