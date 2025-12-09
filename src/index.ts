@@ -5,7 +5,7 @@ import os from 'os';
 import { agentsCommand } from './commands/agents';
 import { configCommand } from './commands/config';
 import { initCommand } from './commands/init';
-import { queryCommand } from './commands/query';
+import { queryCommand, QueryOptions } from './commands/query';
 import { setCommand } from './commands/set';
 import { tasksSubscriptionCommand } from './commands/tasks';
 import { handleAutoUpdate } from './utils/cliUpdate';
@@ -74,6 +74,7 @@ program
     'Execute SSH commands without automatic wrapper (skip shell initialization)'
   )
   .option('--workspace <path>', 'Specify a different workspace path')
+  .option('--config <configKey>', 'Specify the configuration Key to use')
   .hook('preAction', (cmd) => {
     // Logger.debug('Pre-action hook', cmd);
     const TWENTY_MINUTES = 20 * 60 * 1000;
@@ -95,7 +96,7 @@ program
       );
       return;
     }
-    const options = program.opts();
+    const options = program.opts<QueryOptions>();
     Logger.debug('Args:', { args, options });
 
     try {
@@ -135,7 +136,7 @@ program
   .hook('preAction', initPlugins)
   .hook('preAction', initPluginCredentials)
   .action(async (taskId, cmdOptions) => {
-    const options = program.opts();
+    const options = program.opts<QueryOptions>();
     const allOptions = { ...cmdOptions, ...options, taskId };
     Logger.debug(`Starting task ${taskId}`);
     await startTaskCommand(allOptions);
