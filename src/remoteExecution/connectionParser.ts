@@ -9,14 +9,6 @@ import {
 import { REMOTE_EXEC_TYPES, RemoteExecConfig } from '../utils/types';
 
 /**
- * Connection string patterns for parsing
- */
-const CONNECTION_PATTERNS = {
-  USER_HOST_PORT: /^([^@]+)@((?:\d{1,3}\.){3}\d{1,3}|[a-zA-Z0-9.-]+):(\d+)$/,
-  USER_HOST: /^([^@]+)@((?:\d{1,3}\.){3}\d{1,3}|[a-zA-Z0-9.-]+)$/,
-} as const;
-
-/**
  * Default ports for different remote execution types
  */
 const DEFAULT_PORTS = {
@@ -39,29 +31,35 @@ function getDefaultPort(remoteExecType: RemoteExecConfig['type']): string {
 }
 
 /**
+ * Host validation patterns
+ */
+const HOST_PATTERNS = {
+  WITH_PORT: /^((?:\d{1,3}\.){3}\d{1,3}|[a-zA-Z0-9.-]+):(\d+)$/,
+  WITHOUT_PORT: /^((?:\d{1,3}\.){3}\d{1,3}|[a-zA-Z0-9.-]+)$/,
+} as const;
+
+/**
  * Try to parse explicit connection patterns (user@host:port or user@host)
+ * Supports any username format including emails (user@domain.com) and
+ * Windows domain users (DOMAIN\user) by splitting on the last @ symbol.
  */
 function tryParseExplicitConnection(
   connectionString: string,
   defaultPort: string
 ): ConnectionDetails | null {
-  // Try user@host:port pattern
-  const withPortMatch = connectionString.match(
-    CONNECTION_PATTERNS.USER_HOST_PORT
-  );
-  if (withPortMatch) {
-    const [, user, host, port] = withPortMatch;
-    return { user, host, port };
-  }
+  const lastAtIndex = connectionString.lastIndexOf('@');
+  if (lastAtIndex === -1) return null;
 
-  // Try user@host pattern (without port)
-  const withoutPortMatch = connectionString.match(
-    CONNECTION_PATTERNS.USER_HOST
-  );
-  if (withoutPortMatch) {
-    const [, user, host] = withoutPortMatch;
-    return { user, host, port: defaultPort };
-  }
+  const user = connectionString.substring(0, lastAtIndex);
+  const hostPortPart = connectionString.substring(lastAtIndex + 1);
+
+  // Try host:port pattern
+  const portMatch = hostPortPart.match(HOST_PATTERNS.WITH_PORT);
+  if (portMatch) return { user, host: portMatch[1], port: portMatch[2] };
+
+  // Try host pattern (without port)
+  const hostMatch = hostPortPart.match(HOST_PATTERNS.WITHOUT_PORT);
+  if (hostMatch) return { user, host: hostMatch[1], port: defaultPort };
 
   return null;
 }
