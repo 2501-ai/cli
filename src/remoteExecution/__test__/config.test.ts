@@ -113,4 +113,46 @@ describe('parseConnectionString', () => {
       'Invalid connection format. Use: user@host:port'
     );
   });
+
+  it('should parse UPN username for WinRM (user@domain.com format)', () => {
+    const config = parseConnectionString(
+      'user@company.com@192.168.1.1',
+      'winrm'
+    );
+    expect(config).toEqual({
+      user: 'user@company.com',
+      host: '192.168.1.1',
+      port: '5985',
+    });
+  });
+
+  it('should parse UPN username with hostname and port for WinRM', () => {
+    const config = parseConnectionString(
+      'user@company.com@myserver.local:5985',
+      'winrm'
+    );
+    expect(config).toEqual({
+      user: 'user@company.com',
+      host: 'myserver.local',
+      port: '5985',
+    });
+  });
+
+  it('should parse Windows domain username (DOMAIN\\user format)', () => {
+    const config = parseConnectionString('DOMAIN\\user@192.168.1.1', 'winrm');
+    expect(config).toEqual({
+      user: 'DOMAIN\\user',
+      host: '192.168.1.1',
+      port: '5985',
+    });
+  });
+
+  it('should parse Windows domain username with port', () => {
+    const config = parseConnectionString('DOMAIN\\user@host:5985', 'winrm');
+    expect(config).toEqual({
+      user: 'DOMAIN\\user',
+      host: 'host',
+      port: '5985',
+    });
+  });
 });
