@@ -178,13 +178,7 @@ export const initCommand = async (
       ? getRemoteSystemInfo()
       : getSystemInfo();
 
-    const configKey = options.config || 'SYSOPS';
-    const parallelPromises = [
-      systemInfoPromise,
-      fetchConfiguration(configKey),
-    ] as const;
-
-    const [systemInfo, agentConfig] = await Promise.all(parallelPromises);
+    const systemInfo = await systemInfoPromise;
 
     Logger.debug('systemInfo results:', systemInfo);
     logger.start('Creating agent');
@@ -195,6 +189,7 @@ export const initCommand = async (
     //TODO: add support for options.agentId and retrieve the existing agent if it exists.
     let id: string;
     let name: string;
+    let configurationKey = options.config || '';
     const hostInfo = await getHostInfo();
 
     const context: TelemetryContext = {
@@ -215,6 +210,7 @@ export const initCommand = async (
         throw new Error('Agent is not idle.');
       }
 
+      configurationKey = agent.configuration;
       if (RemoteExecutor.instance.isEnabled()) {
         // hack to avoid ips to be overriden on remote-exec usages
         delete hostInfo.public_ip;
@@ -236,6 +232,14 @@ export const initCommand = async (
       context.tenantId = agent.organization.tenant_id;
       context.agentId = agent.id;
     } else {
+      if (!options.config) {
+        throw new Error('A configuration Key is required to create an agent.');
+      }
+      const agentConfig = await fetchConfiguration(options.config);
+      if (!agentConfig) {
+        throw new Error(`Invalid Agent configuration: ${options.config}`);
+      }
+
       const createdAgent = await createAgent(
         path,
         agentConfig,
@@ -260,7 +264,7 @@ export const initCommand = async (
       id,
       name,
       workspace: workspacePath,
-      configuration: agentConfig.id,
+      configuration: configurationKey,
       engine: configManager.get('engine'),
       remote_exec: remoteExecConfig ?? undefined,
       org_id: context.orgId,

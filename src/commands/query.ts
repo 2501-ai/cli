@@ -43,7 +43,8 @@ import { updateTelemetryContext } from '../telemetry';
 
 marked.use(markedTerminal() as MarkedExtension);
 
-interface QueryOptions {
+export interface QueryOptions {
+  config?: string;
   workspace?: string;
   agentId?: string;
   stream?: boolean;
