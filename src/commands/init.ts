@@ -186,12 +186,11 @@ export const initCommand = async (
     // Give the agent a workspace that is the remote workspace if remote execution is enabled.
     const path = remoteExecConfig?.remote_workspace ?? workspacePath;
 
-    //TODO: add support for options.agentId and retrieve the existing agent if it exists.
     let id: string;
     let name: string;
     let configurationKey = options.config || '';
-    const hostInfo = await getHostInfo();
 
+    const hostInfo = await getHostInfo();
     const context: TelemetryContext = {
       agentId: options.agentId,
     };
@@ -202,11 +201,10 @@ export const initCommand = async (
       name = agent.name;
       Logger.debug('Agent retrieved:', { agent });
 
-      // TODO: add status check for the agent with new statuses ?
       if (agent.status !== 'idle') {
-        logger.cancel(
-          `Agent ${id} is not idle. Please stop the agent before starting a new task.`
-        );
+        const msg = `Agent ${id} is not idle. Please stop the agent before starting a new task.`;
+        logger.cancel(msg);
+        Logger.debug(msg);
         throw new Error('Agent is not idle.');
       }
 
