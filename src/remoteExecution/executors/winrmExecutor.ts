@@ -90,27 +90,18 @@ export class WinRMExecutor implements IRemoteExecutor {
 
     try {
       const isHttps = HTTPS_PORTS.includes(port);
-      // rawCmd: use runCommand for raw commands, runPowershell for PowerShell
-      const result = rawCmd
-        ? await runCommand(
-            command,
-            host,
-            username,
-            password,
-            port,
-            undefined,
-            isHttps,
-            REJECT_UNAUTHORIZED_TLS
-          )
-        : await runPowershell(
-            command,
-            host,
-            username,
-            password,
-            port,
-            isHttps,
-            REJECT_UNAUTHORIZED_TLS
-          );
+      // Should use powershell for non-raw commands
+      const usePowershell = !rawCmd;
+      const result = await runCommand(
+        command,
+        host,
+        username,
+        password,
+        port,
+        usePowershell,
+        isHttps,
+        REJECT_UNAUTHORIZED_TLS
+      );
 
       Logger.debug('WinRM command completed');
       return result || '';
