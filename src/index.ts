@@ -2,21 +2,23 @@
 
 import { Command } from 'commander';
 import os from 'os';
+
 import { agentsCommand } from './commands/agents';
 import { configCommand } from './commands/config';
 import { initCommand } from './commands/init';
 import { queryCommand } from './commands/query';
 import { setCommand } from './commands/set';
+import { startTaskCommand } from './commands/startTask';
 import { tasksSubscriptionCommand } from './commands/tasks';
-import { handleAutoUpdate } from './utils/cliUpdate';
 import { authMiddleware } from './middleware/auth';
 import { errorHandler } from './middleware/errorHandler';
+import { RemoteExecutor } from './remoteExecution/remoteExecutor';
+import { handleAutoUpdate } from './utils/cliUpdate';
 import { initPluginCredentials } from './utils/credentials';
 import Logger from './utils/logger';
 import { getTempPath2501 } from './utils/platform';
 import { initPlugins } from './utils/plugins';
-import { RemoteExecutor } from './remoteExecution/remoteExecutor';
-import { startTaskCommand } from './commands/startTask';
+import { version } from '../package.json';
 
 // Initialize global error handlers before any other code
 errorHandler.initializeGlobalHandlers();
@@ -52,8 +54,7 @@ program
         ---- AI Autonomous Systems ----
   `
   )
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  .version(require('../package.json').version)
+  .version(version)
   .option(
     '--remote-exec <connection>',
     'Enable remote execution (user@host:port)'

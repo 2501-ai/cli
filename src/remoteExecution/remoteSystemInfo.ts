@@ -268,7 +268,7 @@ async function getUnixRemotePackages(): Promise<Record<string, string>> {
         try {
           await executor.executeCommand(`command -v ${pm.cmd}`);
           return pm;
-        } catch (e) {
+        } catch {
           return null;
         }
       })
@@ -331,7 +331,7 @@ async function getWindowsRemotePackages(): Promise<Record<string, string>> {
             return null;
           }
           return pm;
-        } catch (e) {
+        } catch {
           return null;
         }
       })

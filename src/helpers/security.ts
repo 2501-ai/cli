@@ -88,7 +88,7 @@ export function isDirUnsafe(dir: string, throwOnly = false) {
     // A common way to circumvent security is by using symbolic links (symlinks)
     // to point to unsafe directories while appearing to be in safe directories
     realWorkspace = fs.realpathSync(dir); // Resolve symlinks
-  } catch (err) {
+  } catch {
     throw new Error('Failed to resolve the workspace directory.');
   }
 

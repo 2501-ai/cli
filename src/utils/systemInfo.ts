@@ -157,7 +157,7 @@ async function getPythonVersion() {
   try {
     const { stdout } = await execAsync('python --version');
     return stdout.trim();
-  } catch (error) {
+  } catch {
     // Logger.error('Error executing python --version:', (error as Error).message);
     return '(not installed)';
   }
@@ -178,7 +178,7 @@ async function getPhpVersion() {
   try {
     const { stdout } = await execAsync('php --version');
     return stdout.trim();
-  } catch (error) {
+  } catch {
     // Logger.error('Error executing php --version:', (error as Error).message);
     return '(not installed)';
   }
@@ -434,7 +434,7 @@ export async function getHostInfo(): Promise<HostInfo> {
           .trim();
       }
     }
-  } catch (error) {
+  } catch {
     const networkInterfaces = os.networkInterfaces();
     const mac =
       Object.values(networkInterfaces)
