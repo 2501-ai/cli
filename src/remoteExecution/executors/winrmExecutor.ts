@@ -1,25 +1,13 @@
-import winrm from 'nodejs-winrm';
+import { runCommand, runPowershell } from 'winrm-client';
 import Logger from '../../utils/logger';
 import { RemoteExecConfig } from '../../utils/types';
 import { IRemoteExecutor } from '../remoteExecutor';
 
-// Powershell is the default command wrapper for winrm
-// A space is left at the end for the command concatenation.
 const WINDOWS_CMD_WRAPPER = 'powershell';
-
-interface WinRMSession {
-  shellId: string;
-  host: string;
-  port: number;
-  auth: string;
-  path: string;
-}
 
 export class WinRMExecutor implements IRemoteExecutor {
   private static _instance: WinRMExecutor;
   private config: RemoteExecConfig | null = null;
-  private connected = false;
-  private session: WinRMSession | null = null;
   wrapper = WINDOWS_CMD_WRAPPER;
 
   static get instance() {
@@ -33,88 +21,18 @@ export class WinRMExecutor implements IRemoteExecutor {
 
   init(config: RemoteExecConfig): void {
     this.config = config;
-    this.session = null;
-    this.connected = false;
   }
 
   isConnected(): boolean {
-    return this.connected;
-  }
-
-  private getConnectionConfig() {
-    if (!this.config || !this.config.enabled) {
-      throw new Error('Remote execution not configured for this agent');
-    }
-
-    return {
-      host: this.config.target,
-      port: this.config.port || 5985,
-      username: this.config.user,
-      password: this.config.password || '',
-    };
+    return !!this.config?.enabled;
   }
 
   async connect(): Promise<void> {
-    if (!this.config || !this.config.enabled) {
+    if (!this.config?.enabled) {
       throw new Error('Remote execution not configured');
     }
-
-    // If already connected to the same agent, return
-    if (
-      this.connected &&
-      this.session &&
-      this.config.target === this.config.target
-    ) {
-      return;
-    }
-
-    // Disconnect from previous connection if different agent
-    if (this.connected && this.config.target !== this.config.target) {
-      this.disconnect();
-    }
-
-    try {
-      const connectionConfig = this.getConnectionConfig();
-
-      const auth =
-        'Basic ' +
-        Buffer.from(
-          connectionConfig.username + ':' + connectionConfig.password,
-          'utf8'
-        ).toString('base64');
-
-      Logger.debug('Connection Params:', {
-        auth,
-        username: (connectionConfig.username && '***') || '(not provided)',
-        password: (connectionConfig.password && '***') || '(not provided)',
-        host: connectionConfig.host,
-        port: connectionConfig.port,
-        path: '/wsman',
-      });
-
-      // Connect
-      const shellId = await winrm.shell.doCreateShell({
-        host: connectionConfig.host,
-        port: connectionConfig.port,
-        auth,
-        path: '/wsman',
-      });
-
-      this.session = {
-        shellId,
-        host: connectionConfig.host,
-        port: connectionConfig.port,
-        auth,
-        path: '/wsman',
-      };
-
-      this.connected = true;
-      Logger.debug('WinRM connection established');
-    } catch (error) {
-      this.connected = false;
-      Logger.debug('WinRM connection error:', error);
-      throw error;
-    }
+    // No explicit connection needed - winrm-client handles it per command
+    Logger.debug('WinRM executor initialized');
   }
 
   async executeCommand(
@@ -122,44 +40,37 @@ export class WinRMExecutor implements IRemoteExecutor {
     stdin?: string,
     rawCmd = false
   ): Promise<string> {
+    if (!this.config?.enabled) {
+      throw new Error('Remote execution not configured');
+    }
+
+    if (stdin) {
+      Logger.debug(
+        'WinRM does not support stdin input, ignoring stdin parameter'
+      );
+    }
+
+    const {
+      target: host,
+      port = 5985,
+      user: username,
+      password = '',
+    } = this.config;
+
+    Logger.debug('Executing WinRM command:', {
+      host,
+      port,
+      username: username || '(not provided)',
+      command: command.substring(0, 50) + (command.length > 50 ? '...' : ''),
+    });
+
     try {
-      await this.connect();
+      // rawCmd: use runCommand for raw commands, runPowershell for PowerShell
+      const result = rawCmd
+        ? await runCommand(command, host, username, password, port)
+        : await runPowershell(command, host, username, password, port);
 
-      if (!this.session) {
-        throw new Error('WinRM session not initialized');
-      }
-
-      // Note: stdin is not supported in WinRM like it is in SSH
-      if (stdin) {
-        Logger.debug(
-          'WinRM does not support stdin input, ignoring stdin parameter'
-        );
-      }
-
-      // Suppress progress output to avoid CLIXML noise
-      const fullCommand = `$ProgressPreference = 'SilentlyContinue'; ${command}`;
-      const encoded = Buffer.from(fullCommand, 'utf16le').toString('base64');
-
-      const wrappedCommand = rawCmd
-        ? `-Command ${command}`
-        : `${this.wrapper} -EncodedCommand ${encoded}`;
-
-      const cmdId = await winrm.command.doExecuteCommand({
-        ...this.session,
-        command: wrappedCommand,
-      });
-
-      const result = await winrm.command.doReceiveOutput({
-        ...this.session,
-        commandId: cmdId,
-      });
-
-      Logger.debug('WinRM command result:', {
-        wrappedCommand,
-        cmdId,
-        result,
-      });
-
+      Logger.debug('WinRM command completed');
       return result || '';
     } catch (error) {
       Logger.error('WinRM command execution failed:', error);
@@ -168,12 +79,8 @@ export class WinRMExecutor implements IRemoteExecutor {
   }
 
   async disconnect(): Promise<void> {
-    if (this.session) {
-      await winrm.shell.doDeleteShell(this.session);
-      Logger.debug('WinRM connection closed');
-    }
-    this.session = null;
-    this.connected = false;
+    // No explicit disconnect needed - winrm-client handles cleanup
     this.config = null;
+    Logger.debug('WinRM executor reset');
   }
 }
