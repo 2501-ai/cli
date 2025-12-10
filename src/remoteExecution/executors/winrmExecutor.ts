@@ -90,7 +90,7 @@ export class WinRMExecutor implements IRemoteExecutor {
 
     try {
       const isHttps = HTTPS_PORTS.includes(port);
-      // Should use powershell for non-raw commands
+      // Non-raw commands dont get wrapped in powershell.
       const usePowershell = !rawCmd;
       const result = await runCommand(
         command,
