@@ -16,8 +16,11 @@ module.exports = tseslint.config(
       },
     },
     rules: {
+      '@typescript-eslint/no-require-imports': [
+        'error',
+        { allow: ['\\.json$'] },
+      ],
       '@typescript-eslint/no-explicit-any': 'off',
-      '@typescript-eslint/no-require-imports': 'off',
       '@typescript-eslint/no-unused-vars': [
         'error',
         { argsIgnorePattern: '^_', varsIgnorePattern: '^_' },
