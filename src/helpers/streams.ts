@@ -163,7 +163,7 @@ function parseStreamContent(
       streamEvents: [JSON.parse(content)],
       chunks: [],
     };
-  } catch (e) {
+  } catch {
     // Content might be chunked, use specialized parser
     const { parsed, remaining } = parseChunkedMessages<StreamEvent>(content);
 

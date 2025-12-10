@@ -29,7 +29,7 @@ export const getFunctionArgs = (action: FunctionAction) => {
       // console.log('Args:', JSON.stringify(args));
       try {
         args = JSON.parse(args);
-      } catch (e) {
+      } catch {
         // console.log('Error parsing JSON: %s', JSON.stringify(args));
         if (args.indexOf('`') !== -1) {
           Logger.debug('Cleaning up backticks for args:', args);

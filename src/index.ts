@@ -52,7 +52,6 @@ program
         ---- AI Autonomous Systems ----
   `
   )
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
   .version(require('../package.json').version)
   .option(
     '--remote-exec <connection>',

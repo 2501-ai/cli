@@ -197,7 +197,7 @@ const handleReasoningSteps = (streamResponse: Readable) => {
         logger.stop(stepMessage);
         logger.start('Processing');
       }
-    } catch (e) {
+    } catch {
       // Do nothing on purpose
     }
   });
