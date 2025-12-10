@@ -4,6 +4,8 @@ import { RemoteExecConfig } from '../../utils/types';
 import { IRemoteExecutor } from '../remoteExecutor';
 
 const WINDOWS_CMD_WRAPPER = 'powershell';
+// Detection Logic
+const HTTPS_PORTS = [443, 5986, 8443];
 
 export class WinRMExecutor implements IRemoteExecutor {
   private static _instance: WinRMExecutor;
@@ -31,8 +33,19 @@ export class WinRMExecutor implements IRemoteExecutor {
     if (!this.config?.enabled) {
       throw new Error('Remote execution not configured');
     }
-    // No explicit connection needed - winrm-client handles it per command
-    Logger.debug('WinRM executor initialized');
+
+    const { target: host, user: username, password = '', port } = this.config;
+
+    Logger.debug('Testing WinRM connection...');
+
+    try {
+      const isHttps = HTTPS_PORTS.includes(port);
+      await runPowershell('$true', host, username, password, port, isHttps);
+      Logger.debug('WinRM connection successful');
+    } catch (error) {
+      Logger.error('WinRM connection test failed:', error);
+      throw new Error(`Failed to connect to WinRM host ${host}`);
+    }
   }
 
   async executeCommand(

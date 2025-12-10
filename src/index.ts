@@ -54,7 +54,8 @@ program
         ---- AI Autonomous Systems ----
   `
   )
-  .version(version)
+
+  .version(require('../package.json').version)
   .option(
     '--remote-exec <connection>',
     'Enable remote execution (user@host:port)'
