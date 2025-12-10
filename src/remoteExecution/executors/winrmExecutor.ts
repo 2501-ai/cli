@@ -7,6 +7,9 @@ const WINDOWS_CMD_WRAPPER = 'powershell';
 // Detection Logic
 const HTTPS_PORTS = [443, 5986, 8443];
 
+const REJECT_UNAUTHORIZED_TLS =
+  process.env.NODE_TLS_REJECT_UNAUTHORIZED !== '0';
+
 export class WinRMExecutor implements IRemoteExecutor {
   private static _instance: WinRMExecutor;
   private config: RemoteExecConfig | null = null;
@@ -40,7 +43,15 @@ export class WinRMExecutor implements IRemoteExecutor {
 
     try {
       const isHttps = HTTPS_PORTS.includes(port);
-      await runPowershell('$true', host, username, password, port, isHttps);
+      await runPowershell(
+        '$true',
+        host,
+        username,
+        password,
+        port,
+        isHttps,
+        REJECT_UNAUTHORIZED_TLS
+      );
       Logger.debug('WinRM connection successful');
     } catch (error) {
       Logger.error('WinRM connection test failed:', error);
@@ -78,10 +89,28 @@ export class WinRMExecutor implements IRemoteExecutor {
     });
 
     try {
+      const isHttps = HTTPS_PORTS.includes(port);
       // rawCmd: use runCommand for raw commands, runPowershell for PowerShell
       const result = rawCmd
-        ? await runCommand(command, host, username, password, port)
-        : await runPowershell(command, host, username, password, port);
+        ? await runCommand(
+            command,
+            host,
+            username,
+            password,
+            port,
+            undefined,
+            isHttps,
+            REJECT_UNAUTHORIZED_TLS
+          )
+        : await runPowershell(
+            command,
+            host,
+            username,
+            password,
+            port,
+            isHttps,
+            REJECT_UNAUTHORIZED_TLS
+          );
 
       Logger.debug('WinRM command completed');
       return result || '';
