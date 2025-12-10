@@ -20,7 +20,7 @@
     "test:e2e": "jest --silent --testPathIgnorePatterns=__test__",
     "watch": "tsc --watch",
     "dev": "ts-node ./src/index.ts",
-    "dev:fortinet": "source .env.test && ts-node ./src/index.ts init --workspace .debug-workspace --remote-exec $FORTINET_USER@$FORTINET_HOST --remote-exec-password $FORTINET_PASSWORD",
+    "dev:fortinet": "source .env && ts-node ./src/index.ts init --workspace .debug-workspace --remote-exec $FORTINET_USER@$FORTINET_HOST --remote-exec-password $FORTINET_PASSWORD",
     "version:beta:bump": "npm version --prerelease --preid beta",
     "prepublishOnly": "npm run build:clean"
   },
