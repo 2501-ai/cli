@@ -55,7 +55,7 @@ program
   `
   )
 
-  .version(require('../package.json').version)
+  .version(version)
   .option(
     '--remote-exec <connection>',
     'Enable remote execution (user@host:port)'
