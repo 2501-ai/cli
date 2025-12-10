@@ -17,7 +17,7 @@ export default [
     },
     rules: {
       '@typescript-eslint/no-explicit-any': 'off',
-      'no-control-regex': 'off',
+      'no-control-regex': 'off', // This is required for the sanitizeWindowsOutput function
     },
   },
 ];
