@@ -16,6 +16,7 @@ export default [
       },
     },
     rules: {
+      // TODO: Fix the 32 errors and remove this rule.
       '@typescript-eslint/no-explicit-any': 'off',
       'no-control-regex': 'off', // This is required for the sanitizeWindowsOutput function
     },
