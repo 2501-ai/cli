@@ -4,6 +4,11 @@ import { RemoteExecConfig } from '../../utils/types';
 import { IRemoteExecutor } from '../remoteExecutor';
 
 const WINDOWS_CMD_WRAPPER = 'powershell';
+// Detection Logic
+const HTTPS_PORTS = [443, 5986, 8443];
+
+const REJECT_UNAUTHORIZED_TLS =
+  process.env.NODE_TLS_REJECT_UNAUTHORIZED !== '0';
 
 export class WinRMExecutor implements IRemoteExecutor {
   private static _instance: WinRMExecutor;
@@ -31,8 +36,27 @@ export class WinRMExecutor implements IRemoteExecutor {
     if (!this.config?.enabled) {
       throw new Error('Remote execution not configured');
     }
-    // No explicit connection needed - winrm-client handles it per command
-    Logger.debug('WinRM executor initialized');
+
+    const { target: host, user: username, password = '', port } = this.config;
+
+    Logger.debug('Testing WinRM connection...');
+
+    try {
+      const isHttps = HTTPS_PORTS.includes(port);
+      await runPowershell(
+        '$true',
+        host,
+        username,
+        password,
+        port,
+        isHttps,
+        REJECT_UNAUTHORIZED_TLS
+      );
+      Logger.debug('WinRM connection successful');
+    } catch (error) {
+      Logger.error('WinRM connection test failed:', error);
+      throw new Error(`Failed to connect to WinRM host ${host}`);
+    }
   }
 
   async executeCommand(
@@ -65,10 +89,19 @@ export class WinRMExecutor implements IRemoteExecutor {
     });
 
     try {
-      // rawCmd: use runCommand for raw commands, runPowershell for PowerShell
-      const result = rawCmd
-        ? await runCommand(command, host, username, password, port)
-        : await runPowershell(command, host, username, password, port);
+      const isHttps = HTTPS_PORTS.includes(port);
+      // Non-raw commands dont get wrapped in powershell.
+      const usePowershell = !rawCmd;
+      const result = await runCommand(
+        command,
+        host,
+        username,
+        password,
+        port,
+        usePowershell,
+        isHttps,
+        REJECT_UNAUTHORIZED_TLS
+      );
 
       Logger.debug('WinRM command completed');
       return result || '';

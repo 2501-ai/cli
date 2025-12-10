@@ -1,6 +1,6 @@
 {
   "name": "@2501-ai/cli",
-  "version": "0.3.16",
+  "version": "0.3.17",
   "description": "",
   "main": "dist/index.js",
   "bin": {
@@ -16,7 +16,8 @@
     "start": "node .",
     "lint": "tsc --noEmit && eslint . --fix",
     "prepare": "husky",
-    "test": "jest --silent",
+    "test": "jest --silent --testPathIgnorePatterns=e2e",
+    "test:e2e": "jest --silent --testPathIgnorePatterns=__test__",
     "watch": "tsc --watch",
     "dev": "ts-node ./src/index.ts",
     "dev:fortinet": "source .env && ts-node ./src/index.ts init --workspace .debug-workspace --remote-exec $FORTINET_USER@$FORTINET_HOST --remote-exec-password $FORTINET_PASSWORD",
@@ -63,7 +64,7 @@
     "terminal-kit": "^3.1.1",
     "turndown": "^7.2.0",
     "uuid": "^11.1.0",
-    "winrm-client": "^0.0.7"
+    "winrm-client": "^0.0.10"
   },
   "devDependencies": {
     "@types/archiver": "^6.0.3",
