@@ -1,5 +1,6 @@
 import axios from 'axios';
 import Logger from './logger';
+import { version } from '../../package.json';
 
 export async function isLatestVersion() {
   try {
@@ -7,7 +8,7 @@ export async function isLatestVersion() {
       'https://registry.npmjs.org/@2501-ai/cli/latest'
     );
     const latestVersion = data.version;
-    const currentVersion = require('../../package.json').version;
+    const currentVersion = version;
 
     const isLatest = latestVersion === currentVersion;
     Logger.debug(

@@ -118,9 +118,11 @@ const executeActions = async (
       action,
       toolOutput.success
     );
-    toolOutput.success
-      ? logger.stop(subActionMessage, 0)
-      : logger.stop(`(failed) ${subActionMessage}`, 1);
+    if (toolOutput.success) {
+      logger.stop(subActionMessage, 0);
+    } else {
+      logger.stop(`(failed) ${subActionMessage}`, 1);
+    }
     results.push(toolOutput);
   }
 

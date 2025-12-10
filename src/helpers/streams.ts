@@ -79,13 +79,13 @@ export function getActionPostfix(action: FunctionAction): string {
       return toItalic(` (Updating file: ${path.basename(args.path)})`);
     case 'run_shell':
       // avoid displaying the full cd command.
-      const formatted =
-        args.command.startsWith('cd') && args.command.indexOf('&&') > 0
-          ? (args.command as string)
-              .split('&&')
-              .slice(args.command.indexOf('&&') + 1)
-          : args.command;
-      return toItalic(` (Executing command: ${formatted})`);
+      return toItalic(
+        ` (Executing command: ${
+          args.command.startsWith('cd') && args.command.indexOf('&&') > 0
+            ? (args.command as string).split('&&').slice(1).join('&&').trim()
+            : args.command
+        })`
+      );
     case 'browse_url':
       return toItalic(` (Browsing URL: ${args.url})`);
     default:
