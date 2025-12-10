@@ -91,9 +91,7 @@ export class AgentManager {
           \`\`\`
           ${fs.readFileSync(args.path, 'utf8')}
           \`\`\``;
-        } catch {
-          // ignore
-        }
+        } catch {}
       }
       return {
         tool_call_id: action.id,
